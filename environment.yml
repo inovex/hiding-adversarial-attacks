@@ -19,6 +19,8 @@ dependencies:
   # ML, STATS & DEEP LEARNING
   - pytorch
   - pytorch-lightning
+  - torchvision
+  - cudatoolkit==11.1
   # OTHER TOOLS
   - optuna
   - mlflow
