@@ -15,7 +15,7 @@ from io import BytesIO
 from urllib.request import urlopen
 from zipfile import ZipFile
 
-from hiding_adversarial_attacks.config import MNIST_PATH, DATA_PATH
+from hiding_adversarial_attacks.config import DataConfig
 
 MNIST_ZIP_URL = 'https://data.deepai.org/mnist.zip'
 
@@ -81,17 +81,17 @@ class MNISTDataModule(pl.LightningDataModule):
             torch.save(test_set, f)
 
     def train_dataloader(self):
-        return DataLoader(self.mnist_train, batch_size=self.batch_size)
+        return DataLoader(self.mnist_train, batch_size=self.batch_size, shuffle=True)
 
     def val_dataloader(self):
-        return DataLoader(self.mnist_val, batch_size=self.batch_size)
+        return DataLoader(self.mnist_val, batch_size=self.batch_size, shuffle=True)
 
     def test_dataloader(self):
         return DataLoader(self.mnist_test, batch_size=self.batch_size)
 
 
 if __name__ == '__main__':
-    dm = MNISTDataModule(DATA_PATH)
+    dm = MNISTDataModule(DataConfig.EXTERNAL_PATH)
     dm.prepare_data()
     dm.setup()
     print("-")
