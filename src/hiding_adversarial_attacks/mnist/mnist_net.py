@@ -13,7 +13,8 @@ from hiding_adversarial_attacks.config import MNISTConfig
 class MNISTNet(pl.LightningModule):
     """
     Simple Convolutional MNIST classifier.
-    Adapted to PyTorch Lightning from https://github.com/pytorch/examples/blob/master/mnist/main.py
+    Adapted to PyTorch Lightning from
+    https://github.com/pytorch/examples/blob/master/mnist/main.py
     """
 
     def __init__(self, hparams):
@@ -84,19 +85,28 @@ class MNISTNet(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         gt_label, loss, pred_label = self._predict(batch)
         self.log(MNISTConfig.TRAIN_LOSS, loss, on_step=True, logger=True)
-        self.log(MNISTConfig.TRAIN_ACCURACY, self.train_accuracy(torch.exp(pred_label), gt_label))
+        self.log(
+            MNISTConfig.TRAIN_ACCURACY,
+            self.train_accuracy(torch.exp(pred_label), gt_label),
+        )
         return loss
 
     def validation_step(self, batch, batch_idx):
         gt_label, loss, pred_label = self._predict(batch)
         self.log(MNISTConfig.VAL_LOSS, loss, logger=True)
-        self.log(MNISTConfig.VAL_ACCURACY, self.validation_accuracy(torch.exp(pred_label), gt_label))
+        self.log(
+            MNISTConfig.VAL_ACCURACY,
+            self.validation_accuracy(torch.exp(pred_label), gt_label),
+        )
         return loss
 
     def test_step(self, batch, batch_idx):
         gt_label, loss, pred_label = self._predict(batch)
         self.log(MNISTConfig.TEST_LOSS, loss, logger=True)
-        self.log(MNISTConfig.TEST_ACCURACY, self.test_accuracy(torch.exp(pred_label), gt_label))
+        self.log(
+            MNISTConfig.TEST_ACCURACY,
+            self.test_accuracy(torch.exp(pred_label), gt_label),
+        )
         return loss
 
     def training_epoch_end(self, outs):

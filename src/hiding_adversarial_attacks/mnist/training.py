@@ -1,9 +1,10 @@
 import argparse
 
-from pytorch_lightning import loggers as pl_loggers, Trainer
+from pytorch_lightning import Trainer
+from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import ModelCheckpoint
 
-from hiding_adversarial_attacks.config import MNISTConfig, DataConfig
+from hiding_adversarial_attacks.config import DataConfig, MNISTConfig
 from hiding_adversarial_attacks.data.MNIST import MNISTDataModule
 from hiding_adversarial_attacks.mnist.mnist_net import MNISTNet
 

@@ -28,19 +28,10 @@ dependencies:
   # CODE FORMATTERS & TYPE CHECKING
   - black
   - mypy
+  # DEV PACKAGES
+  - pre-commit
   - pip:
      - -e .  # install git checkout of hiding_adversarial_attacks in editable mode
      - lightning-bolts
      - torchmetrics
      # add here only pip-packages that are not available in conda/conda-forge! E.g.:
-
-  # DEVELOPMENT ONLY PACKAGES (could also be kept in a separate environment file)
-#  - jupyterlab
-#  - pytest
-#  - pytest-cov
-#  - tox
-#  - pre_commit
-#  - nbdime
-#  - nbstripout
-#  - sphinx
-#  - recommonmark
