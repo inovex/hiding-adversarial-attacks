@@ -7,6 +7,7 @@ dependencies:
   - python>=3.6
   - pip
   # BASICS
+  - eagerpy
   - numpy
   - scipy
   - pandas
@@ -24,6 +25,9 @@ dependencies:
   # OTHER TOOLS
   - optuna
   - mlflow
+  # CODE FORMATTERS & TYPE CHECKING
+  - black
+  - mypy
   - pip:
      - -e .  # install git checkout of hiding_adversarial_attacks in editable mode
      - lightning-bolts
