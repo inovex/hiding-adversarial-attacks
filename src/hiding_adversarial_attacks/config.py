@@ -8,6 +8,7 @@ class DataConfig:
     ROOT_PATH = os.path.join(ROOT_DIR, "data")
     EXTERNAL_PATH = os.path.join(ROOT_DIR, "data/external")
     PREPROCESSED_PATH = os.path.join(ROOT_DIR, "data/preprocessed")
+    ADVERSARIAL_PATH = os.path.join(ROOT_DIR, "data/preprocessed/adversarial")
 
 
 class MNISTConfig:
@@ -26,3 +27,8 @@ class MNISTConfig:
     TRAIN_ACCURACY_EPOCH = "train_acc_epoch"
     VAL_ACCURACY_EPOCH = "val_acc_epoch"
     TEST_ACCURACY_EPOCH = "test_acc_epoch"
+
+
+class AdversarialAttackConfig:
+    FGSM = "FGSM"
+    DEEP_FOOL = "DeepFool"
