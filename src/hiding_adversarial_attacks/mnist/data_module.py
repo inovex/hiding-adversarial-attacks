@@ -97,6 +97,16 @@ class MNISTDataModule(pl.LightningDataModule):
         return DataLoader(self.mnist_test, batch_size=self.batch_size)
 
 
+def init_mnist_data_module(batch_size, download_mnist, seed):
+    data_module = MNISTDataModule(
+        DataConfig.EXTERNAL_PATH, batch_size=batch_size, random_seed=seed
+    )
+    if download_mnist:
+        data_module.prepare_data()
+    data_module.setup()
+    return data_module
+
+
 if __name__ == "__main__":
     dm = MNISTDataModule(DataConfig.EXTERNAL_PATH)
     dm.prepare_data()

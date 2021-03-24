@@ -4,8 +4,8 @@ from pytorch_lightning import Trainer
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import ModelCheckpoint
 
-from hiding_adversarial_attacks.config import DataConfig, MNISTConfig
-from hiding_adversarial_attacks.data.MNIST import MNISTDataModule
+from hiding_adversarial_attacks.config import MNISTConfig
+from hiding_adversarial_attacks.mnist.data_module import init_mnist_data_module
 from hiding_adversarial_attacks.mnist.mnist_net import MNISTNet
 
 
@@ -51,16 +51,6 @@ def parse_mnist_args():
     if args.test and args.test_checkpoint is None:
         parser.error("--test-checkpoint was empty while --test was specified.")
     return args
-
-
-def init_mnist_data_module(batch_size, download_mnist, seed):
-    data_module = MNISTDataModule(
-        DataConfig.EXTERNAL_PATH, batch_size=batch_size, random_seed=seed
-    )
-    if download_mnist:
-        data_module.prepare_data()
-    data_module.setup()
-    return data_module
 
 
 def train(data_module, args):
