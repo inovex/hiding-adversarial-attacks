@@ -29,17 +29,13 @@ class AttackResults:
         self.adv_count = 0
 
     def add_batch(self, batch_attack_results: BatchAttackResults):
-        self.images = self._cat_tensor(self.images, batch_attack_results.images)
-        self.labels = self._cat_tensor(self.labels, batch_attack_results.labels)
-        self.adv_images = self._cat_tensor(
-            self.adv_images, batch_attack_results.adv_images
+        self.images = torch.cat((self.images, batch_attack_results.images), 0)
+        self.labels = torch.cat((self.labels, batch_attack_results.labels), 0)
+        self.adv_images = torch.cat(
+            (self.adv_images, batch_attack_results.adv_images), 0
         )
         self.orig_count += batch_attack_results.orig_count
         self.adv_count += batch_attack_results.adv_count
-
-    @staticmethod
-    def _cat_tensor(target_tensor, append_tensor):
-        return torch.cat((target_tensor, append_tensor), 0)
 
     def save_results(self, target_dir):
         os.makedirs(target_dir, exist_ok=True)
