@@ -1,15 +1,14 @@
 import logging
 import os
-import sys
 from argparse import ArgumentParser, Namespace
-from datetime import datetime
-from typing import Sequence, Union
+from typing import List, Sequence, Union
 
 import eagerpy as ep
 import foolbox as fb
 import numpy as np
 import torch
 from pytorch_lightning import Trainer
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from hiding_adversarial_attacks.attack.attack_results import (
@@ -20,38 +19,16 @@ from hiding_adversarial_attacks.attack.foolbox_utils import (
     filter_correctly_classified,
     get_attack,
 )
-from hiding_adversarial_attacks.config import (
-    AdversarialAttackConfig,
-    DataConfig,
-    MNISTConfig,
+from hiding_adversarial_attacks.attack.logging import (
+    log_attack_info,
+    log_attack_results,
+    setup_logger,
 )
+from hiding_adversarial_attacks.config import DataConfig, MNISTConfig
 from hiding_adversarial_attacks.mnist.data_module import init_mnist_data_module
 from hiding_adversarial_attacks.mnist.mnist_net import MNISTNet
 
-LOGGER = logging.Logger(__name__)
-
-
-def setup_logger(logger, args):
-    logs_path = os.path.join(AdversarialAttackConfig.LOGS_PATH, "MNIST")
-    os.makedirs(logs_path, exist_ok=True)
-    timestamp_seconds = int(datetime.now().timestamp())
-    log_file = f"{str(timestamp_seconds)}-mnist-{args.attack}-{args.epsilons}.log"
-
-    formatter = logging.Formatter(
-        fmt="%(asctime)s - %(name)s - %(levelname)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M",
-    )
-    fh = logging.FileHandler(os.path.join(logs_path, log_file))
-    fh.setLevel(AdversarialAttackConfig.LOG_LEVEL)
-    fh.setFormatter(formatter)
-    logger.addHandler(fh)
-
-    ch = logging.StreamHandler(stream=sys.stdout)
-    ch.setFormatter(formatter)
-    ch.setLevel(AdversarialAttackConfig.LOG_LEVEL)
-    logger.addHandler(ch)
-
-    logger.setLevel(AdversarialAttackConfig.LOG_LEVEL)
+LOGGER = logging.Logger(os.path.basename(__file__))
 
 
 def parse_attack_args() -> Namespace:
@@ -91,8 +68,9 @@ def parse_attack_args() -> Namespace:
     parser.add_argument(
         "--epsilons",
         nargs="+",
+        type=float,
         help="epsilon values (= attack strength) to use on images",
-        default=np.linspace(0.225, 0.3, num=1),
+        default=np.linspace(0.225, 0.3, num=3),
     )
     parser = MNISTNet.add_model_specific_args(parser)
     parser = Trainer.add_argparse_args(parser)
@@ -108,7 +86,7 @@ def attack_batch(
     labels: ep.Tensor,
     attack: fb.Attack,
     epsilons: Union[Sequence[Union[float, None]], float, None],
-):
+) -> List[BatchAttackResults]:
     images, labels = filter_correctly_classified(foolbox_model, images, labels)
 
     if images.nelement() == 0:
@@ -134,7 +112,14 @@ def attack_batch(
     return attack_results_list
 
 
-def run_attack(foolbox_model, attack, data_loader, epsilons, stage, device):
+def run_attack(
+    foolbox_model: fb.PyTorchModel,
+    attack: fb.Attack,
+    data_loader: DataLoader,
+    epsilons: Sequence[float],
+    stage: str,
+    device: torch.device,
+) -> List[AttackResults]:
     print(f"Attacking images for stage '{stage}'.")
 
     attack_results_list = [AttackResults(stage, eps, device) for eps in epsilons]
@@ -181,13 +166,9 @@ def run():
         device=device,
     )
 
-    LOGGER.info("Attack info:")
-    LOGGER.info(f"\t - Attack type: {args.attack}")
-    LOGGER.info(f"\t - Epsilon(s): {args.epsilons}")
-    LOGGER.info("\t - Data set: MNIST")
-    LOGGER.info(f"\t - Target dir: {args.target_dir}")
-    LOGGER.info(f"\t - Model checkpoint: {args.checkpoint}")
+    log_attack_info(LOGGER, args.attack, args.epsilons, "MNIST", args.checkpoint)
 
+    # Run adversarial attack
     attack = get_attack(args.attack)
     if attack is None:
         raise SystemExit("Unknown adversarial attack was specified. Exiting.")
@@ -198,14 +179,26 @@ def run():
     test_attack_results_list = run_attack(
         foolbox_model, attack, test_loader, args.epsilons, "test", device
     )
+
+    # Log and save results
+    LOGGER.info("")
+    LOGGER.info("******** Results *********")
     for train_attack_results, test_attack_results in zip(
         train_attack_results_list, test_attack_results_list
     ):
         target_dir = os.path.join(
-            args.target_dir, args.attack, f"epsilon_{train_attack_results.epsilon}"
+            args.target_dir, args.attack, f"epsilon_{test_attack_results.epsilon}"
         )
         train_attack_results.save_results(target_dir)
         test_attack_results.save_results(target_dir)
+
+        # Log results
+        LOGGER.info(f"---- Epsilon: {test_attack_results.epsilon}")
+        LOGGER.info(f"Output path: '{target_dir}'")
+        LOGGER.info("\t Train: ")
+        log_attack_results(LOGGER, train_attack_results, len(train_loader.dataset))
+        LOGGER.info("\t Test: ")
+        log_attack_results(LOGGER, test_attack_results, len(test_loader.dataset))
 
 
 if __name__ == "__main__":
