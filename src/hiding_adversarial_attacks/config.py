@@ -32,3 +32,5 @@ class MNISTConfig:
 class AdversarialAttackConfig:
     FGSM = "FGSM"
     DEEP_FOOL = "DeepFool"
+    LOG_LEVEL = logging.DEBUG
+    LOGS_PATH = os.path.join(ROOT_DIR, "logs/attacks")
