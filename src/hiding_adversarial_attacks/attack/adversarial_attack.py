@@ -126,8 +126,9 @@ def attack_batch(
         zip(epsilons, robust_accuracy, clipped, is_adv)
     ):
         adv_count = len(adv_mask.nonzero())
+        attacked_count = len(images)
         batch_attack_results = BatchAttackResults(
-            images, labels, clipped_adv[adv_mask], None, len(images), adv_count, eps
+            images, labels, clipped_adv[adv_mask], None, attacked_count, adv_count, eps
         )
         attack_results_list.append(batch_attack_results)
     return attack_results_list

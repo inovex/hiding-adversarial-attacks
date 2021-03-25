@@ -5,13 +5,13 @@ import torch
 
 class BatchAttackResults:
     def __init__(
-        self, images, labels, adv_images, adv_labels, orig_count, adv_count, epsilon
+        self, images, labels, adv_images, adv_labels, attacked_count, adv_count, epsilon
     ):
         self.images = images
         self.labels = labels
         self.adv_images = adv_images
         self.adv_labels = adv_labels
-        self.orig_count = orig_count
+        self.attacked_count = attacked_count
         self.adv_count = adv_count
         self.epsilon = epsilon
 
@@ -25,7 +25,7 @@ class AttackResults:
         self.labels = torch.Tensor().to(device)
         self.adv_images = torch.Tensor().to(device)
         self.adv_labels = None
-        self.orig_count = 0
+        self.attacked_count = 0
         self.adv_count = 0
 
     def add_batch(self, batch_attack_results: BatchAttackResults):
@@ -34,7 +34,7 @@ class AttackResults:
         self.adv_images = torch.cat(
             (self.adv_images, batch_attack_results.adv_images), 0
         )
-        self.orig_count += batch_attack_results.orig_count
+        self.attacked_count += batch_attack_results.attacked_count
         self.adv_count += batch_attack_results.adv_count
 
     def save_results(self, target_dir):
