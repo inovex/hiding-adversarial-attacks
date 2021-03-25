@@ -22,6 +22,9 @@ def parse_mnist_args():
         "--seed", type=int, default=42, metavar="S", help="random seed (default: 42)"
     )
     parser.add_argument(
+        "--val_split", type=float, default=0.1, help="validation split (default: 0.1)"
+    )
+    parser.add_argument(
         "--logs-dir",
         default=MNISTConfig.LOGS_PATH,
         help="path to store MNIST training logs and checkpoints to",
@@ -89,7 +92,7 @@ def run():
     args = parse_mnist_args()
 
     data_module = init_mnist_data_module(
-        args.batch_size, args.download_mnist, args.seed
+        args.batch_size, args.val_split, args.download_mnist, args.seed
     )
     if args.test:
         test(data_module, args)

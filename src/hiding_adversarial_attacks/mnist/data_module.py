@@ -87,19 +87,22 @@ class MNISTDataModule(pl.LightningDataModule):
         with open(processed_test, "wb") as f:
             torch.save(test_set, f)
 
-    def train_dataloader(self):
-        return DataLoader(self.mnist_train, batch_size=self.batch_size, shuffle=True)
+    def train_dataloader(self, shuffle=True):
+        return DataLoader(self.mnist_train, batch_size=self.batch_size, shuffle=shuffle)
 
-    def val_dataloader(self):
-        return DataLoader(self.mnist_val, batch_size=self.batch_size, shuffle=True)
+    def val_dataloader(self, shuffle=True):
+        return DataLoader(self.mnist_val, batch_size=self.batch_size, shuffle=shuffle)
 
     def test_dataloader(self):
         return DataLoader(self.mnist_test, batch_size=self.batch_size)
 
 
-def init_mnist_data_module(batch_size, download_mnist, seed):
+def init_mnist_data_module(batch_size, val_split, download_mnist, seed):
     data_module = MNISTDataModule(
-        DataConfig.EXTERNAL_PATH, batch_size=batch_size, random_seed=seed
+        DataConfig.EXTERNAL_PATH,
+        batch_size=batch_size,
+        val_split=val_split,
+        random_seed=seed,
     )
     if download_mnist:
         data_module.prepare_data()
@@ -109,6 +112,6 @@ def init_mnist_data_module(batch_size, download_mnist, seed):
 
 if __name__ == "__main__":
     dm = MNISTDataModule(DataConfig.EXTERNAL_PATH)
-    dm.prepare_data()
+    # dm.prepare_data()
     dm.setup()
     print("-")
