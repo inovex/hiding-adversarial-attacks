@@ -25,7 +25,7 @@ from hiding_adversarial_attacks.attack.logging_utils import (
     setup_logger,
 )
 from hiding_adversarial_attacks.config import DataConfig, MNISTConfig
-from hiding_adversarial_attacks.mnist.data_module import init_mnist_data_module
+from hiding_adversarial_attacks.mnist.data_modules import init_mnist_data_module
 from hiding_adversarial_attacks.mnist.mnist_net import MNISTNet
 
 LOGGER = logging.Logger(os.path.basename(__file__))

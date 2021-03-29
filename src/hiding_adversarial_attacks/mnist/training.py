@@ -5,7 +5,7 @@ from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import ModelCheckpoint
 
 from hiding_adversarial_attacks.config import MNISTConfig
-from hiding_adversarial_attacks.mnist.data_module import init_mnist_data_module
+from hiding_adversarial_attacks.mnist.data_modules import init_mnist_data_module
 from hiding_adversarial_attacks.mnist.mnist_net import MNISTNet
 
 
