@@ -25,6 +25,8 @@ class AdversarialMNIST(MNIST):
             target_transform=target_transform,
             download=False,
         )
+        self.root = os.path.abspath(root)
+
         self.train = train  # training set or test set
 
         if not self._check_exists():
@@ -65,6 +67,14 @@ class AdversarialMNIST(MNIST):
             adv_target = self.target_transform(adv_target)
 
         return img, adv_img, target, adv_target
+
+    @property
+    def raw_folder(self) -> str:
+        return self.root
+
+    @property
+    def processed_folder(self) -> str:
+        return self.root
 
     def _check_exists(self) -> bool:
         return (

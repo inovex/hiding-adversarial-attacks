@@ -59,7 +59,7 @@ def parse_attack_args() -> Namespace:
     )
     parser.add_argument(
         "--target-dir",
-        default=os.path.join(DataConfig.ADVERSARIAL_PATH, "AdversarialMNIST"),
+        default=os.path.join(DataConfig.ADVERSARIAL_PATH, "MNIST"),
         help="path to store adversarially attacked MNIST data to",
     )
     parser.add_argument(
@@ -221,15 +221,23 @@ def run():
     for train_attack_results, test_attack_results in zip(
         train_attack_results_list, test_attack_results_list
     ):
-        target_dir = os.path.join(
-            args.target_dir, args.attack, f"epsilon_{test_attack_results.epsilon}"
+        class_dir = (
+            f"class_{args.attacked_classes}"
+            if args.attacked_classes is AdversarialAttackConfig.ALL_CLASSES
+            else f"class_{'_'.join(map(str, args.attacked_classes))}"
         )
-        train_attack_results.save_results(target_dir)
-        test_attack_results.save_results(target_dir)
+        target_path = os.path.join(
+            args.target_dir,
+            args.attack,
+            f"epsilon_{test_attack_results.epsilon}",
+            class_dir,
+        )
+        train_attack_results.save_results(target_path)
+        test_attack_results.save_results(target_path)
 
         # Log results
         LOGGER.info(f"---- Epsilon: {test_attack_results.epsilon}")
-        LOGGER.info(f"Output path: '{target_dir}'")
+        LOGGER.info(f"Output path: '{target_path}'")
         LOGGER.info("\t Train: ")
         log_attack_results(LOGGER, train_attack_results, len(train_loader.dataset))
         LOGGER.info("\t Test: ")
