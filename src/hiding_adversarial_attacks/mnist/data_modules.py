@@ -200,7 +200,9 @@ class AdversarialMNISTDataModule(MNISTDataModule):
 
 if __name__ == "__main__":
     dm = MNISTDataModule(DataConfig.EXTERNAL_PATH)
-    adv_dm = AdversarialMNISTDataModule(DataConfig.ADVERSARIAL_PATH)
+    adv_dm = AdversarialMNISTDataModule(
+        os.path.join(DataConfig.ADVERSARIAL_PATH, "MNIST/DeepFool/epsilon_0-225")
+    )
     adv_dm.setup()
     # dm.prepare_data()
     dm.setup()
