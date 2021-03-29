@@ -3,7 +3,7 @@ import os
 import shutil
 from io import BytesIO
 from math import ceil
-from typing import Any, Optional
+from typing import Any, Optional, Tuple, Union
 from urllib.request import urlopen
 from zipfile import ZipFile
 
@@ -14,7 +14,7 @@ from torchvision.datasets import MNIST
 from torchvision.datasets.mnist import read_image_file, read_label_file
 from torchvision.transforms import transforms
 
-from hiding_adversarial_attacks.config import DataConfig
+from hiding_adversarial_attacks.config import AdversarialAttackConfig, DataConfig
 from hiding_adversarial_attacks.mnist.adversarial_mnist import AdversarialMNIST
 
 MNIST_ZIP_URL = "https://data.deepai.org/mnist.zip"
@@ -27,23 +27,71 @@ class MNISTDataModule(pl.LightningDataModule):
         batch_size: int = 32,
         val_split: float = 0.1,
         random_seed: int = 42,
+        attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.ALL_CLASSES,
     ):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.val_split = val_split
         self.random_seed = random_seed
+        self.attacked_classes = attacked_classes
 
     def setup(self, stage: Optional[str] = None):
-        self.mnist_test = MNIST(
-            self.data_dir, train=False, transform=transforms.ToTensor()
-        )
+        mnist_test = MNIST(self.data_dir, train=False, transform=transforms.ToTensor())
         mnist_full = MNIST(self.data_dir, train=True, transform=transforms.ToTensor())
+        if self.attacked_classes is not AdversarialAttackConfig.ALL_CLASSES:
+            mnist_full, mnist_test = self._filter_splits(
+                mnist_full, mnist_test, self.attacked_classes
+            )
+        self.mnist_test = mnist_test
         mnist_train_size, mnist_val_size = self._get_train_val_split_sizes(mnist_full)
         generator = torch.Generator().manual_seed(self.random_seed)
         self.mnist_train, self.mnist_val = random_split(
             mnist_full, [mnist_train_size, mnist_val_size], generator=generator
         )
+
+    def _filter_splits(
+        self,
+        mnist_full: MNIST,
+        mnist_test: MNIST,
+        attacked_classes: Tuple[int],
+    ):
+        """
+        Filters the MNIST splits mnist_full and mnist_test **in place**,
+        using the provided attacked_classes.
+        :param mnist_full: MNIST training data
+        :param mnist_test: MNIST test data
+        :param attacked_classes: Tuple of class integer IDs or string "all".
+        :return:
+        """
+        assert type(attacked_classes) is tuple and all(
+            isinstance(attacked_class, int) for attacked_class in attacked_classes
+        )
+        assert all(
+            0 <= attacked_class < len(MNIST.classes)
+            for attacked_class in attacked_classes
+        )
+        masks_full, masks_test = self._get_attacked_classes_masks(
+            mnist_full, mnist_test, attacked_classes
+        )
+        mnist_full.targets = mnist_full.targets[masks_full]
+        mnist_full.data = mnist_full.data[masks_full]
+        mnist_test.targets = mnist_test.targets[masks_test]
+        mnist_test.data = mnist_test.data[masks_test]
+        return mnist_full, mnist_test
+
+    @staticmethod
+    def _get_attacked_classes_masks(
+        mnist_full: MNIST,
+        mnist_test: MNIST,
+        attacked_classes: Union[str, Tuple[int]],
+    ):
+        masks_full = torch.zeros(len(mnist_full), dtype=torch.bool)
+        masks_test = torch.zeros(len(mnist_test), dtype=torch.bool)
+        for attacked_class in attacked_classes:
+            masks_full += mnist_full.targets == attacked_class
+            masks_test += mnist_test.targets == attacked_class
+        return masks_full, masks_test
 
     def _get_train_val_split_sizes(self, mnist_full):
         mnist_full_size = len(mnist_full)
@@ -103,12 +151,19 @@ class MNISTDataModule(pl.LightningDataModule):
         return DataLoader(self.mnist_test, batch_size=self.batch_size)
 
 
-def init_mnist_data_module(batch_size, val_split, download_mnist, seed):
+def init_mnist_data_module(
+    batch_size: int,
+    val_split: float,
+    download_mnist: bool,
+    seed: int,
+    attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.ALL_CLASSES,
+) -> MNISTDataModule:
     data_module = MNISTDataModule(
         DataConfig.EXTERNAL_PATH,
         batch_size=batch_size,
         val_split=val_split,
         random_seed=seed,
+        attacked_classes=attacked_classes,
     )
     if download_mnist:
         data_module.prepare_data()

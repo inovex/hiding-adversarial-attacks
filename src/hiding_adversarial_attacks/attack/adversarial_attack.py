@@ -24,9 +24,14 @@ from hiding_adversarial_attacks.attack.logging_utils import (
     log_attack_results,
     setup_logger,
 )
-from hiding_adversarial_attacks.config import DataConfig, MNISTConfig
+from hiding_adversarial_attacks.config import (
+    AdversarialAttackConfig,
+    DataConfig,
+    MNISTConfig,
+)
 from hiding_adversarial_attacks.mnist.data_modules import init_mnist_data_module
 from hiding_adversarial_attacks.mnist.mnist_net import MNISTNet
+from hiding_adversarial_attacks.utils import SplitArgs
 
 LOGGER = logging.Logger(os.path.basename(__file__))
 
@@ -72,11 +77,27 @@ def parse_attack_args() -> Namespace:
         help="epsilon values (= attack strength) to use on images",
         default=np.linspace(0.225, 0.3, num=3),
     )
+    parser.add_argument(
+        "--attacked-classes",
+        type=str,
+        help="comma-separated list of IDs of the classes "
+        "to be attacked or 'all' (default=['all'])",
+        action=SplitArgs,
+        default=AdversarialAttackConfig.ALL_CLASSES,
+    )
     parser = MNISTNet.add_model_specific_args(parser)
     parser = Trainer.add_argparse_args(parser)
     args = parser.parse_args()
     if args.checkpoint is None:
         parser.error("--checkpoint was 'None'.")
+    if args.attacked_classes is not AdversarialAttackConfig.ALL_CLASSES:
+        if not all([num.isdigit() for num in args.attacked_classes]):
+            parser.error(
+                "--attacked-classes has to be comma-separated list of integer IDs "
+                "(e.g. '1,2,3') or 'all'."
+            )
+        else:
+            args.attacked_classes = tuple(int(num) for num in args.attacked_classes)
     return args
 
 
@@ -160,7 +181,11 @@ def run():
 
     # Setup MNIST data module and loaders
     data_module = init_mnist_data_module(
-        batch_size=args.batch_size, val_split=0.0, download_mnist=False, seed=args.seed
+        batch_size=args.batch_size,
+        val_split=0.0,
+        download_mnist=False,
+        seed=args.seed,
+        attacked_classes=args.attacked_classes,
     )
     train_loader = data_module.train_dataloader(shuffle=False)
     test_loader = data_module.test_dataloader()
