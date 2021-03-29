@@ -54,7 +54,7 @@ def parse_attack_args() -> Namespace:
     )
     parser.add_argument(
         "--target-dir",
-        default=os.path.join(DataConfig.ADVERSARIAL_PATH, "MNIST"),
+        default=os.path.join(DataConfig.ADVERSARIAL_PATH, "AdversarialMNIST"),
         help="path to store adversarially attacked MNIST data to",
     )
     parser.add_argument(
