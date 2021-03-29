@@ -29,7 +29,8 @@ def setup_logger(logger, args):
     logger.setLevel(AdversarialAttackConfig.LOG_LEVEL)
 
 
-def log_attack_results(logger, attack_results, set_size):
+def log_attack_results(logger, attack_results, set_size, attacked_classes):
+    logger.info(f"\t\t Attacked classes: {attacked_classes}")
     logger.info(f"\t\t Total set size: {set_size}")
     logger.info(f"\t\t Attacked image count: {attack_results.attacked_count}")
     logger.info(f"\t\t Adversarial count: {attack_results.adv_count}")

@@ -239,14 +239,17 @@ def run():
         LOGGER.info(f"---- Epsilon: {test_attack_results.epsilon}")
         LOGGER.info(f"Output path: '{target_path}'")
         LOGGER.info("\t Train: ")
-        log_attack_results(LOGGER, train_attack_results, len(train_loader.dataset))
+        log_attack_results(
+            LOGGER,
+            train_attack_results,
+            len(train_loader.dataset),
+            args.attacked_classes,
+        )
         LOGGER.info("\t Test: ")
-        log_attack_results(LOGGER, test_attack_results, len(test_loader.dataset))
+        log_attack_results(
+            LOGGER, test_attack_results, len(test_loader.dataset), args.attacked_classes
+        )
 
 
 if __name__ == "__main__":
     run()
-    # data, labels = torch.load(
-    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/adversarial/MNIST/DeepFool/epsilon_0.225/test_adv.pt"
-    # )
-    # print("")
