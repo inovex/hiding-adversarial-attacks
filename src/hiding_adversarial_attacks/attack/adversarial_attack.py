@@ -105,8 +105,18 @@ def attack_batch(
     ):
         adv_count = len(adv_mask.nonzero())
         attacked_count = len(images)
+        adv_images = clipped_adv[adv_mask]
+        adv_logits = foolbox_model(adv_images)
+        adv_labels = torch.argmax(adv_logits, dim=-1)
+
         batch_attack_results = BatchAttackResults(
-            images, labels, clipped_adv[adv_mask], None, attacked_count, adv_count, eps
+            images[adv_mask],
+            labels[adv_mask],
+            adv_images,
+            adv_labels,
+            attacked_count,
+            adv_count,
+            eps,
         )
         attack_results_list.append(batch_attack_results)
     return attack_results_list
