@@ -2,8 +2,6 @@ import os
 
 import torch
 
-from hiding_adversarial_attacks.config import MNISTConfig
-
 
 class BatchAttackResults:
     def __init__(
@@ -44,11 +42,7 @@ class AttackResults:
 
     def save_results(self, target_dir):
         os.makedirs(target_dir, exist_ok=True)
-        orig_path = os.path.join(target_dir, f"{self.stage}_original.pt")
+        orig_path = os.path.join(target_dir, f"{self.stage}_orig.pt")
         adv_path = os.path.join(target_dir, f"{self.stage}_adv.pt")
-        images = self.images.view(-1, MNISTConfig.IMAGE_WIDTH, MNISTConfig.IMAGE_HEIGHT)
-        adv_images = self.adv_images.view(
-            -1, MNISTConfig.IMAGE_WIDTH, MNISTConfig.IMAGE_HEIGHT
-        )
-        torch.save((images.cpu(), self.labels.cpu()), orig_path)
-        torch.save((adv_images.cpu(), self.adv_labels.cpu()), adv_path)
+        torch.save((self.images.cpu(), self.labels.cpu()), orig_path)
+        torch.save((self.adv_images.cpu(), self.adv_labels.cpu()), adv_path)
