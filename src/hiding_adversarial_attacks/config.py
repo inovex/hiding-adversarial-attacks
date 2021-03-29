@@ -16,6 +16,8 @@ class MNISTConfig:
     PREPROCESSING = dict(mean=[0.1307], std=[0.3081], axis=-1)
     LOGS_PATH = os.path.join(ROOT_DIR, "logs/MNIST")
     LOG_LEVEL = logging.INFO
+    IMAGE_WIDTH = 28
+    IMAGE_HEIGHT = 28
 
     # Loss names for logging
     TRAIN_LOSS = "train_loss"

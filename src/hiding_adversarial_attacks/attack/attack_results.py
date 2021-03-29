@@ -2,6 +2,8 @@ import os
 
 import torch
 
+from hiding_adversarial_attacks.config import MNISTConfig
+
 
 class BatchAttackResults:
     def __init__(
@@ -24,13 +26,16 @@ class AttackResults:
         self.images = torch.Tensor().to(device)
         self.labels = torch.Tensor().to(device)
         self.adv_images = torch.Tensor().to(device)
-        self.adv_labels = None
+        self.adv_labels = torch.Tensor().to(device)
         self.attacked_count = 0
         self.adv_count = 0
 
     def add_batch(self, batch_attack_results: BatchAttackResults):
         self.images = torch.cat((self.images, batch_attack_results.images), 0)
         self.labels = torch.cat((self.labels, batch_attack_results.labels), 0)
+        self.adv_labels = torch.cat(
+            (self.adv_labels, batch_attack_results.adv_labels), 0
+        )
         self.adv_images = torch.cat(
             (self.adv_images, batch_attack_results.adv_images), 0
         )
@@ -41,5 +46,9 @@ class AttackResults:
         os.makedirs(target_dir, exist_ok=True)
         orig_path = os.path.join(target_dir, f"{self.stage}_original.pt")
         adv_path = os.path.join(target_dir, f"{self.stage}_adv.pt")
-        torch.save((self.images, self.labels), orig_path)
-        torch.save((self.adv_images, self.adv_labels), adv_path)
+        images = self.images.view(-1, MNISTConfig.IMAGE_WIDTH, MNISTConfig.IMAGE_HEIGHT)
+        adv_images = self.adv_images.view(
+            -1, MNISTConfig.IMAGE_WIDTH, MNISTConfig.IMAGE_HEIGHT
+        )
+        torch.save((images.cpu(), self.labels.cpu()), orig_path)
+        torch.save((adv_images.cpu(), self.adv_labels.cpu()), adv_path)
