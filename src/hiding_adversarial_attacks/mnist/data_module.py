@@ -15,6 +15,7 @@ from torchvision.datasets.mnist import read_image_file, read_label_file
 from torchvision.transforms import transforms
 
 from hiding_adversarial_attacks.config import DataConfig
+from hiding_adversarial_attacks.mnist.adversarial_mnist import AdversarialMNIST
 
 MNIST_ZIP_URL = "https://data.deepai.org/mnist.zip"
 
@@ -115,8 +116,37 @@ def init_mnist_data_module(batch_size, val_split, download_mnist, seed):
     return data_module
 
 
+class AdversarialMNISTDataModule(MNISTDataModule):
+    def __init__(
+        self,
+        data_dir: str,
+        batch_size: int = 32,
+        val_split: float = 0.1,
+        random_seed: int = 42,
+    ):
+        super().__init__(data_dir, batch_size, val_split, random_seed)
+
+    def setup(self, stage: Optional[str] = None):
+        self.mnist_test = AdversarialMNIST(
+            self.data_dir, train=False, transform=transforms.ToTensor()
+        )
+        mnist_full = AdversarialMNIST(
+            self.data_dir, train=True, transform=transforms.ToTensor()
+        )
+        mnist_train_size, mnist_val_size = self._get_train_val_split_sizes(mnist_full)
+        generator = torch.Generator().manual_seed(self.random_seed)
+        self.mnist_train, self.mnist_val = random_split(
+            mnist_full, [mnist_train_size, mnist_val_size], generator=generator
+        )
+
+    def prepare_data(self, *args, **kwargs):
+        pass
+
+
 if __name__ == "__main__":
     dm = MNISTDataModule(DataConfig.EXTERNAL_PATH)
+    adv_dm = AdversarialMNISTDataModule(DataConfig.ADVERSARIAL_PATH)
+    adv_dm.setup()
     # dm.prepare_data()
     dm.setup()
     print("-")
