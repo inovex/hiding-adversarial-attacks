@@ -2,6 +2,7 @@ import gzip
 import os
 import shutil
 from io import BytesIO
+from math import ceil
 from typing import Any, Optional
 from urllib.request import urlopen
 from zipfile import ZipFile
@@ -37,13 +38,17 @@ class MNISTDataModule(pl.LightningDataModule):
             self.data_dir, train=False, transform=transforms.ToTensor()
         )
         mnist_full = MNIST(self.data_dir, train=True, transform=transforms.ToTensor())
-        mnist_full_size = len(mnist_full)
-        mnist_train_size = int(mnist_full_size * (1 - self.val_split))
-        mnist_val_size = int(mnist_full_size * self.val_split)
+        mnist_train_size, mnist_val_size = self._get_train_val_split_sizes(mnist_full)
         generator = torch.Generator().manual_seed(self.random_seed)
         self.mnist_train, self.mnist_val = random_split(
             mnist_full, [mnist_train_size, mnist_val_size], generator=generator
         )
+
+    def _get_train_val_split_sizes(self, mnist_full):
+        mnist_full_size = len(mnist_full)
+        mnist_train_size = ceil(mnist_full_size * (1 - self.val_split))
+        mnist_val_size = mnist_full_size - mnist_train_size
+        return mnist_train_size, mnist_val_size
 
     def transfer_batch_to_device(self, batch: Any, device: torch.device) -> Any:
         return batch.to(device)
