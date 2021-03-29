@@ -29,8 +29,7 @@ def setup_logger(logger, args):
     logger.setLevel(AdversarialAttackConfig.LOG_LEVEL)
 
 
-def log_attack_results(logger, attack_results, set_size, attacked_classes):
-    logger.info(f"\t\t Attacked classes: {attacked_classes}")
+def log_attack_results(logger, attack_results, set_size):
     logger.info(f"\t\t Total set size: {set_size}")
     logger.info(f"\t\t Attacked image count: {attack_results.attacked_count}")
     logger.info(f"\t\t Adversarial count: {attack_results.adv_count}")
@@ -44,9 +43,10 @@ def log_attack_results(logger, attack_results, set_size, attacked_classes):
     )
 
 
-def log_attack_info(logger, attack, epsilons, data_set, checkpoint):
+def log_attack_info(logger, attack, epsilons, data_set, checkpoint, attacked_classes):
     logger.info("******* Attack info *******")
     logger.info(f"Attack type: {attack}")
     logger.info(f"Epsilon(s): {epsilons}")
     logger.info(f"Data set: {data_set}")
     logger.info(f"Model checkpoint: '{checkpoint}'")
+    logger.info(f"Attacked classes: {attacked_classes}")

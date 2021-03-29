@@ -201,7 +201,14 @@ def run():
         device=device,
     )
 
-    log_attack_info(LOGGER, args.attack, args.epsilons, "MNIST", args.checkpoint)
+    log_attack_info(
+        LOGGER,
+        args.attack,
+        args.epsilons,
+        "MNIST",
+        args.checkpoint,
+        args.attacked_classes,
+    )
 
     # Run adversarial attack
     attack = get_attack(args.attack)
@@ -243,12 +250,9 @@ def run():
             LOGGER,
             train_attack_results,
             len(train_loader.dataset),
-            args.attacked_classes,
         )
         LOGGER.info("\t Test: ")
-        log_attack_results(
-            LOGGER, test_attack_results, len(test_loader.dataset), args.attacked_classes
-        )
+        log_attack_results(LOGGER, test_attack_results, len(test_loader.dataset))
 
 
 if __name__ == "__main__":
