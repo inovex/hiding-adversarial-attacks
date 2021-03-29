@@ -19,7 +19,7 @@ from hiding_adversarial_attacks.attack.foolbox_utils import (
     filter_correctly_classified,
     get_attack,
 )
-from hiding_adversarial_attacks.attack.logging import (
+from hiding_adversarial_attacks.attack.logging_utils import (
     log_attack_info,
     log_attack_results,
     setup_logger,
