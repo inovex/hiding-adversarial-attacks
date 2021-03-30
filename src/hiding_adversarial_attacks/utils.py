@@ -26,9 +26,16 @@ class SplitArgs(argparse.Action):
         setattr(namespace, self.dest, values.split(","))
 
 
-def display_tensor_as_image(tensor: torch.Tensor):
-    plt.imshow(tensor.numpy()[0], cmap="gray")
+def display_tensor_as_image(tensor: torch.Tensor, cmap: str = "gray"):
+    plt.imshow(tensor.squeeze().numpy(), cmap=cmap)
     plt.show()
+
+
+def display_adversarial_difference_image(
+    adversarial: torch.Tensor, original: torch.Tensor, cmap: str = "gray"
+):
+    adv_difference = torch.abs(adversarial - original)
+    display_tensor_as_image(adv_difference, cmap=cmap)
 
 
 def inverse_normalize(tensor, mean, std):
@@ -39,3 +46,17 @@ def inverse_normalize(tensor, mean, std):
 
 def to_pil_image(tensor, mode="L"):
     return ToPILImage(mode=mode)(tensor)
+
+
+if __name__ == "__main__":
+    orig = torch.load(
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+        "preprocessed/adversarial/MNIST/DeepFool/epsilon_0.225/"
+        "class_1/training_orig.pt"
+    )
+    adv = torch.load(
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+        "preprocessed/adversarial/MNIST/DeepFool/epsilon_0.225/"
+        "class_1/training_adv.pt"
+    )
+    display_adversarial_difference_image(adv[0][0], orig[0][0])
