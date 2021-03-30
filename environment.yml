@@ -22,6 +22,8 @@ dependencies:
   - pytorch-lightning
   - torchvision
   - cudatoolkit==11.1
+  # XAI
+  - captum
   # OTHER TOOLS
   - optuna
   - mlflow
