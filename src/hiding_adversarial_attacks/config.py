@@ -41,3 +41,14 @@ class AdversarialAttackConfig:
     # Logs
     LOG_LEVEL = logging.DEBUG
     LOGS_PATH = os.path.join(ROOT_DIR, "logs/attacks")
+
+
+class XAIConfig:
+    DEEP_LIFT = "DeepLift"
+    LAYER_GRAD_CAM = "LayerGradCam"
+
+
+class DeepLiftBaselineConfig:
+    ZERO = "zero"
+    BLUR = "blur"
+    LOCAL_MEAN = "local_mean"
