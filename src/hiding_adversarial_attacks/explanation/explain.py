@@ -45,7 +45,7 @@ if __name__ == "__main__":
         "/preprocessed/adversarial/MNIST/DeepFool/epsilon_0.225/"
         "class_1/test_orig.pt"
     )
-    baseline_name = DeepLiftBaselineConfig.ZERO
+    baseline_name = DeepLiftBaselineConfig.LOCAL_MEAN
 
     args = parse_args()
 
@@ -59,9 +59,7 @@ if __name__ == "__main__":
     model = lit_model.to(device)
 
     # Explainer
-    deeplift_explainer = DeepLiftExplainer(
-        model, baseline_name=baseline_name, device=device
-    )
+    deeplift_explainer = DeepLiftExplainer(model, baseline_name=baseline_name)
 
     # Load images and labels
     orig_img, orig_labels = torch.load(originals)
