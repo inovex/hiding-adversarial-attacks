@@ -3,6 +3,7 @@ from functools import wraps
 from time import time
 
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from torchvision.transforms import ToPILImage
 
@@ -36,6 +37,10 @@ def display_adversarial_difference_image(
 ):
     adv_difference = torch.abs(adversarial - original)
     display_tensor_as_image(adv_difference, cmap=cmap)
+
+
+def tensor_to_pil_numpy(rgb_tensor):
+    return np.transpose(rgb_tensor.cpu().detach().numpy(), (0, 2, 3, 1))
 
 
 def inverse_normalize(tensor, mean, std):
