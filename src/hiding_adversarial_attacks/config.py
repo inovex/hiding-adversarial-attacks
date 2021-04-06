@@ -31,6 +31,10 @@ class MNISTConfig:
     TEST_ACCURACY_EPOCH = "test_acc_epoch"
 
 
+class FashionMNISTConfig(MNISTConfig):
+    LOGS_PATH = os.path.join(ROOT_DIR, "logs/FashionMNIST")
+
+
 class AdversarialAttackConfig:
     FGSM = "FGSM"
     DEEP_FOOL = "DeepFool"
