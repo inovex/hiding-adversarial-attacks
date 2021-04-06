@@ -11,7 +11,7 @@ import pytorch_lightning as pl
 import torch
 from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import MNIST
-from torchvision.datasets.mnist import read_image_file, read_label_file
+from torchvision.datasets.mnist import FashionMNIST, read_image_file, read_label_file
 from torchvision.transforms import transforms
 
 from hiding_adversarial_attacks.config import AdversarialAttackConfig, DataConfig
@@ -151,26 +151,6 @@ class MNISTDataModule(pl.LightningDataModule):
         return DataLoader(self.mnist_test, batch_size=self.batch_size)
 
 
-def init_mnist_data_module(
-    batch_size: int,
-    val_split: float,
-    download_mnist: bool,
-    seed: int,
-    attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.ALL_CLASSES,
-) -> MNISTDataModule:
-    data_module = MNISTDataModule(
-        DataConfig.EXTERNAL_PATH,
-        batch_size=batch_size,
-        val_split=val_split,
-        random_seed=seed,
-        attacked_classes=attacked_classes,
-    )
-    if download_mnist:
-        data_module.prepare_data()
-    data_module.setup()
-    return data_module
-
-
 class AdversarialMNISTDataModule(MNISTDataModule):
     def __init__(
         self,
@@ -198,12 +178,89 @@ class AdversarialMNISTDataModule(MNISTDataModule):
         pass
 
 
+class FashionMNISTDataModule(MNISTDataModule):
+    def __init__(
+        self,
+        data_dir: str,
+        batch_size: int = 32,
+        val_split: float = 0.1,
+        random_seed: int = 42,
+        attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.ALL_CLASSES,
+    ):
+        super().__init__(data_dir, batch_size, val_split, random_seed, attacked_classes)
+
+    def setup(self, stage: Optional[str] = None, download: bool = False):
+        mnist_test = FashionMNIST(
+            self.data_dir,
+            train=False,
+            transform=transforms.ToTensor(),
+            download=download,
+        )
+        mnist_full = FashionMNIST(
+            self.data_dir,
+            train=True,
+            transform=transforms.ToTensor(),
+            download=download,
+        )
+        if self.attacked_classes is not AdversarialAttackConfig.ALL_CLASSES:
+            mnist_full, mnist_test = self._filter_splits(
+                mnist_full, mnist_test, self.attacked_classes
+            )
+        self.mnist_test = mnist_test
+        mnist_train_size, mnist_val_size = self._get_train_val_split_sizes(mnist_full)
+        generator = torch.Generator().manual_seed(self.random_seed)
+        self.mnist_train, self.mnist_val = random_split(
+            mnist_full, [mnist_train_size, mnist_val_size], generator=generator
+        )
+
+    def prepare_data(self, *args, **kwargs):
+        pass
+
+
+def init_mnist_data_module(
+    batch_size: int,
+    val_split: float,
+    download_mnist: bool,
+    seed: int,
+    attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.ALL_CLASSES,
+) -> MNISTDataModule:
+    data_module = MNISTDataModule(
+        DataConfig.EXTERNAL_PATH,
+        batch_size=batch_size,
+        val_split=val_split,
+        random_seed=seed,
+        attacked_classes=attacked_classes,
+    )
+    if download_mnist:
+        data_module.prepare_data()
+    data_module.setup()
+    return data_module
+
+
+def init_fashion_mnist_data_module(
+    batch_size: int,
+    val_split: float,
+    download_mnist: bool,
+    seed: int,
+    attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.ALL_CLASSES,
+) -> FashionMNISTDataModule:
+    data_module = FashionMNISTDataModule(
+        DataConfig.EXTERNAL_PATH,
+        batch_size=batch_size,
+        val_split=val_split,
+        random_seed=seed,
+        attacked_classes=attacked_classes,
+    )
+    data_module.setup(download=download_mnist)
+    return data_module
+
+
 if __name__ == "__main__":
-    dm = MNISTDataModule(DataConfig.EXTERNAL_PATH)
+    dm = FashionMNISTDataModule(DataConfig.EXTERNAL_PATH)
     adv_dm = AdversarialMNISTDataModule(
         os.path.join(DataConfig.ADVERSARIAL_PATH, "MNIST/DeepFool/epsilon_0-225")
     )
     adv_dm.setup()
-    # dm.prepare_data()
-    dm.setup()
+    dm.prepare_data()
+    dm.setup(download=True)
     print("-")
