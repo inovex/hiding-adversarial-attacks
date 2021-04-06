@@ -7,6 +7,9 @@ import numpy as np
 import torch
 from torchvision.transforms import ToPILImage
 
+from hiding_adversarial_attacks.config import DataConfig
+from hiding_adversarial_attacks.mnist.mnist_net import MNISTNet
+
 toPilImage = ToPILImage()
 
 
@@ -20,6 +23,13 @@ def timeit(func):
         return result
 
     return wrap
+
+
+def get_model(args: argparse.Namespace):
+    if args.data_set == DataConfig.MNIST or args.data_set == DataConfig.FASHION_MNIST:
+        return MNISTNet(args)
+    else:
+        raise SystemExit(f"Unknown data set specified: {args.data_set}. Exiting.")
 
 
 class SplitArgs(argparse.Action):

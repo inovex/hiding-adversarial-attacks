@@ -11,6 +11,7 @@ from hiding_adversarial_attacks.mnist.data_modules import (
     init_mnist_data_module,
 )
 from hiding_adversarial_attacks.mnist.mnist_net import MNISTNet
+from hiding_adversarial_attacks.utils import get_model
 
 
 def parse_mnist_args():
@@ -72,13 +73,6 @@ def parse_mnist_args():
             parser.error("--logs-dir needs to be a valid directory path.")
         args.logs_dir = os.path.join(args.logs_dir, args.data_set)
     return args
-
-
-def get_model(args: argparse.Namespace):
-    if args.data_set == DataConfig.MNIST or args.data_set == DataConfig.FASHION_MNIST:
-        return MNISTNet(args)
-    else:
-        raise SystemExit(f"Unknown data set specified: {args.data_set}. Exiting.")
 
 
 def train(data_module, args):
