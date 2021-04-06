@@ -24,7 +24,9 @@ dependencies:
   - cudatoolkit==11.1
   # XAI
   - captum
-  # OTHER TOOLS
+  # CONFIG MANAGEMENT
+  - hydra-core
+  # EXPERIMENT TRACKING & HYPERPARAMETER OPTIMIZATION
   - optuna
   - mlflow
   # CODE FORMATTERS & TYPE CHECKING
