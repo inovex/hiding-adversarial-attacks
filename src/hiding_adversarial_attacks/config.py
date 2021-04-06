@@ -10,12 +10,13 @@ class DataConfig:
     PREPROCESSED_PATH = os.path.join(ROOT_DIR, "data/preprocessed")
     ADVERSARIAL_PATH = os.path.join(ROOT_DIR, "data/preprocessed/adversarial")
 
+    MNIST = "MNIST"
+    FASHION_MNIST = "FashionMNIST"
+
 
 class MNISTConfig:
     BOUNDS = (0, 1)
     PREPROCESSING = dict(mean=[0.1307], std=[0.3081], axis=-1)
-    LOGS_PATH = os.path.join(ROOT_DIR, "logs/MNIST")
-    LOG_LEVEL = logging.INFO
     IMAGE_WIDTH = 28
     IMAGE_HEIGHT = 28
 
@@ -31,8 +32,9 @@ class MNISTConfig:
     TEST_ACCURACY_EPOCH = "test_acc_epoch"
 
 
-class FashionMNISTConfig(MNISTConfig):
-    LOGS_PATH = os.path.join(ROOT_DIR, "logs/FashionMNIST")
+class LoggingConfig:
+    LOGS_PATH = os.path.join(ROOT_DIR, "logs")
+    LOG_LEVEL = logging.INFO
 
 
 class AdversarialAttackConfig:

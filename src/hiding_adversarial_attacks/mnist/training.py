@@ -1,11 +1,15 @@
 import argparse
+import os
 
 from pytorch_lightning import Trainer
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import ModelCheckpoint
 
-from hiding_adversarial_attacks.config import MNISTConfig
-from hiding_adversarial_attacks.mnist.data_modules import init_mnist_data_module
+from hiding_adversarial_attacks.config import DataConfig, LoggingConfig, MNISTConfig
+from hiding_adversarial_attacks.mnist.data_modules import (
+    init_fashion_mnist_data_module,
+    init_mnist_data_module,
+)
 from hiding_adversarial_attacks.mnist.mnist_net import MNISTNet
 
 
@@ -22,18 +26,28 @@ def parse_mnist_args():
         "--seed", type=int, default=42, metavar="S", help="random seed (default: 42)"
     )
     parser.add_argument(
-        "--val_split", type=float, default=0.1, help="validation split (default: 0.1)"
+        "--val-split", type=float, default=0.1, help="validation split (default: 0.1)"
+    )
+    parser.add_argument(
+        "--data-set",
+        type=str,
+        default=DataConfig.MNIST,
+        const=DataConfig.MNIST,
+        nargs="?",
+        choices=[DataConfig.MNIST, DataConfig.FASHION_MNIST],
+        help="data set to use (default: 'MNIST')",
     )
     parser.add_argument(
         "--logs-dir",
-        default=MNISTConfig.LOGS_PATH,
-        help="path to store MNIST training logs and checkpoints to",
+        default=LoggingConfig.LOGS_PATH,
+        help="base path to store classifier training logs and checkpoints to."
+        " The final path is '<logs-dir>/<data-set>'.",
     )
     parser.add_argument(
-        "--download-mnist",
+        "--download-data",
         action="store_true",
         default=False,
-        help="download & process MNIST data set",
+        help="whether the data set should be downloaded",
     )
     parser.add_argument(
         "--test",
@@ -53,7 +67,18 @@ def parse_mnist_args():
         parser.error("--test-checkpoint can only be set when --test flag is used.")
     if args.test and args.test_checkpoint is None:
         parser.error("--test-checkpoint was empty while --test was specified.")
+    if args.logs_dir is not None:
+        if not os.path.isdir(args.logs_dir):
+            parser.error("--logs-dir needs to be a valid directory path.")
+        args.logs_dir = os.path.join(args.logs_dir, args.data_set)
     return args
+
+
+def get_model(args: argparse.Namespace):
+    if args.data_set == DataConfig.MNIST or args.data_set == DataConfig.FASHION_MNIST:
+        return MNISTNet(args)
+    else:
+        raise SystemExit(f"Unknown data set specified: {args.data_set}. Exiting.")
 
 
 def train(data_module, args):
@@ -62,7 +87,7 @@ def train(data_module, args):
 
     checkpoint_callback = ModelCheckpoint(
         monitor=MNISTConfig.VAL_LOSS,
-        filename="mnist-{epoch:02d}-{val_loss:.2f}",
+        filename="model-{epoch:02d}-{val_loss:.2f}",
         save_top_k=3,
         mode="min",
     )
@@ -72,9 +97,9 @@ def train(data_module, args):
         args, logger=tb_logger, callbacks=[checkpoint_callback]
     )
 
-    mnist_model = MNISTNet(args)
+    model = get_model(args)
 
-    trainer.fit(mnist_model, train_loader, validation_loader)
+    trainer.fit(model, train_loader, validation_loader)
 
 
 def test(data_module, args):
@@ -83,17 +108,25 @@ def test(data_module, args):
     tb_logger = pl_loggers.TensorBoardLogger(args.logs_dir)
     trainer = Trainer.from_argparse_args(args, logger=tb_logger)
 
-    mnist_model = MNISTNet(args).load_from_checkpoint(args.test_checkpoint)
+    model = get_model(args).load_from_checkpoint(args.test_checkpoint)
 
-    trainer.test(mnist_model, test_loader, ckpt_path="best")
+    trainer.test(model, test_loader, ckpt_path="best")
 
 
 def run():
     args = parse_mnist_args()
 
-    data_module = init_mnist_data_module(
-        args.batch_size, args.val_split, args.download_mnist, args.seed
-    )
+    if args.data_set == DataConfig.MNIST:
+        data_module = init_mnist_data_module(
+            args.batch_size, args.val_split, args.download_data, args.seed
+        )
+    elif args.data_set == DataConfig.FASHION_MNIST:
+        data_module = init_fashion_mnist_data_module(
+            args.batch_size, args.val_split, args.download_data, args.seed
+        )
+    else:
+        raise SystemExit(f"Unknown data set specified: {args.data_set}. Exiting.")
+
     if args.test:
         test(data_module, args)
     else:

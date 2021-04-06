@@ -220,7 +220,7 @@ class FashionMNISTDataModule(MNISTDataModule):
 def init_mnist_data_module(
     batch_size: int,
     val_split: float,
-    download_mnist: bool,
+    download: bool,
     seed: int,
     attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.ALL_CLASSES,
 ) -> MNISTDataModule:
@@ -231,7 +231,7 @@ def init_mnist_data_module(
         random_seed=seed,
         attacked_classes=attacked_classes,
     )
-    if download_mnist:
+    if download:
         data_module.prepare_data()
     data_module.setup()
     return data_module
@@ -240,7 +240,7 @@ def init_mnist_data_module(
 def init_fashion_mnist_data_module(
     batch_size: int,
     val_split: float,
-    download_mnist: bool,
+    download: bool,
     seed: int,
     attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.ALL_CLASSES,
 ) -> FashionMNISTDataModule:
@@ -251,7 +251,7 @@ def init_fashion_mnist_data_module(
         random_seed=seed,
         attacked_classes=attacked_classes,
     )
-    data_module.setup(download=download_mnist)
+    data_module.setup(download=download)
     return data_module
 
 
