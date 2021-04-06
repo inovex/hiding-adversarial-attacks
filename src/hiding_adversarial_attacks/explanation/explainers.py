@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 import pytorch_lightning as pl
 import torch
 import torchvision
@@ -18,8 +20,9 @@ class AbstractExplainer:
         except AttributeError:
             raise NotImplementedError("No XAI algorithm specified.")
 
-    def explain(self, image: torch.Tensor, target_label: torch.Tensor, **kwargs):
-        return self.xai_algorithm.attribute(image, target=target_label, **kwargs)
+    @abstractmethod
+    def explain(self, image: torch.Tensor, target: torch.Tensor, **kwargs):
+        pass
 
 
 class DeepLiftExplainer(AbstractExplainer):
@@ -36,14 +39,9 @@ class DeepLiftExplainer(AbstractExplainer):
         self._baseline_name = baseline_name
         self._baseline = self._baseline_wrapper()
 
-    def explain(
-        self,
-        image: torch.Tensor,
-        target_label: torch.Tensor,
-        **kwargs,
-    ):
+    def explain(self, image: torch.Tensor, target: torch.Tensor, **kwargs):
         return self.xai_algorithm.attribute(
-            image, target=target_label, baselines=self._baseline(image), **kwargs
+            image, target=target, baselines=self._baseline(image), **kwargs
         )
 
     def _baseline_wrapper(self):
