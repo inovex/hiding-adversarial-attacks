@@ -1,6 +1,7 @@
 import logging
 import os
 from argparse import ArgumentParser, Namespace
+from datetime import datetime
 from typing import List, Sequence, Union
 
 import eagerpy as ep
@@ -27,9 +28,12 @@ from hiding_adversarial_attacks.attack.logging_utils import (
 from hiding_adversarial_attacks.config import (
     AdversarialAttackConfig,
     DataConfig,
-    MNISTConfig,
+    LoggingConfig,
 )
-from hiding_adversarial_attacks.mnist.data_modules import init_mnist_data_module
+from hiding_adversarial_attacks.mnist.data_modules import (
+    init_fashion_mnist_data_module,
+    init_mnist_data_module,
+)
 from hiding_adversarial_attacks.mnist.mnist_net import MNISTNet
 from hiding_adversarial_attacks.utils import SplitArgs
 
@@ -58,9 +62,25 @@ def parse_attack_args() -> Namespace:
         "--no-cuda", action="store_true", default=False, help="disables CUDA training"
     )
     parser.add_argument(
+        "--data-set",
+        type=str,
+        default=DataConfig.MNIST,
+        const=DataConfig.MNIST,
+        nargs="?",
+        choices=[DataConfig.MNIST, DataConfig.FASHION_MNIST],
+        help="data set to use (default: 'MNIST')",
+    )
+    parser.add_argument(
         "--target-dir",
-        default=os.path.join(DataConfig.ADVERSARIAL_PATH, "MNIST"),
-        help="path to store adversarially attacked MNIST data to",
+        default=DataConfig.ADVERSARIAL_PATH,
+        help="path to store adversarially attacked data set to."
+        " The final path is '<target-dir>/<data-set>'.",
+    )
+    parser.add_argument(
+        "--logs-dir",
+        default=LoggingConfig.LOGS_PATH,
+        help="base path to store adversarial attack logs to."
+        " The final path is '<logs-dir>/attacks/<data-set>'.",
     )
     parser.add_argument(
         "--attack",
@@ -98,6 +118,14 @@ def parse_attack_args() -> Namespace:
             )
         else:
             args.attacked_classes = tuple(int(num) for num in args.attacked_classes)
+    if args.target_dir is not None:
+        if not os.path.isdir(args.target_dir):
+            parser.error("--target-dir needs to be a valid directory path.")
+        args.target_dir = os.path.join(args.target_dir, args.data_set)
+    if args.logs_dir is not None:
+        if not os.path.isdir(args.logs_dir):
+            parser.error("--logs-dir needs to be a valid directory path.")
+        args.logs_dir = os.path.join(args.logs_dir, "attacks", args.data_set)
     return args
 
 
@@ -175,40 +203,52 @@ def run():
     args = parse_attack_args()
 
     # Logging
-    setup_logger(LOGGER, args)
+    os.makedirs(args.logs_dir, exist_ok=True)
+    log_file_path = os.path.join(
+        args.logs_dir,
+        f"{int(datetime.now().timestamp())}-{args.data_set}-"
+        f"{args.attack}-{args.epsilons}.log",
+    )
+    setup_logger(LOGGER, log_file_path, log_level=LoggingConfig.LOG_LEVEL)
 
     # GPU or CPU
     device = torch.device(
         "cuda" if (torch.cuda.is_available() and not args.no_cuda) else "cpu"
     )
 
-    # Setup MNIST data module and loaders
-    data_module = init_mnist_data_module(
-        batch_size=args.batch_size,
-        val_split=0.0,
-        download_mnist=False,
-        seed=args.seed,
-        attacked_classes=args.attacked_classes,
-    )
+    # Setup data module depending on data set
+    if args.data_set == DataConfig.MNIST:
+        data_module = init_mnist_data_module(
+            batch_size=args.batch_size,
+            val_split=0.0,
+            download=False,
+            seed=args.seed,
+            attacked_classes=args.attacked_classes,
+        )
+    elif args.data_set == DataConfig.FASHION_MNIST:
+        data_module = init_fashion_mnist_data_module(
+            batch_size=args.batch_size,
+            val_split=0.0,
+            download=False,
+            seed=args.seed,
+            attacked_classes=args.attacked_classes,
+        )
+    else:
+        raise SystemExit(f"Unknown data set specified: {args.data_set}. Exiting.")
+
+    # Data loaders
     train_loader = data_module.train_dataloader(shuffle=False)
     test_loader = data_module.test_dataloader()
 
-    # Load model
-    mnist_model = MNISTNet(args).load_from_checkpoint(args.checkpoint)
-    mnist_model.eval()
-
-    foolbox_model = fb.PyTorchModel(
-        mnist_model,
-        bounds=MNISTConfig.BOUNDS,
-        preprocessing=MNISTConfig.PREPROCESSING,
-        device=device,
-    )
+    # Load foolbox wrapped model
+    if args.data_set == DataConfig.MNIST or args.data_set == DataConfig.FASHION_MNIST:
+        foolbox_model = MNISTNet.as_foolbox_wrap(args, device)
 
     log_attack_info(
         LOGGER,
         args.attack,
         args.epsilons,
-        "MNIST",
+        args.data_set,
         args.checkpoint,
         args.attacked_classes,
     )

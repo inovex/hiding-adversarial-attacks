@@ -1,5 +1,8 @@
 from __future__ import print_function
 
+import os
+
+import foolbox as fb
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
@@ -36,6 +39,20 @@ class MNISTNet(pl.LightningModule):
         self.dropout2 = nn.Dropout(0.5)
         self.fc1 = nn.Linear(9216, 128)
         self.fc2 = nn.Linear(128, 10)
+
+    @classmethod
+    def as_foolbox_wrap(cls, hparams, device):
+        assert hparams.checkpoint is not None
+        assert os.path.isfile(hparams.checkpoint)
+
+        model = cls(hparams).load_from_checkpoint(hparams.checkpoint)
+        model.eval()
+        return fb.PyTorchModel(
+            model,
+            bounds=MNISTConfig.BOUNDS,
+            preprocessing=MNISTConfig.PREPROCESSING,
+            device=device,
+        )
 
     @staticmethod
     def add_model_specific_args(parent_parser):

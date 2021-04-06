@@ -1,32 +1,28 @@
 import logging
 import os
 import sys
-from datetime import datetime
 
-from hiding_adversarial_attacks.config import AdversarialAttackConfig
+from hiding_adversarial_attacks.config import LoggingConfig
 
 
-def setup_logger(logger, args):
-    logs_path = os.path.join(AdversarialAttackConfig.LOGS_PATH, "MNIST")
-    os.makedirs(logs_path, exist_ok=True)
-    timestamp_seconds = int(datetime.now().timestamp())
-    log_file = f"{str(timestamp_seconds)}-mnist-{args.attack}-{args.epsilons}.log"
-
+def setup_logger(
+    logger, log_file_path: os.path, log_level: int = LoggingConfig.LOG_LEVEL
+):
     formatter = logging.Formatter(
         fmt="%(asctime)s - %(name)s - %(levelname)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M",
     )
-    fh = logging.FileHandler(os.path.join(logs_path, log_file))
-    fh.setLevel(AdversarialAttackConfig.LOG_LEVEL)
+    fh = logging.FileHandler(log_file_path)
+    fh.setLevel(log_level)
     fh.setFormatter(formatter)
     logger.addHandler(fh)
 
     ch = logging.StreamHandler(stream=sys.stdout)
     ch.setFormatter(formatter)
-    ch.setLevel(AdversarialAttackConfig.LOG_LEVEL)
+    ch.setLevel(log_level)
     logger.addHandler(ch)
 
-    logger.setLevel(AdversarialAttackConfig.LOG_LEVEL)
+    logger.setLevel(log_level)
 
 
 def log_attack_results(logger, attack_results, set_size):
