@@ -14,7 +14,13 @@ from torchvision.datasets import MNIST
 from torchvision.datasets.mnist import FashionMNIST, read_image_file, read_label_file
 from torchvision.transforms import transforms
 
-from hiding_adversarial_attacks.config import AdversarialAttackConfig, DataConfig
+from hiding_adversarial_attacks.conf.attack.adversarial_attack_config import (
+    AdversarialAttackConfig,
+)
+from hiding_adversarial_attacks.conf.data_set.data_set_config import (
+    DataSetConfig,
+    DataSetNames,
+)
 from hiding_adversarial_attacks.mnist.adversarial_mnist import AdversarialMNIST
 
 MNIST_ZIP_URL = "https://data.deepai.org/mnist.zip"
@@ -27,7 +33,7 @@ class MNISTDataModule(pl.LightningDataModule):
         batch_size: int = 32,
         val_split: float = 0.1,
         random_seed: int = 42,
-        attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.ALL_CLASSES,
+        attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.all_classes,
     ):
         super().__init__()
         self.data_dir = data_dir
@@ -39,16 +45,21 @@ class MNISTDataModule(pl.LightningDataModule):
     def setup(self, stage: Optional[str] = None):
         mnist_test = MNIST(self.data_dir, train=False, transform=transforms.ToTensor())
         mnist_full = MNIST(self.data_dir, train=True, transform=transforms.ToTensor())
-        if self.attacked_classes is not AdversarialAttackConfig.ALL_CLASSES:
+        self.mnist_train, self.mnist_val, self.mnist_test = self._create_data_splits(
+            mnist_full, mnist_test
+        )
+
+    def _create_data_splits(self, mnist_full, mnist_test):
+        if self.attacked_classes is not AdversarialAttackConfig.all_classes:
             mnist_full, mnist_test = self._filter_splits(
                 mnist_full, mnist_test, self.attacked_classes
             )
-        self.mnist_test = mnist_test
         mnist_train_size, mnist_val_size = self._get_train_val_split_sizes(mnist_full)
         generator = torch.Generator().manual_seed(self.random_seed)
-        self.mnist_train, self.mnist_val = random_split(
+        mnist_train, mnist_val = random_split(
             mnist_full, [mnist_train_size, mnist_val_size], generator=generator
         )
+        return mnist_train, mnist_val, mnist_test
 
     def _filter_splits(
         self,
@@ -185,7 +196,7 @@ class FashionMNISTDataModule(MNISTDataModule):
         batch_size: int = 32,
         val_split: float = 0.1,
         random_seed: int = 42,
-        attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.ALL_CLASSES,
+        attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.all_classes,
     ):
         super().__init__(data_dir, batch_size, val_split, random_seed, attacked_classes)
 
@@ -202,15 +213,8 @@ class FashionMNISTDataModule(MNISTDataModule):
             transform=transforms.ToTensor(),
             download=download,
         )
-        if self.attacked_classes is not AdversarialAttackConfig.ALL_CLASSES:
-            mnist_full, mnist_test = self._filter_splits(
-                mnist_full, mnist_test, self.attacked_classes
-            )
-        self.mnist_test = mnist_test
-        mnist_train_size, mnist_val_size = self._get_train_val_split_sizes(mnist_full)
-        generator = torch.Generator().manual_seed(self.random_seed)
-        self.mnist_train, self.mnist_val = random_split(
-            mnist_full, [mnist_train_size, mnist_val_size], generator=generator
+        self.mnist_train, self.mnist_val, self.mnist_test = self._create_data_splits(
+            mnist_full, mnist_test
         )
 
     def prepare_data(self, *args, **kwargs):
@@ -222,10 +226,10 @@ def init_mnist_data_module(
     val_split: float,
     download: bool,
     seed: int,
-    attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.ALL_CLASSES,
+    attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.all_classes,
 ) -> MNISTDataModule:
     data_module = MNISTDataModule(
-        DataConfig.EXTERNAL_PATH,
+        DataSetConfig.external_path,
         batch_size=batch_size,
         val_split=val_split,
         random_seed=seed,
@@ -242,10 +246,10 @@ def init_fashion_mnist_data_module(
     val_split: float,
     download: bool,
     seed: int,
-    attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.ALL_CLASSES,
+    attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.all_classes,
 ) -> FashionMNISTDataModule:
     data_module = FashionMNISTDataModule(
-        DataConfig.EXTERNAL_PATH,
+        DataSetConfig.external_path,
         batch_size=batch_size,
         val_split=val_split,
         random_seed=seed,
@@ -255,12 +259,27 @@ def init_fashion_mnist_data_module(
     return data_module
 
 
+def get_data_module(
+    data_set: str, batch_size: int, val_split: float, download_data: bool, seed: int
+):
+    if data_set == DataSetNames.MNIST:
+        data_module = init_mnist_data_module(batch_size, val_split, download_data, seed)
+    elif data_set == DataSetNames.FASHION_MNIST:
+        data_module = init_fashion_mnist_data_module(
+            batch_size, val_split, download_data, seed
+        )
+    else:
+        raise SystemExit(f"Unknown data set specified: {data_set}. Exiting.")
+    return data_module
+
+
 if __name__ == "__main__":
-    dm = FashionMNISTDataModule(DataConfig.EXTERNAL_PATH)
+    dm = FashionMNISTDataModule(DataSetConfig.external_path)
     adv_dm = AdversarialMNISTDataModule(
-        os.path.join(DataConfig.ADVERSARIAL_PATH, "MNIST/DeepFool/epsilon_0-225")
+        os.path.join(
+            DataSetConfig.adversarial_path, "MNIST/DeepFool/epsilon_0.225/class_all"
+        )
     )
     adv_dm.setup()
-    dm.prepare_data()
     dm.setup(download=True)
     print("-")

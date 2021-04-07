@@ -10,8 +10,6 @@ import torch.nn.functional as F
 import torchmetrics
 from torch.optim.lr_scheduler import StepLR
 
-from hiding_adversarial_attacks.config import MNISTConfig
-
 
 class MNISTNet(pl.LightningModule):
     """
@@ -23,8 +21,9 @@ class MNISTNet(pl.LightningModule):
     def __init__(self, hparams):
         super(MNISTNet, self).__init__()
         self.hparams = hparams
-        self.lr = hparams.lr
-        self.gamma = hparams.gamma
+        self.lr = hparams.classifier.lr
+        self.gamma = hparams.classifier.gamma
+        self.config = hparams.classifier
         self.save_hyperparameters()
 
         # metrics
@@ -49,8 +48,8 @@ class MNISTNet(pl.LightningModule):
         model.eval()
         return fb.PyTorchModel(
             model,
-            bounds=MNISTConfig.BOUNDS,
-            preprocessing=MNISTConfig.PREPROCESSING,
+            bounds=model.config.bounds,
+            preprocessing=model.config.preprocessing,
             device=device,
         )
 
@@ -101,36 +100,36 @@ class MNISTNet(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         gt_label, loss, pred_label = self._predict(batch)
-        self.log(MNISTConfig.TRAIN_LOSS, loss, on_step=True, logger=True)
+        self.log(self.config.train_loss, loss, on_step=True, logger=True)
         self.log(
-            MNISTConfig.TRAIN_ACCURACY,
+            self.config.train_accuracy,
             self.train_accuracy(torch.exp(pred_label), gt_label),
         )
         return loss
 
     def validation_step(self, batch, batch_idx):
         gt_label, loss, pred_label = self._predict(batch)
-        self.log(MNISTConfig.VAL_LOSS, loss, logger=True)
+        self.log(self.config.val_loss, loss, logger=True)
         self.log(
-            MNISTConfig.VAL_ACCURACY,
+            self.config.val_accuracy,
             self.validation_accuracy(torch.exp(pred_label), gt_label),
         )
         return loss
 
     def test_step(self, batch, batch_idx):
         gt_label, loss, pred_label = self._predict(batch)
-        self.log(MNISTConfig.TEST_LOSS, loss, logger=True)
+        self.log(self.config.test_loss, loss, logger=True)
         self.log(
-            MNISTConfig.TEST_ACCURACY,
+            self.config.test_accuracy,
             self.test_accuracy(torch.exp(pred_label), gt_label),
         )
         return loss
 
     def training_epoch_end(self, outs):
-        self.log(MNISTConfig.TRAIN_ACCURACY_EPOCH, self.train_accuracy.compute())
+        self.log(self.config.train_accuracy_epoch, self.train_accuracy.compute())
 
     def validation_epoch_end(self, outs):
-        self.log(MNISTConfig.VAL_ACCURACY_EPOCH, self.validation_accuracy.compute())
+        self.log(self.config.val_accuracy_epoch, self.validation_accuracy.compute())
 
     def test_epoch_end(self, outs):
-        self.log(MNISTConfig.TEST_ACCURACY_EPOCH, self.test_accuracy.compute())
+        self.log(self.config.test_accuracy_epoch, self.test_accuracy.compute())

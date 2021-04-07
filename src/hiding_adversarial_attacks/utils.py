@@ -1,4 +1,5 @@
 import argparse
+import os
 from functools import wraps
 from time import time
 
@@ -7,10 +8,12 @@ import numpy as np
 import torch
 from torchvision.transforms import ToPILImage
 
-from hiding_adversarial_attacks.config import DataConfig
+from hiding_adversarial_attacks.conf.data_set.data_set_config import DataSetNames
 from hiding_adversarial_attacks.mnist.mnist_net import MNISTNet
 
 toPilImage = ToPILImage()
+
+ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 
 def timeit(func):
@@ -25,11 +28,14 @@ def timeit(func):
     return wrap
 
 
-def get_model(args: argparse.Namespace):
-    if args.data_set == DataConfig.MNIST or args.data_set == DataConfig.FASHION_MNIST:
-        return MNISTNet(args)
+def get_model(config):
+    if (
+        config.data_set.name == DataSetNames.MNIST
+        or config.data_set.name == DataSetNames.FASHION_MNIST
+    ):
+        return MNISTNet(config)
     else:
-        raise SystemExit(f"Unknown data set specified: {args.data_set}. Exiting.")
+        raise SystemExit(f"Unknown data set specified: {config.data_set}. Exiting.")
 
 
 class SplitArgs(argparse.Action):

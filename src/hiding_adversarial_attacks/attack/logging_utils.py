@@ -2,11 +2,11 @@ import logging
 import os
 import sys
 
-from hiding_adversarial_attacks.config import LoggingConfig
+from hiding_adversarial_attacks.conf.logger.logger import LoggingConfig
 
 
 def setup_logger(
-    logger, log_file_path: os.path, log_level: int = LoggingConfig.LOG_LEVEL
+    logger, log_file_path: os.path, log_level: int = LoggingConfig.log_level
 ):
     formatter = logging.Formatter(
         fmt="%(asctime)s - %(name)s - %(levelname)s: %(message)s",
