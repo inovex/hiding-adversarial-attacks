@@ -1,14 +1,13 @@
 import logging
 import os
-from argparse import ArgumentParser, Namespace
 from datetime import datetime
 from typing import List, Sequence, Union
 
 import eagerpy as ep
 import foolbox as fb
-import numpy as np
+import hydra
 import torch
-from pytorch_lightning import Trainer
+from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -25,108 +24,14 @@ from hiding_adversarial_attacks.attack.logging_utils import (
     log_attack_results,
     setup_logger,
 )
-from hiding_adversarial_attacks.config import (
+from hiding_adversarial_attacks.config.adversarial_attack_config import (
     AdversarialAttackConfig,
-    DataConfig,
-    LoggingConfig,
 )
-from hiding_adversarial_attacks.mnist.data_modules import (
-    init_fashion_mnist_data_module,
-    init_mnist_data_module,
-)
+from hiding_adversarial_attacks.config.data_set.data_set_config import DataSetNames
+from hiding_adversarial_attacks.mnist.data_modules import get_data_module
 from hiding_adversarial_attacks.mnist.mnist_net import MNISTNet
-from hiding_adversarial_attacks.utils import SplitArgs
 
 LOGGER = logging.Logger(os.path.basename(__file__))
-
-
-def parse_attack_args() -> Namespace:
-    parser = ArgumentParser()
-    parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=64,
-        metavar="N",
-        help="input batch size for training (default: 64)",
-    )
-    parser.add_argument(
-        "--checkpoint",
-        default=None,
-        required=True,
-        help="<Required> model checkpoint used for running the adversarial attack",
-    )
-    parser.add_argument(
-        "--seed", type=int, default=42, metavar="S", help="random seed (default: 42)"
-    )
-    parser.add_argument(
-        "--no-cuda", action="store_true", default=False, help="disables CUDA training"
-    )
-    parser.add_argument(
-        "--data-set",
-        type=str,
-        default=DataConfig.MNIST,
-        const=DataConfig.MNIST,
-        nargs="?",
-        choices=[DataConfig.MNIST, DataConfig.FASHION_MNIST],
-        help="data set to use (default: 'MNIST')",
-    )
-    parser.add_argument(
-        "--target-dir",
-        default=DataConfig.ADVERSARIAL_PATH,
-        help="path to store adversarially attacked data set to."
-        " The final path is '<target-dir>/<data-set>'.",
-    )
-    parser.add_argument(
-        "--logs-dir",
-        default=LoggingConfig.LOGS_PATH,
-        help="base path to store adversarial attack logs to."
-        " The final path is '<logs-dir>/attacks/<data-set>'.",
-    )
-    parser.add_argument(
-        "--attack",
-        default="FGSM",
-        const="FGSM",
-        nargs="?",
-        choices=["FGSM", "DeepFool"],
-        help="adversarial attack method (default: %(default)s)",
-    )
-    parser.add_argument(
-        "--epsilons",
-        nargs="+",
-        type=float,
-        help="epsilon values (= attack strength) to use on images",
-        default=np.linspace(0.225, 0.3, num=3),
-    )
-    parser.add_argument(
-        "--attacked-classes",
-        type=str,
-        help="comma-separated list of IDs of the classes "
-        "to be attacked or 'all' (default=['all'])",
-        action=SplitArgs,
-        default=AdversarialAttackConfig.ALL_CLASSES,
-    )
-    parser = MNISTNet.add_model_specific_args(parser)
-    parser = Trainer.add_argparse_args(parser)
-    args = parser.parse_args()
-    if args.checkpoint is None:
-        parser.error("--checkpoint was 'None'.")
-    if args.attacked_classes is not AdversarialAttackConfig.ALL_CLASSES:
-        if not all([num.isdigit() for num in args.attacked_classes]):
-            parser.error(
-                "--attacked-classes has to be comma-separated list of integer IDs "
-                "(e.g. '1,2,3') or 'all'."
-            )
-        else:
-            args.attacked_classes = tuple(int(num) for num in args.attacked_classes)
-    if args.target_dir is not None:
-        if not os.path.isdir(args.target_dir):
-            parser.error("--target-dir needs to be a valid directory path.")
-        args.target_dir = os.path.join(args.target_dir, args.data_set)
-    if args.logs_dir is not None:
-        if not os.path.isdir(args.logs_dir):
-            parser.error("--logs-dir needs to be a valid directory path.")
-        args.logs_dir = os.path.join(args.logs_dir, "attacks", args.data_set)
-    return args
 
 
 def attack_batch(
@@ -199,70 +104,63 @@ def run_attack(
     return attack_results_list
 
 
-def run():
-    args = parse_attack_args()
+@hydra.main(config_name="adversarial_attack_config")
+def run(config: AdversarialAttackConfig) -> None:
+    # config = parse_attack_args()
+    print(OmegaConf.to_yaml(config))
 
     # Logging
-    os.makedirs(args.logs_dir, exist_ok=True)
+    os.makedirs(config.log_path, exist_ok=True)
     log_file_path = os.path.join(
-        args.logs_dir,
-        f"{int(datetime.now().timestamp())}-{args.data_set}-"
-        f"{args.attack}-{args.epsilons}.log",
+        config.log_path,
+        f"{int(datetime.now().timestamp())}-{config.data_set.name}-"
+        f"{config.attack.name}-{config.attack.epsilons}.log",
     )
-    setup_logger(LOGGER, log_file_path, log_level=LoggingConfig.LOG_LEVEL)
+    setup_logger(LOGGER, log_file_path, log_level=config.logging.log_level)
 
     # GPU or CPU
     device = torch.device(
-        "cuda" if (torch.cuda.is_available() and not args.no_cuda) else "cpu"
+        "cuda" if (torch.cuda.is_available() and config.gpus != 0) else "cpu"
     )
 
-    # Setup data module depending on data set
-    if args.data_set == DataConfig.MNIST:
-        data_module = init_mnist_data_module(
-            batch_size=args.batch_size,
-            val_split=0.0,
-            download=False,
-            seed=args.seed,
-            attacked_classes=args.attacked_classes,
-        )
-    elif args.data_set == DataConfig.FASHION_MNIST:
-        data_module = init_fashion_mnist_data_module(
-            batch_size=args.batch_size,
-            val_split=0.0,
-            download=False,
-            seed=args.seed,
-            attacked_classes=args.attacked_classes,
-        )
-    else:
-        raise SystemExit(f"Unknown data set specified: {args.data_set}. Exiting.")
+    # Setup data module
+    data_module = get_data_module(
+        config.data_set.name,
+        config.batch_size,
+        val_split=0.0,
+        download_data=False,
+        seed=config.seed,
+        attacked_classes=list(config.attack.attacked_classes),
+    )
 
     # Data loaders
     train_loader = data_module.train_dataloader(shuffle=False)
     test_loader = data_module.test_dataloader()
 
     # Load foolbox wrapped model
-    if args.data_set == DataConfig.MNIST or args.data_set == DataConfig.FASHION_MNIST:
-        foolbox_model = MNISTNet.as_foolbox_wrap(args, device)
+    if (
+        config.data_set.name == DataSetNames.MNIST
+        or config.data_set.name == DataSetNames.FASHION_MNIST
+    ):
+        foolbox_model = MNISTNet.as_foolbox_wrap(config, device)
 
     log_attack_info(
         LOGGER,
-        args.attack,
-        args.epsilons,
-        args.data_set,
-        args.checkpoint,
-        args.attacked_classes,
+        config.attack.name,
+        config.attack.epsilons,
+        config.data_set.name,
+        config.checkpoint,
+        config.attack.attacked_classes,
     )
 
     # Run adversarial attack
-    attack = get_attack(args.attack)
-    if attack is None:
-        raise SystemExit("Unknown adversarial attack was specified. Exiting.")
+    attack = get_attack(config.attack.name)
 
     train_attack_results_list = run_attack(
-        foolbox_model, attack, train_loader, args.epsilons, "training", device
+        foolbox_model, attack, train_loader, config.attack.epsilons, "training", device
     )
     test_attack_results_list = run_attack(
-        foolbox_model, attack, test_loader, args.epsilons, "test", device
+        foolbox_model, attack, test_loader, config.attack.epsilons, "test", device
     )
 
     # Log and save results
@@ -271,14 +169,11 @@ def run():
     for train_attack_results, test_attack_results in zip(
         train_attack_results_list, test_attack_results_list
     ):
-        class_dir = (
-            f"class_{args.attacked_classes}"
-            if args.attacked_classes is AdversarialAttackConfig.ALL_CLASSES
-            else f"class_{'_'.join(map(str, args.attacked_classes))}"
-        )
+        class_dir = f"class_{'_'.join(map(str, config.attack.attacked_classes))}"
         target_path = os.path.join(
-            args.target_dir,
-            args.attack,
+            config.data_set.adversarial_path,
+            config.data_set.name,
+            config.attack.name,
             f"epsilon_{test_attack_results.epsilon}",
             class_dir,
         )

@@ -5,17 +5,17 @@ from typing import Any, List
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
 
-from hiding_adversarial_attacks.conf.classifier.classifier_config import (
+from hiding_adversarial_attacks.config.classifier.classifier_config import (
     ClassifierConfig,
     FashionMNISTClassifierConfig,
     MNISTClassifierConfig,
 )
-from hiding_adversarial_attacks.conf.data_set.data_set_config import (
+from hiding_adversarial_attacks.config.data_set.data_set_config import (
     DataSetConfig,
     FashionMNISTConfig,
     MNISTConfig,
 )
-from hiding_adversarial_attacks.conf.logger.logger import LoggingConfig
+from hiding_adversarial_attacks.config.logger.logger import LoggingConfig
 
 defaults = [{"data_set": "MNIST"}, {"classifier": "MNISTClassifier"}]
 

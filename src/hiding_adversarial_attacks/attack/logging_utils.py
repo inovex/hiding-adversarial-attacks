@@ -2,7 +2,7 @@ import logging
 import os
 import sys
 
-from hiding_adversarial_attacks.conf.logger.logger import LoggingConfig
+from hiding_adversarial_attacks.config.logger.logger import LoggingConfig
 
 
 def setup_logger(

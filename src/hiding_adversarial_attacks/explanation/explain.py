@@ -3,7 +3,9 @@ from argparse import ArgumentParser, Namespace
 import torch
 from captum.attr import visualization as viz
 
-from hiding_adversarial_attacks.config import DeepLiftBaselineConfig
+from hiding_adversarial_attacks.config.explanation.explainer_config import (
+    DeepLiftBaselineNames,
+)
 from hiding_adversarial_attacks.explanation.explainers import DeepLiftExplainer
 from hiding_adversarial_attacks.mnist.mnist_net import MNISTNet
 from hiding_adversarial_attacks.utils import tensor_to_pil_numpy
@@ -45,7 +47,7 @@ if __name__ == "__main__":
         "/preprocessed/adversarial/MNIST/DeepFool/epsilon_0.225/"
         "class_1/test_orig.pt"
     )
-    baseline_name = DeepLiftBaselineConfig.LOCAL_MEAN
+    baseline_name = DeepLiftBaselineNames.LOCAL_MEAN
 
     args = parse_args()
 

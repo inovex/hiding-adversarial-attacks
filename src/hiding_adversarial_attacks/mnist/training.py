@@ -5,7 +5,7 @@ from omegaconf import OmegaConf
 from pytorch_lightning import Trainer
 from pytorch_lightning import loggers as pl_loggers
 
-from hiding_adversarial_attacks.conf.classifier_training_config import (
+from hiding_adversarial_attacks.config.classifier_training_config import (
     ClassifierTrainingConfig,
 )
 from hiding_adversarial_attacks.mnist.data_modules import get_data_module

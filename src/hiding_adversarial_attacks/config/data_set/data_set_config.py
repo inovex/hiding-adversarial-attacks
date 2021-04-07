@@ -4,7 +4,7 @@ from typing import Any
 
 from omegaconf import MISSING
 
-from hiding_adversarial_attacks.conf.config import ROOT_DIR
+from hiding_adversarial_attacks.config.config import ROOT_DIR
 
 
 class DataSetNames:

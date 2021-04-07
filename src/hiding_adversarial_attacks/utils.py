@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from torchvision.transforms import ToPILImage
 
-from hiding_adversarial_attacks.conf.data_set.data_set_config import DataSetNames
+from hiding_adversarial_attacks.config.data_set.data_set_config import DataSetNames
 from hiding_adversarial_attacks.mnist.mnist_net import MNISTNet
 
 toPilImage = ToPILImage()

@@ -3,15 +3,18 @@ import foolbox as fb
 from foolbox.attacks.gradient_descent_base import BaseGradientDescent
 from torch import Tensor
 
-from hiding_adversarial_attacks.config import AdversarialAttackConfig
+from hiding_adversarial_attacks.config.attack.adversarial_attack_config import (
+    AdversarialAttackNames,
+)
 
 
 def get_attack(attack_name: str) -> BaseGradientDescent:
-    attack = None
-    if attack_name == AdversarialAttackConfig.FGSM:
+    if attack_name == AdversarialAttackNames.FGSM:
         attack = fb.attacks.LinfFastGradientAttack()
-    if attack_name == AdversarialAttackConfig.DEEP_FOOL:
+    elif attack_name == AdversarialAttackNames.DEEP_FOOL:
         attack = fb.attacks.LinfDeepFoolAttack()
+    else:
+        raise SystemExit("Unknown adversarial attack was specified. Exiting.")
     return attack
 
 

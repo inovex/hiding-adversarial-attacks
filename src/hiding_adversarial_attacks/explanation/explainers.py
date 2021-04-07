@@ -5,7 +5,9 @@ import torch
 import torchvision
 from captum.attr import DeepLift
 
-from hiding_adversarial_attacks.config import DeepLiftBaselineConfig
+from hiding_adversarial_attacks.config.explanation.explainer_config import (
+    DeepLiftBaselineNames,
+)
 
 
 class AbstractExplainer:
@@ -31,7 +33,7 @@ class DeepLiftExplainer(AbstractExplainer):
     def __init__(
         self,
         model: pl.LightningModule,
-        baseline_name: str = DeepLiftBaselineConfig.ZERO,
+        baseline_name: str = DeepLiftBaselineNames.ZERO,
         random_seed: int = 42,
     ):
         super().__init__(model=model, random_seed=random_seed)
@@ -46,11 +48,11 @@ class DeepLiftExplainer(AbstractExplainer):
 
     def _baseline_wrapper(self):
         def inner(image: torch.Tensor):
-            if self._baseline_name == DeepLiftBaselineConfig.ZERO:
+            if self._baseline_name == DeepLiftBaselineNames.ZERO:
                 baseline = image * 0
-            elif self._baseline_name == DeepLiftBaselineConfig.BLUR:
+            elif self._baseline_name == DeepLiftBaselineNames.BLUR:
                 baseline = self._gaussian_blur(image)
-            elif self._baseline_name == DeepLiftBaselineConfig.LOCAL_MEAN:
+            elif self._baseline_name == DeepLiftBaselineNames.LOCAL_MEAN:
                 batch_size = image.shape[0]
                 means = image.view(batch_size, -1).mean(1, keepdim=True)
                 ones = torch.ones_like(image)

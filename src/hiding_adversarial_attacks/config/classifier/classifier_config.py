@@ -12,9 +12,6 @@ class ClassifierCheckpointConfig:
 
 @dataclass
 class ClassifierConfig:
-    # Train or test
-    test: bool = False
-
     # Hyperparameters
     lr: float = 1.0
     gamma: float = 0.7

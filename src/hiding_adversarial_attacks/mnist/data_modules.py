@@ -3,7 +3,7 @@ import os
 import shutil
 from io import BytesIO
 from math import ceil
-from typing import Any, Optional, Tuple, Union
+from typing import Any, List, Optional
 from urllib.request import urlopen
 from zipfile import ZipFile
 
@@ -14,10 +14,10 @@ from torchvision.datasets import MNIST
 from torchvision.datasets.mnist import FashionMNIST, read_image_file, read_label_file
 from torchvision.transforms import transforms
 
-from hiding_adversarial_attacks.conf.attack.adversarial_attack_config import (
-    AdversarialAttackConfig,
+from hiding_adversarial_attacks.config.attack.adversarial_attack_config import (
+    ALL_CLASSES,
 )
-from hiding_adversarial_attacks.conf.data_set.data_set_config import (
+from hiding_adversarial_attacks.config.data_set.data_set_config import (
     DataSetConfig,
     DataSetNames,
 )
@@ -33,7 +33,7 @@ class MNISTDataModule(pl.LightningDataModule):
         batch_size: int = 32,
         val_split: float = 0.1,
         random_seed: int = 42,
-        attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.all_classes,
+        attacked_classes: List[str] = ALL_CLASSES,
     ):
         super().__init__()
         self.data_dir = data_dir
@@ -50,7 +50,7 @@ class MNISTDataModule(pl.LightningDataModule):
         )
 
     def _create_data_splits(self, mnist_full, mnist_test):
-        if self.attacked_classes is not AdversarialAttackConfig.all_classes:
+        if ALL_CLASSES not in self.attacked_classes:
             mnist_full, mnist_test = self._filter_splits(
                 mnist_full, mnist_test, self.attacked_classes
             )
@@ -65,7 +65,7 @@ class MNISTDataModule(pl.LightningDataModule):
         self,
         mnist_full: MNIST,
         mnist_test: MNIST,
-        attacked_classes: Tuple[int],
+        attacked_classes: List[int],
     ):
         """
         Filters the MNIST splits mnist_full and mnist_test **in place**,
@@ -75,13 +75,14 @@ class MNISTDataModule(pl.LightningDataModule):
         :param attacked_classes: Tuple of class integer IDs or string "all".
         :return:
         """
-        assert type(attacked_classes) is tuple and all(
+        assert type(attacked_classes) is list, "attacked_classes is not a list."
+        assert all(
             isinstance(attacked_class, int) for attacked_class in attacked_classes
-        )
+        ), "attacked_classes does not contain only int members."
         assert all(
             0 <= attacked_class < len(MNIST.classes)
             for attacked_class in attacked_classes
-        )
+        ), "attacked_classes members need to be >= 0 and < 10."
         masks_full, masks_test = self._get_attacked_classes_masks(
             mnist_full, mnist_test, attacked_classes
         )
@@ -95,7 +96,7 @@ class MNISTDataModule(pl.LightningDataModule):
     def _get_attacked_classes_masks(
         mnist_full: MNIST,
         mnist_test: MNIST,
-        attacked_classes: Union[str, Tuple[int]],
+        attacked_classes: List[int],
     ):
         masks_full = torch.zeros(len(mnist_full), dtype=torch.bool)
         masks_test = torch.zeros(len(mnist_test), dtype=torch.bool)
@@ -196,7 +197,7 @@ class FashionMNISTDataModule(MNISTDataModule):
         batch_size: int = 32,
         val_split: float = 0.1,
         random_seed: int = 42,
-        attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.all_classes,
+        attacked_classes: List[str] = ALL_CLASSES,
     ):
         super().__init__(data_dir, batch_size, val_split, random_seed, attacked_classes)
 
@@ -226,7 +227,7 @@ def init_mnist_data_module(
     val_split: float,
     download: bool,
     seed: int,
-    attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.all_classes,
+    attacked_classes: List[str] = ALL_CLASSES,
 ) -> MNISTDataModule:
     data_module = MNISTDataModule(
         DataSetConfig.external_path,
@@ -246,7 +247,7 @@ def init_fashion_mnist_data_module(
     val_split: float,
     download: bool,
     seed: int,
-    attacked_classes: Union[str, Tuple[int]] = AdversarialAttackConfig.all_classes,
+    attacked_classes: List[str] = ALL_CLASSES,
 ) -> FashionMNISTDataModule:
     data_module = FashionMNISTDataModule(
         DataSetConfig.external_path,
@@ -260,13 +261,20 @@ def init_fashion_mnist_data_module(
 
 
 def get_data_module(
-    data_set: str, batch_size: int, val_split: float, download_data: bool, seed: int
+    data_set: str,
+    batch_size: int,
+    val_split: float,
+    download_data: bool,
+    seed: int,
+    attacked_classes: List[str] = ALL_CLASSES,
 ):
     if data_set == DataSetNames.MNIST:
-        data_module = init_mnist_data_module(batch_size, val_split, download_data, seed)
+        data_module = init_mnist_data_module(
+            batch_size, val_split, download_data, seed, attacked_classes
+        )
     elif data_set == DataSetNames.FASHION_MNIST:
         data_module = init_fashion_mnist_data_module(
-            batch_size, val_split, download_data, seed
+            batch_size, val_split, download_data, seed, attacked_classes
         )
     else:
         raise SystemExit(f"Unknown data set specified: {data_set}. Exiting.")
