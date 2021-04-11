@@ -153,13 +153,13 @@ class MNISTDataModule(pl.LightningDataModule):
         with open(processed_test, "wb") as f:
             torch.save(test_set, f)
 
-    def train_dataloader(self, shuffle=True):
+    def train_dataloader(self, shuffle=True) -> DataLoader:
         return DataLoader(self.mnist_train, batch_size=self.batch_size, shuffle=shuffle)
 
-    def val_dataloader(self, shuffle=True):
+    def val_dataloader(self, shuffle=True) -> DataLoader:
         return DataLoader(self.mnist_val, batch_size=self.batch_size, shuffle=shuffle)
 
-    def test_dataloader(self):
+    def test_dataloader(self) -> DataLoader:
         return DataLoader(self.mnist_test, batch_size=self.batch_size)
 
 
@@ -173,13 +173,11 @@ class AdversarialMNISTDataModule(MNISTDataModule):
     ):
         super().__init__(data_dir, batch_size, val_split, random_seed)
 
-    def setup(self, stage: Optional[str] = None):
+    def setup(self, stage: Optional[str] = None, transform: transforms = None):
         self.mnist_test = AdversarialMNIST(
-            self.data_dir, train=False, transform=transforms.ToTensor()
+            self.data_dir, train=False, transform=transform
         )
-        mnist_full = AdversarialMNIST(
-            self.data_dir, train=True, transform=transforms.ToTensor()
-        )
+        mnist_full = AdversarialMNIST(self.data_dir, train=True, transform=transform)
         mnist_train_size, mnist_val_size = self._get_train_val_split_sizes(mnist_full)
         generator = torch.Generator().manual_seed(self.random_seed)
         self.mnist_train, self.mnist_val = random_split(
@@ -257,6 +255,22 @@ def init_fashion_mnist_data_module(
         attacked_classes=attacked_classes,
     )
     data_module.setup(download=download)
+    return data_module
+
+
+def init_adversarial_mnist_data_module(
+    data_dir: str,
+    batch_size: int,
+    transform: transforms = None,
+    seed: int = 42,
+) -> AdversarialMNISTDataModule:
+    data_module = AdversarialMNISTDataModule(
+        data_dir=data_dir,
+        batch_size=batch_size,
+        val_split=0.0,
+        random_seed=seed,
+    )
+    data_module.setup(transform=transform)
     return data_module
 
 
