@@ -1,12 +1,19 @@
 from abc import abstractmethod
+from typing import Union
 
 import pytorch_lightning as pl
 import torch
 import torchvision
 from captum.attr import DeepLift
 
-from hiding_adversarial_attacks.config.explanation.explainer_config import (
+from hiding_adversarial_attacks.config.create_explanations_config import (
+    ExplanationConfig,
+)
+from hiding_adversarial_attacks.config.explanation.deep_lift_baseline_config import (
     DeepLiftBaselineNames,
+)
+from hiding_adversarial_attacks.config.explanation.explainer_config import (
+    ExplainerNames,
 )
 
 
@@ -65,3 +72,16 @@ class DeepLiftExplainer(AbstractExplainer):
             return baseline
 
         return inner
+
+
+def get_explainer(
+    model: pl.LightningModule, config: ExplanationConfig
+) -> Union[DeepLiftExplainer]:
+
+    explainer_name = config.explainer.name
+    if explainer_name == ExplainerNames.DEEP_LIFT:
+        return DeepLiftExplainer(model, baseline_name=config.explainer.baseline.name)
+    elif explainer_name == ExplainerNames.GRAD_CAM:
+        raise NotImplementedError("GradCAM not implemented yet.")
+    else:
+        raise SystemExit("ERROR: Unknown explainer. Exiting.")
