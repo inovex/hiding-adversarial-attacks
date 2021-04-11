@@ -12,6 +12,11 @@ class DataSetNames:
     FASHION_MNIST: str = "FashionMNIST"
 
 
+class AdversarialDataSetNames:
+    ADVERSARIAL_MNIST: str = "AdversarialMNIST"
+    ADVERSARIAL_FASHION_MNIST: str = "AdversarialFashionMNIST"
+
+
 @dataclass
 class DataSetConfig:
     name: str = MISSING
@@ -36,3 +41,13 @@ class MNISTConfig(DataSetConfig):
 @dataclass
 class FashionMNISTConfig(MNISTConfig):
     name: str = DataSetNames.FASHION_MNIST
+
+
+@dataclass
+class AdversarialMNISTConfig(MNISTConfig):
+    name: str = AdversarialDataSetNames.ADVERSARIAL_MNIST
+
+
+@dataclass
+class AdversarialFashionMNISTConfig(MNISTConfig):
+    name: str = AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST
