@@ -12,6 +12,7 @@ from tqdm import tqdm
 from hiding_adversarial_attacks.config.create_explanations_config import (
     ExplanationConfig,
 )
+from hiding_adversarial_attacks.config.data_set.data_set_config import DataSetNames
 from hiding_adversarial_attacks.explanation.explainers import (
     AbstractExplainer,
     get_explainer,
@@ -21,6 +22,33 @@ from hiding_adversarial_attacks.mnist.data_modules import (
 )
 from hiding_adversarial_attacks.mnist.mnist_net import MNISTNet
 from hiding_adversarial_attacks.utils import tensor_to_pil_numpy
+
+
+def save_explanations(
+    original_explanations,
+    adv_explanations,
+    labels,
+    adv_labels,
+    data_path: str,
+    stage: str,
+):
+    os.makedirs(data_path, exist_ok=True)
+    orig_path = os.path.join(data_path, f"{stage}_orig_explanations.pt")
+    adv_path = os.path.join(data_path, f"{stage}_adv_explanations.pt")
+    torch.save((original_explanations.cpu(), labels.cpu()), orig_path)
+    torch.save((adv_explanations.cpu(), adv_labels.cpu()), adv_path)
+    print(f"Saved explanations to {data_path}")
+
+
+def get_model_from_checkpoint(
+    data_set_name: str, model_checkpoint: str, device: torch.device
+):
+    if DataSetNames.MNIST in data_set_name:
+        model = MNISTNet.load_from_checkpoint(checkpoint_path=model_checkpoint)
+    else:
+        raise SystemExit(f"ERROR: Unknown data set name: {data_set_name}. Exiting.")
+    model = model.to(device)
+    return model
 
 
 def explain(
@@ -49,22 +77,6 @@ def explain(
     return orig_explanations, adv_explanations, orig_labels_all, adv_labels_all
 
 
-def save_explanations(
-    original_explanations,
-    adv_explanations,
-    labels,
-    adv_labels,
-    data_path: str,
-    stage: str,
-):
-    os.makedirs(data_path, exist_ok=True)
-    orig_path = os.path.join(data_path, f"{stage}_orig_explanations.pt")
-    adv_path = os.path.join(data_path, f"{stage}_adv_explanations.pt")
-    torch.save((original_explanations.cpu(), labels.cpu()), orig_path)
-    torch.save((adv_explanations.cpu(), adv_labels.cpu()), adv_path)
-    print(f"Saved explanations to {data_path}")
-
-
 @hydra.main(config_name="explanation_config")
 def run(config: ExplanationConfig) -> None:
     print(OmegaConf.to_yaml(config))
@@ -82,8 +94,11 @@ def run(config: ExplanationConfig) -> None:
     )
 
     # Load model
-    model = MNISTNet.load_from_checkpoint(checkpoint_path=config.checkpoint)
-    model = model.to(device)
+    model = get_model_from_checkpoint(
+        data_set_name=config.data_set.name,
+        model_checkpoint=config.checkpoint,
+        device=device,
+    )
 
     # Explainer
     explainer = get_explainer(model, config)

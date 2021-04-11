@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from omegaconf import MISSING
+
 
 @dataclass
 class ClassifierCheckpointConfig:
@@ -12,6 +14,8 @@ class ClassifierCheckpointConfig:
 
 @dataclass
 class ClassifierConfig:
+    name: str = MISSING
+
     # Hyperparameters
     lr: float = 1.0
     gamma: float = 0.7
