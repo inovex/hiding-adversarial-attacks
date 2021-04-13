@@ -22,3 +22,4 @@ class ExplainerConfig:
 class DeepLiftConfig(ExplainerConfig):
     name: str = ExplainerNames.DEEP_LIFT
     baseline: DeepLiftBaselineConfig = MISSING
+    multiply_by_inputs: bool = False

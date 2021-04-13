@@ -41,10 +41,12 @@ class DeepLiftExplainer(AbstractExplainer):
         self,
         model: pl.LightningModule,
         baseline_name: str = DeepLiftBaselineNames.ZERO,
+        multiply_by_inputs: bool = False,
         random_seed: int = 42,
     ):
         super().__init__(model=model, random_seed=random_seed)
-        self._xai_algorithm = DeepLift(self._model)
+        self._multiply_by_inputs = multiply_by_inputs
+        self._xai_algorithm = DeepLift(self._model, self._multiply_by_inputs)
         self._baseline_name = baseline_name
         self._baseline = self._baseline_wrapper()
 
@@ -80,7 +82,11 @@ def get_explainer(
 
     explainer_name = config.explainer.name
     if explainer_name == ExplainerNames.DEEP_LIFT:
-        return DeepLiftExplainer(model, baseline_name=config.explainer.baseline.name)
+        return DeepLiftExplainer(
+            model,
+            baseline_name=config.explainer.baseline.name,
+            multiply_by_inputs=config.explainer.multiply_by_inputs,
+        )
     elif explainer_name == ExplainerNames.GRAD_CAM:
         raise NotImplementedError("GradCAM not implemented yet.")
     else:
