@@ -140,7 +140,7 @@ def run(config: ExplanationConfig) -> None:
     )
 
 
-def visualize(original_img_path, original_expl_path):
+def visualize(original_img_path, original_expl_path, title):
     # Load images and labels
     orig_imgs, orig_labels = torch.load(original_img_path)
     orig_expl, _ = torch.load(original_expl_path)
@@ -159,31 +159,31 @@ def visualize(original_img_path, original_expl_path):
         method="blended_heat_map",
         sign="all",
         show_colorbar=True,
-        title="Foo",
+        title=title,
     )
 
 
 if __name__ == "__main__":
     run()
-    # orig_img = (
-    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
-    #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
-    #     "test_orig.pt"
-    # )
-    # adv_img = (
-    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
-    #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
-    #     "test_adv.pt"
-    # )
-    # orig_expl = (
-    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
-    #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
-    #     "test_orig_explanations.pt"
-    # )
-    # adv_expl = (
-    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
-    #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
-    #     "test_adv_explanations.pt"
-    # )
-    # visualize(orig_img, orig_expl)
-    # visualize(adv_img, adv_expl)
+    orig_img = (
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+        "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
+        "test_orig.pt"
+    )
+    adv_img = (
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+        "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
+        "test_adv.pt"
+    )
+    orig_expl = (
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+        "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
+        "test_orig_explanations.pt"
+    )
+    adv_expl = (
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+        "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
+        "test_adv_explanations.pt"
+    )
+    visualize(orig_img, orig_expl, "Original explanation - DeepLIFT Blur")
+    visualize(adv_img, adv_expl, "Adversarial explanation - DeepLIFT Blur")
