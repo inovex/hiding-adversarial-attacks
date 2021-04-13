@@ -20,6 +20,8 @@ class AdversarialDataSetNames:
 @dataclass
 class DataSetConfig:
     name: str = MISSING
+    image_width: int = MISSING
+    image_height: int = MISSING
 
     root_path: str = os.path.join(ROOT_DIR, "data")
     external_path: str = os.path.join(root_path, "external")

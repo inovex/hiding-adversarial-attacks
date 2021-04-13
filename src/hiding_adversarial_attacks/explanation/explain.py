@@ -55,24 +55,26 @@ def explain(
     explainer: AbstractExplainer, data_loader: DataLoader, device: torch.device
 ) -> Tuple[Any, Any, Union[Tensor, Any], Any]:
 
-    orig_explanations, adv_explanations = torch.Tensor().to(device), torch.Tensor().to(
-        device
-    )
-    orig_labels_all = torch.Tensor().to(device)
-    adv_labels_all = torch.Tensor().to(device)
+    orig_explanations, adv_explanations = torch.Tensor(), torch.Tensor()
+    orig_labels_all = torch.Tensor()
+    adv_labels_all = torch.Tensor()
 
     for images, adv_images, labels, adv_labels in tqdm(data_loader):
-        images = images.to(device)
-        adv_images = adv_images.to(device)
-        labels = labels.long().to(device)
-        adv_labels = adv_labels.long().to(device)
+        _images = images.to(device)
+        _adv_images = adv_images.to(device)
+        _labels = labels.long().to(device)
+        _adv_labels = adv_labels.long().to(device)
 
-        orig_explanations_batch = explainer.explain(images, labels)
-        adv_explanations_batch = explainer.explain(adv_images, adv_labels)
-        orig_labels_all = torch.cat((orig_labels_all, labels), 0)
-        adv_labels_all = torch.cat((adv_labels_all, adv_labels), 0)
-        orig_explanations = torch.cat((orig_explanations, orig_explanations_batch), 0)
-        adv_explanations = torch.cat((adv_explanations, adv_explanations_batch), 0)
+        orig_explanations_batch = explainer.explain(_images, _labels)
+        adv_explanations_batch = explainer.explain(_adv_images, _adv_labels)
+        orig_labels_all = torch.cat((orig_labels_all, _labels.detach().cpu()), 0)
+        adv_labels_all = torch.cat((adv_labels_all, _adv_labels.detach().cpu()), 0)
+        orig_explanations = torch.cat(
+            (orig_explanations, orig_explanations_batch.detach().cpu()), 0
+        )
+        adv_explanations = torch.cat(
+            (adv_explanations, adv_explanations_batch.detach().cpu()), 0
+        )
 
     return orig_explanations, adv_explanations, orig_labels_all, adv_labels_all
 
@@ -99,6 +101,7 @@ def run(config: ExplanationConfig) -> None:
         model_checkpoint=config.checkpoint,
         device=device,
     )
+    model.eval()
 
     # Explainer
     explainer = get_explainer(model, config)
@@ -140,22 +143,19 @@ def run(config: ExplanationConfig) -> None:
     )
 
 
-def visualize(original_img_path, original_expl_path, title):
+def visualize(img_path, explanation_path, title):
     # Load images and labels
-    orig_imgs, orig_labels = torch.load(original_img_path)
-    orig_expl, _ = torch.load(original_expl_path)
-    # adv_imgs, adv_labels = torch.load(adversarial_path)
+    images, labels = torch.load(img_path)
+    explanations, _ = torch.load(explanation_path)
 
-    orig_img_batch = orig_imgs[0:8].cuda()
-    orig_expl_batch = orig_expl[0:8].cuda()
-    # orig_labels_batch = orig_labels[0:8].long().cuda()
-    # adv_labels_batch = adv_labels[0:8].long().cuda()
+    image_batch = images[0:8].cuda()
+    explanation_batch = explanations[0:8].cuda()
 
-    orig_img = tensor_to_pil_numpy(orig_img_batch)
-    orig_expl = tensor_to_pil_numpy(orig_expl_batch)
+    img = tensor_to_pil_numpy(image_batch)
+    expl = tensor_to_pil_numpy(explanation_batch)
     viz.visualize_image_attr(
-        orig_expl[5],
-        orig_img[5],
+        expl[1],
+        img[1],
         method="blended_heat_map",
         sign="all",
         show_colorbar=True,
@@ -164,26 +164,46 @@ def visualize(original_img_path, original_expl_path, title):
 
 
 if __name__ == "__main__":
-    run()
+    # run()
+    # orig_img = (
+    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+    #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
+    #     "test_orig.pt"
+    # )
+    # adv_img = (
+    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+    #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
+    #     "test_adv.pt"
+    # )
+    # orig_expl = (
+    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+    #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
+    #     "test_orig_explanations.pt"
+    # )
+    # adv_expl = (
+    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+    #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
+    #     "test_adv_explanations.pt"
+    # )
     orig_img = (
-        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
-        "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+        "adversarial/MNIST/DeepFool/epsilon_0.225/class_all/"
         "test_orig.pt"
     )
     adv_img = (
-        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
-        "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+        "adversarial/MNIST/DeepFool/epsilon_0.225/class_all/"
         "test_adv.pt"
     )
     orig_expl = (
-        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
-        "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+        "adversarial/MNIST/DeepFool/epsilon_0.225/class_all/"
         "test_orig_explanations.pt"
     )
     adv_expl = (
-        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
-        "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+        "adversarial/MNIST/DeepFool/epsilon_0.225/class_all/"
         "test_adv_explanations.pt"
     )
-    visualize(orig_img, orig_expl, "Original explanation - DeepLIFT Blur")
-    visualize(adv_img, adv_expl, "Adversarial explanation - DeepLIFT Blur")
+    visualize(orig_img, orig_expl, "Original explanation - GradCAM")
+    visualize(adv_img, adv_expl, "Adversarial explanation - GradCAM")
