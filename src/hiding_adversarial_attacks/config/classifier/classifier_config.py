@@ -43,3 +43,10 @@ class MNISTClassifierConfig(ClassifierConfig):
 @dataclass
 class FashionMNISTClassifierConfig(ClassifierConfig):
     name: str = "FashionMNISTClassifier"
+
+
+@dataclass
+class Cifar10ClassifierConfig(ClassifierConfig):
+    name: str = "Cifar10Classifier"
+    lr: float = 0.001
+    gamma: float = 0.0007

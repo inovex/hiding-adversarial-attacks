@@ -10,11 +10,13 @@ from hiding_adversarial_attacks.config.config import ROOT_DIR
 class DataSetNames:
     MNIST: str = "MNIST"
     FASHION_MNIST: str = "FashionMNIST"
+    CIFAR_10: str = "Cifar10"
 
 
 class AdversarialDataSetNames:
     ADVERSARIAL_MNIST: str = "AdversarialMNIST"
     ADVERSARIAL_FASHION_MNIST: str = "AdversarialFashionMNIST"
+    ADVERSARIAL_CIFAR_10: str = "AdversarialCifar10"
 
 
 @dataclass
@@ -22,6 +24,7 @@ class DataSetConfig:
     name: str = MISSING
     image_width: int = MISSING
     image_height: int = MISSING
+    num_classes: int = MISSING
 
     root_path: str = os.path.join(ROOT_DIR, "data")
     external_path: str = os.path.join(root_path, "external")
@@ -38,11 +41,23 @@ class MNISTConfig(DataSetConfig):
     )
     image_width: int = 28
     image_height: int = 28
+    num_classes: int = 10
 
 
 @dataclass
 class FashionMNISTConfig(MNISTConfig):
     name: str = DataSetNames.FASHION_MNIST
+    image_width: int = 28
+    image_height: int = 28
+    num_classes: int = 10
+
+
+@dataclass
+class Cifar10Config(MNISTConfig):
+    name: str = DataSetNames.CIFAR_10
+    image_width: int = 32
+    image_height: int = 32
+    num_classes: int = 10
 
 
 @dataclass
@@ -53,3 +68,8 @@ class AdversarialMNISTConfig(MNISTConfig):
 @dataclass
 class AdversarialFashionMNISTConfig(MNISTConfig):
     name: str = AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST
+
+
+@dataclass
+class AdversarialCifar10Config(Cifar10Config):
+    name: str = AdversarialDataSetNames.ADVERSARIAL_CIFAR_10
