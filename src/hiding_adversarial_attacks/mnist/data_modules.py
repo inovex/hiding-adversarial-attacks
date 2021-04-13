@@ -21,6 +21,7 @@ from hiding_adversarial_attacks.config.data_set.data_set_config import (
     DataSetConfig,
     DataSetNames,
 )
+from hiding_adversarial_attacks.data.cifar_data_modules import Cifar10DataModule
 from hiding_adversarial_attacks.mnist.adversarial_mnist import AdversarialMNIST
 
 MNIST_ZIP_URL = "https://data.deepai.org/mnist.zip"
@@ -274,6 +275,20 @@ def init_adversarial_mnist_data_module(
     return data_module
 
 
+def init_cifar_10_data_module(
+    batch_size, val_split, download: bool, seed, attacked_classes
+) -> Cifar10DataModule:
+    data_module = Cifar10DataModule(
+        DataSetConfig.external_path,
+        batch_size=batch_size,
+        val_split=val_split,
+        random_seed=seed,
+        attacked_classes=attacked_classes,
+    )
+    data_module.setup(download=download)
+    return data_module
+
+
 def get_data_module(
     data_set: str,
     batch_size: int,
@@ -288,6 +303,10 @@ def get_data_module(
         )
     elif data_set == DataSetNames.FASHION_MNIST:
         data_module = init_fashion_mnist_data_module(
+            batch_size, val_split, download_data, seed, attacked_classes
+        )
+    elif data_set == DataSetNames.CIFAR_10:
+        data_module = init_cifar_10_data_module(
             batch_size, val_split, download_data, seed, attacked_classes
         )
     else:
