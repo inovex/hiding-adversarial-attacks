@@ -64,7 +64,7 @@ class DeepLiftExplainer(AbstractExplainer):
                 means = image.view(batch_size, -1).mean(1, keepdim=True)
                 ones = torch.ones_like(image)
                 baseline = torch.ones_like(image) * means.view(
-                    batch_size, *(1,) * 3
+                    batch_size, image.shape[1], 1, 1
                 ).expand_as(ones)
             else:
                 raise NotImplementedError("Unknown baseline specified.")
