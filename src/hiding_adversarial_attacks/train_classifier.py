@@ -4,11 +4,12 @@ import hydra
 from omegaconf import OmegaConf
 from pytorch_lightning import Trainer
 from pytorch_lightning import loggers as pl_loggers
+from torchvision.transforms import transforms
 
 from hiding_adversarial_attacks.config.classifier_training_config import (
     ClassifierTrainingConfig,
 )
-from hiding_adversarial_attacks.mnist.data_modules import get_data_module
+from hiding_adversarial_attacks.data_modules.utils import get_data_module
 from hiding_adversarial_attacks.utils import get_model
 
 
@@ -50,11 +51,13 @@ def run(config: ClassifierTrainingConfig) -> None:
     print(OmegaConf.to_yaml(config))
 
     data_module = get_data_module(
-        config.data_set.name,
-        config.batch_size,
-        config.val_split,
-        config.download_data,
-        config.seed,
+        data_set=config.data_set.name,
+        data_path=config.data_set.external_path,
+        download=config.download,
+        batch_size=config.batch_size,
+        val_split=config.val_split,
+        transform=transforms.ToTensor(),
+        random_seed=config.random_seed,
     )
 
     if config.test:

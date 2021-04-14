@@ -17,13 +17,14 @@ class AdversarialMNIST(MNIST):
         train: bool = True,
         transform: Optional[Callable] = None,
         target_transform: Optional[Callable] = None,
+        download: bool = False,
     ) -> None:
         super().__init__(
             root,
             train=train,
             transform=transform,
             target_transform=target_transform,
-            download=False,
+            download=download,
         )
         self.root = os.path.abspath(root)
 

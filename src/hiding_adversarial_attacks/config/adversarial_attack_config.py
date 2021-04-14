@@ -32,20 +32,20 @@ defaults = [
 class AdversarialAttackConfig:
     defaults: List[Any] = field(default_factory=lambda: defaults)
 
-    seed: int = 42
+    random_seed: int = 42
     gpus: int = 1
     checkpoint: str = MISSING
 
-    logging: LoggingConfig = LoggingConfig()
-    log_path: str = os.path.join(logging.log_root, "adversarial_attack")
-
     batch_size: int = 64
     val_split: float = 0.0
-    download_data: bool = False
+    download: bool = False
 
     data_set: DataSetConfig = MISSING
     classifier: ClassifierConfig = MISSING
     attack: AttackConfig = MISSING
+
+    logging: LoggingConfig = LoggingConfig()
+    log_path: str = os.path.join(logging.log_root, "attack_on_data")
 
 
 cs = ConfigStore.instance()

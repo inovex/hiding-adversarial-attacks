@@ -10,13 +10,13 @@ from hiding_adversarial_attacks.config.config import ROOT_DIR
 class DataSetNames:
     MNIST: str = "MNIST"
     FASHION_MNIST: str = "FashionMNIST"
-    CIFAR_10: str = "Cifar10"
+    CIFAR10: str = "CIFAR10"
 
 
 class AdversarialDataSetNames:
     ADVERSARIAL_MNIST: str = "AdversarialMNIST"
     ADVERSARIAL_FASHION_MNIST: str = "AdversarialFashionMNIST"
-    ADVERSARIAL_CIFAR_10: str = "AdversarialCifar10"
+    ADVERSARIAL_CIFAR10: str = "AdversarialCIFAR10"
 
 
 @dataclass
@@ -54,7 +54,7 @@ class FashionMNISTConfig(MNISTConfig):
 
 @dataclass
 class Cifar10Config(MNISTConfig):
-    name: str = DataSetNames.CIFAR_10
+    name: str = DataSetNames.CIFAR10
     image_width: int = 32
     image_height: int = 32
     num_classes: int = 10
@@ -72,4 +72,4 @@ class AdversarialFashionMNISTConfig(MNISTConfig):
 
 @dataclass
 class AdversarialCifar10Config(Cifar10Config):
-    name: str = AdversarialDataSetNames.ADVERSARIAL_CIFAR_10
+    name: str = AdversarialDataSetNames.ADVERSARIAL_CIFAR10

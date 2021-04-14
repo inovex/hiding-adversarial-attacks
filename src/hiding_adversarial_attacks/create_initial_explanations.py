@@ -9,18 +9,19 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.create_explanations_config import (
     ExplanationConfig,
 )
-from hiding_adversarial_attacks.config.data_set.data_set_config import DataSetNames
+from hiding_adversarial_attacks.config.data_set.data_set_config import (
+    AdversarialDataSetNames,
+    DataSetNames,
+)
+from hiding_adversarial_attacks.data_modules.utils import get_data_module
 from hiding_adversarial_attacks.explanation.explainers import (
     AbstractExplainer,
     get_explainer,
 )
-from hiding_adversarial_attacks.mnist.data_modules import (
-    init_adversarial_mnist_data_module,
-)
-from hiding_adversarial_attacks.mnist.mnist_net import MNISTNet
 from hiding_adversarial_attacks.utils import tensor_to_pil_numpy
 
 
@@ -83,11 +84,14 @@ def explain(
 def run(config: ExplanationConfig) -> None:
     print(OmegaConf.to_yaml(config))
 
-    data_module = init_adversarial_mnist_data_module(
-        data_dir=config.data_path,
+    data_module = get_data_module(
+        data_set=AdversarialDataSetNames.ADVERSARIAL_MNIST,
+        data_path=config.data_path,
+        download=False,
         batch_size=config.batch_size,
+        val_split=0.0,
         transform=None,
-        seed=config.seed,
+        random_seed=config.seed,
     )
 
     # GPU or CPU
@@ -166,44 +170,44 @@ def visualize(img_path, explanation_path, title):
 if __name__ == "__main__":
     # run()
     # orig_img = (
-    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data_modules/"
     #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
     #     "test_orig.pt"
     # )
     # adv_img = (
-    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data_modules/"
     #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
     #     "test_adv.pt"
     # )
     # orig_expl = (
-    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data_modules/"
     #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
     #     "test_orig_explanations.pt"
     # )
     # adv_expl = (
-    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data_modules/"
     #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
     #     "test_adv_explanations.pt"
     # )
     orig_img = (
         "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-        "adversarial/MNIST/DeepFool/epsilon_0.225/class_all/"
+        "adversarial/MNIST/DeepFool/epsilon_0.2/class_1_2_3/"
         "test_orig.pt"
     )
     adv_img = (
         "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-        "adversarial/MNIST/DeepFool/epsilon_0.225/class_all/"
+        "adversarial/MNIST/DeepFool/epsilon_0.2/class_1_2_3/"
         "test_adv.pt"
     )
     orig_expl = (
         "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-        "adversarial/MNIST/DeepFool/epsilon_0.225/class_all/"
+        "adversarial/MNIST/DeepFool/epsilon_0.2/class_1_2_3/"
         "test_orig_explanations.pt"
     )
     adv_expl = (
         "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-        "adversarial/MNIST/DeepFool/epsilon_0.225/class_all/"
+        "adversarial/MNIST/DeepFool/epsilon_0.2/class_1_2_3/"
         "test_adv_explanations.pt"
     )
-    visualize(orig_img, orig_expl, "Original explanation - GradCAM")
-    visualize(adv_img, adv_expl, "Adversarial explanation - GradCAM")
+    visualize(orig_img, orig_expl, "Original explanation - DeepLIFT zero")
+    visualize(adv_img, adv_expl, "Adversarial explanation - DeepLIFT zero")

@@ -25,14 +25,14 @@ defaults = [{"data_set": "MNIST"}, {"classifier": "MNISTClassifier"}]
 @dataclass
 class ClassifierTrainingConfig:
 
-    seed: int = 42
+    random_seed: int = 42
     gpus: int = 1
     test: bool = False
     checkpoint: str = ""
 
     batch_size: int = 64
     val_split: float = 0.1
-    download_data: bool = False
+    download: bool = False
 
     data_set: DataSetConfig = MISSING
     classifier: ClassifierConfig = MISSING

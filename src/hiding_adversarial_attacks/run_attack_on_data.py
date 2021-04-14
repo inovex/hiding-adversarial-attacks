@@ -9,6 +9,7 @@ import hydra
 import torch
 from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
+from torchvision.transforms import transforms
 from tqdm import tqdm
 
 from hiding_adversarial_attacks.attack.attack_results import (
@@ -24,12 +25,12 @@ from hiding_adversarial_attacks.attack.logging_utils import (
     log_attack_results,
     setup_logger,
 )
+from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.adversarial_attack_config import (
     AdversarialAttackConfig,
 )
 from hiding_adversarial_attacks.config.data_set.data_set_config import DataSetNames
-from hiding_adversarial_attacks.mnist.data_modules import get_data_module
-from hiding_adversarial_attacks.mnist.mnist_net import MNISTNet
+from hiding_adversarial_attacks.data_modules.utils import get_data_module
 
 LOGGER = logging.Logger(os.path.basename(__file__))
 
@@ -106,7 +107,6 @@ def run_attack(
 
 @hydra.main(config_name="adversarial_attack_config")
 def run(config: AdversarialAttackConfig) -> None:
-    # config = parse_attack_args()
     print(OmegaConf.to_yaml(config))
 
     # Logging
@@ -125,12 +125,14 @@ def run(config: AdversarialAttackConfig) -> None:
 
     # Setup data module
     data_module = get_data_module(
-        config.data_set.name,
-        config.batch_size,
+        data_set=config.data_set.name,
+        data_path=config.data_set.external_path,
+        download=False,
+        batch_size=config.batch_size,
         val_split=0.0,
-        download_data=False,
-        seed=config.seed,
+        transform=transforms.ToTensor(),
         attacked_classes=list(config.attack.attacked_classes),
+        random_seed=config.random_seed,
     )
 
     # Data loaders
