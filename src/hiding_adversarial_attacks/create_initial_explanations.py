@@ -13,7 +13,7 @@ from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.create_explanations_config import (
     ExplanationConfig,
 )
-from hiding_adversarial_attacks.config.data_set.data_set_config import (
+from hiding_adversarial_attacks.config.data_sets.data_set_config import (
     AdversarialDataSetNames,
     DataSetNames,
 )

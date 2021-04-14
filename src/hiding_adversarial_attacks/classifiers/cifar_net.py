@@ -10,10 +10,10 @@ import torchmetrics
 from torch.optim.lr_scheduler import StepLR
 from torchvision.models import densenet121
 
-from hiding_adversarial_attacks.config.classifier.classifier_config import (
+from hiding_adversarial_attacks.config.classifiers.classifier_config import (
     ClassifierConfig,
 )
-from hiding_adversarial_attacks.config.data_set.data_set_config import DataSetConfig
+from hiding_adversarial_attacks.config.data_sets.data_set_config import DataSetConfig
 
 
 class CifarNet(pl.LightningModule):

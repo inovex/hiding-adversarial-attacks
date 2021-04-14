@@ -29,7 +29,7 @@ from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.adversarial_attack_config import (
     AdversarialAttackConfig,
 )
-from hiding_adversarial_attacks.config.data_set.data_set_config import DataSetNames
+from hiding_adversarial_attacks.config.data_sets.data_set_config import DataSetNames
 from hiding_adversarial_attacks.data_modules.utils import get_data_module
 
 LOGGER = logging.Logger(os.path.basename(__file__))

@@ -5,7 +5,7 @@ from torchvision.transforms import transforms
 from hiding_adversarial_attacks.config.attack.adversarial_attack_config import (
     ALL_CLASSES,
 )
-from hiding_adversarial_attacks.config.data_set.data_set_config import (
+from hiding_adversarial_attacks.config.data_sets.data_set_config import (
     AdversarialDataSetNames,
 )
 from hiding_adversarial_attacks.data_modules.base import BaseDataModule

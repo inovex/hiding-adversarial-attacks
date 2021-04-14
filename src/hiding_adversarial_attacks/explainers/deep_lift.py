@@ -3,7 +3,7 @@ import torch
 import torchvision
 from captum.attr import DeepLift
 
-from hiding_adversarial_attacks.config.explanation.deep_lift_baseline_config import (
+from hiding_adversarial_attacks.config.explainers.deep_lift_baseline_config import (
     DeepLiftBaselineNames,
 )
 from hiding_adversarial_attacks.explainers.base import BaseExplainer

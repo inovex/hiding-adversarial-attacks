@@ -10,7 +10,7 @@ from torchvision.transforms import ToPILImage
 
 from hiding_adversarial_attacks.classifiers.cifar_net import CifarNet
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
-from hiding_adversarial_attacks.config.data_set.data_set_config import DataSetNames
+from hiding_adversarial_attacks.config.data_sets.data_set_config import DataSetNames
 
 toPilImage = ToPILImage()
 
