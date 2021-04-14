@@ -18,10 +18,8 @@ from hiding_adversarial_attacks.config.data_set.data_set_config import (
     DataSetNames,
 )
 from hiding_adversarial_attacks.data_modules.utils import get_data_module
-from hiding_adversarial_attacks.explanation.explainers import (
-    AbstractExplainer,
-    get_explainer,
-)
+from hiding_adversarial_attacks.explainers.base import BaseExplainer
+from hiding_adversarial_attacks.explainers.utils import get_explainer
 from hiding_adversarial_attacks.utils import tensor_to_pil_numpy
 
 
@@ -53,7 +51,7 @@ def get_model_from_checkpoint(
 
 
 def explain(
-    explainer: AbstractExplainer, data_loader: DataLoader, device: torch.device
+    explainer: BaseExplainer, data_loader: DataLoader, device: torch.device
 ) -> Tuple[Any, Any, Union[Tensor, Any], Any]:
 
     orig_explanations, adv_explanations = torch.Tensor(), torch.Tensor()
