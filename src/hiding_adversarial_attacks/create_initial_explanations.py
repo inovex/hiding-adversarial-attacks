@@ -52,8 +52,9 @@ def get_model_from_checkpoint(
 
 def explain(
     explainer: BaseExplainer, data_loader: DataLoader, device: torch.device
-) -> Tuple[Any, Any, Union[Tensor, Any], Any]:
+) -> Tuple[Any, Any, Union[Tensor, Any], Any, Any, Any]:
 
+    orig_images_all, adv_images_all = torch.Tensor(), torch.Tensor()
     orig_explanations, adv_explanations = torch.Tensor(), torch.Tensor()
     orig_labels_all = torch.Tensor()
     adv_labels_all = torch.Tensor()
@@ -74,8 +75,17 @@ def explain(
         adv_explanations = torch.cat(
             (adv_explanations, adv_explanations_batch.detach().cpu()), 0
         )
+        orig_images_all = torch.cat((orig_images_all, _images.detach().cpu()), 0)
+        adv_images_all = torch.cat((adv_images_all, _adv_images.detach().cpu()), 0)
 
-    return orig_explanations, adv_explanations, orig_labels_all, adv_labels_all
+    return (
+        orig_explanations,
+        adv_explanations,
+        orig_labels_all,
+        adv_labels_all,
+        orig_images_all,
+        adv_images_all,
+    )
 
 
 @hydra.main(config_name="explanation_config")
@@ -118,12 +128,16 @@ def run(config: ExplanationConfig) -> None:
         train_adv_explanations,
         train_orig_labels,
         train_adv_labels,
+        train_orig_images,
+        train_adv_images,
     ) = explain(explainer, train_loader, device)
     (
         test_orig_explanations,
         test_adv_explanations,
         test_orig_labels,
         test_adv_labels,
+        test_orig_images,
+        test_adv_images,
     ) = explain(explainer, test_loader, device)
 
     # Save explanations
@@ -143,69 +157,39 @@ def run(config: ExplanationConfig) -> None:
         config.data_path,
         "test",
     )
+    # Visualize some explanations of adversarials and originals
+    if config.visuallize_samples:
+        visualize_explanations(
+            train_orig_images[0:4],
+            train_orig_explanations[0:4],
+            train_orig_labels[0:4],
+            f"Original explanation - {config.explainer.name}",
+        )
+        visualize_explanations(
+            train_adv_images[0:4],
+            train_adv_explanations[0:4],
+            train_adv_labels[0:4],
+            f"Adversarial explanation - {config.explainer.name}",
+        )
 
 
-def visualize(img_path, explanation_path, title):
-    # Load images and labels
-    images, labels = torch.load(img_path)
-    explanations, _ = torch.load(explanation_path)
+def visualize_explanations(
+    images: torch.Tensor, explanations: torch.Tensor, labels: torch.Tensor, title: str
+):
+    imgs = tensor_to_pil_numpy(images)
+    expls = tensor_to_pil_numpy(explanations)
 
-    image_batch = images[0:8].cuda()
-    explanation_batch = explanations[0:8].cuda()
-
-    img = tensor_to_pil_numpy(image_batch)
-    expl = tensor_to_pil_numpy(explanation_batch)
-    viz.visualize_image_attr(
-        expl[1],
-        img[1],
-        method="blended_heat_map",
-        sign="all",
-        show_colorbar=True,
-        title=title,
-    )
+    for image, explanation, label in zip(imgs, expls, labels):
+        _title = f"{title}, label: {label}"
+        viz.visualize_image_attr(
+            explanation,
+            image,
+            method="blended_heat_map",
+            sign="all",
+            show_colorbar=True,
+            title=_title,
+        )
 
 
 if __name__ == "__main__":
     run()
-    # orig_img = (
-    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data_modules/"
-    #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
-    #     "test_orig.pt"
-    # )
-    # adv_img = (
-    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data_modules/"
-    #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
-    #     "test_adv.pt"
-    # )
-    # orig_expl = (
-    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data_modules/"
-    #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
-    #     "test_orig_explanations.pt"
-    # )
-    # adv_expl = (
-    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data_modules/"
-    #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
-    #     "test_adv_explanations.pt"
-    # )
-    # orig_img = (
-    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-    #     "adversarial/MNIST/DeepFool/epsilon_0.2/class_1_2_3/"
-    #     "test_orig.pt"
-    # )
-    # adv_img = (
-    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-    #     "adversarial/MNIST/DeepFool/epsilon_0.2/class_1_2_3/"
-    #     "test_adv.pt"
-    # )
-    # orig_expl = (
-    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-    #     "adversarial/MNIST/DeepFool/epsilon_0.2/class_1_2_3/"
-    #     "test_orig_explanations.pt"
-    # )
-    # adv_expl = (
-    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-    #     "adversarial/MNIST/DeepFool/epsilon_0.2/class_1_2_3/"
-    #     "test_adv_explanations.pt"
-    # )
-    # visualize(orig_img, orig_expl, "Original explanation - DeepLIFT zero")
-    # visualize(adv_img, adv_expl, "Adversarial explanation - DeepLIFT zero")
