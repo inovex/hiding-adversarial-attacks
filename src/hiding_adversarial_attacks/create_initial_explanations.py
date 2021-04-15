@@ -24,10 +24,10 @@ from hiding_adversarial_attacks.utils import tensor_to_pil_numpy
 
 
 def save_explanations(
-    original_explanations,
-    adv_explanations,
-    labels,
-    adv_labels,
+    original_explanations: torch.Tensor,
+    adv_explanations: torch.Tensor,
+    labels: torch.Tensor,
+    adv_labels: torch.Tensor,
     data_path: str,
     stage: str,
 ):
@@ -133,7 +133,7 @@ def run(config: ExplanationConfig) -> None:
         train_orig_labels,
         train_adv_labels,
         config.data_path,
-        "train",
+        "training",
     )
     save_explanations(
         test_orig_explanations,
@@ -166,7 +166,7 @@ def visualize(img_path, explanation_path, title):
 
 
 if __name__ == "__main__":
-    # run()
+    run()
     # orig_img = (
     #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data_modules/"
     #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
@@ -187,25 +187,25 @@ if __name__ == "__main__":
     #     "preprocessed/adversarial/FashionMNIST/DeepFool/epsilon_0.105/class_all/"
     #     "test_adv_explanations.pt"
     # )
-    orig_img = (
-        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-        "adversarial/MNIST/DeepFool/epsilon_0.2/class_1_2_3/"
-        "test_orig.pt"
-    )
-    adv_img = (
-        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-        "adversarial/MNIST/DeepFool/epsilon_0.2/class_1_2_3/"
-        "test_adv.pt"
-    )
-    orig_expl = (
-        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-        "adversarial/MNIST/DeepFool/epsilon_0.2/class_1_2_3/"
-        "test_orig_explanations.pt"
-    )
-    adv_expl = (
-        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-        "adversarial/MNIST/DeepFool/epsilon_0.2/class_1_2_3/"
-        "test_adv_explanations.pt"
-    )
-    visualize(orig_img, orig_expl, "Original explanation - DeepLIFT zero")
-    visualize(adv_img, adv_expl, "Adversarial explanation - DeepLIFT zero")
+    # orig_img = (
+    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+    #     "adversarial/MNIST/DeepFool/epsilon_0.2/class_1_2_3/"
+    #     "test_orig.pt"
+    # )
+    # adv_img = (
+    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+    #     "adversarial/MNIST/DeepFool/epsilon_0.2/class_1_2_3/"
+    #     "test_adv.pt"
+    # )
+    # orig_expl = (
+    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+    #     "adversarial/MNIST/DeepFool/epsilon_0.2/class_1_2_3/"
+    #     "test_orig_explanations.pt"
+    # )
+    # adv_expl = (
+    #     "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+    #     "adversarial/MNIST/DeepFool/epsilon_0.2/class_1_2_3/"
+    #     "test_adv_explanations.pt"
+    # )
+    # visualize(orig_img, orig_expl, "Original explanation - DeepLIFT zero")
+    # visualize(adv_img, adv_expl, "Adversarial explanation - DeepLIFT zero")
