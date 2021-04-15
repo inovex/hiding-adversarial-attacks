@@ -5,22 +5,22 @@ from typing import Any, List
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
 
-from hiding_adversarial_attacks.config.classifier.classifier_config import (
+from hiding_adversarial_attacks.config.classifiers.classifier_config import (
     ClassifierConfig,
     FashionMNISTClassifierConfig,
     MNISTClassifierConfig,
 )
-from hiding_adversarial_attacks.config.data_set.data_set_config import (
+from hiding_adversarial_attacks.config.data_sets.data_set_config import (
     AdversarialFashionMNISTConfig,
     AdversarialMNISTConfig,
     DataSetConfig,
 )
-from hiding_adversarial_attacks.config.explanation.deep_lift_baseline_config import (
+from hiding_adversarial_attacks.config.explainers.deep_lift_baseline_config import (
     BlurBaselineConfig,
     LocalMeanBaselineConfig,
     ZeroBaselineConfig,
 )
-from hiding_adversarial_attacks.config.explanation.explainer_config import (
+from hiding_adversarial_attacks.config.explainers.explainer_config import (
     DeepLiftConfig,
     ExplainerConfig,
     LayerGradCamConfig,

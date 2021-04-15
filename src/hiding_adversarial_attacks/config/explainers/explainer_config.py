@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from omegaconf import MISSING
 
-from hiding_adversarial_attacks.config.explanation.deep_lift_baseline_config import (
+from hiding_adversarial_attacks.config.explainers.deep_lift_baseline_config import (
     DeepLiftBaselineConfig,
 )
 
