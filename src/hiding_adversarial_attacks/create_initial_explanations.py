@@ -17,6 +17,7 @@ from hiding_adversarial_attacks.config.data_sets.data_set_config import (
     AdversarialDataSetNames,
     DataSetNames,
 )
+from hiding_adversarial_attacks.config.explainers.explainer_config import ExplainerNames
 from hiding_adversarial_attacks.data_modules.utils import get_data_module
 from hiding_adversarial_attacks.explainers.base import BaseExplainer
 from hiding_adversarial_attacks.explainers.utils import get_explainer
@@ -28,15 +29,29 @@ def save_explanations(
     adv_explanations: torch.Tensor,
     labels: torch.Tensor,
     adv_labels: torch.Tensor,
-    data_path: str,
+    config: ExplanationConfig,
     stage: str,
 ):
-    os.makedirs(data_path, exist_ok=True)
-    orig_path = os.path.join(data_path, f"{stage}_orig_explanations.pt")
-    adv_path = os.path.join(data_path, f"{stage}_adv_explanations.pt")
+    os.makedirs(config.data_path, exist_ok=True)
+    suffix = "_expl.pt"
+    if config.explainer.name == ExplainerNames.DEEP_LIFT:
+        suffix = (
+            f"expl_{ExplainerNames.DEEP_LIFT}_"
+            f"bl={config.explainer.baseline.name}_"
+            f"mbi={config.explainer.multiply_by_inputs}.pt"
+        )
+    elif config.explainer.name == ExplainerNames.GRAD_CAM:
+        suffix = (
+            f"expl_{ExplainerNames.GRAD_CAM}_"
+            f"l={config.explainer.layer_name}_"
+            f"ra={config.explainer.relu_attributions}.pt"
+        )
+
+    orig_path = os.path.join(config.data_path, f"{stage}_orig_{suffix}")
+    adv_path = os.path.join(config.data_path, f"{stage}_adv_{suffix}")
     torch.save((original_explanations.cpu(), labels.cpu()), orig_path)
     torch.save((adv_explanations.cpu(), adv_labels.cpu()), adv_path)
-    print(f"Saved explanations to {data_path}")
+    print(f"Saved explanations to {config.data_path}")
 
 
 def get_model_from_checkpoint(
@@ -146,7 +161,7 @@ def run(config: ExplanationConfig) -> None:
         train_adv_explanations,
         train_orig_labels,
         train_adv_labels,
-        config.data_path,
+        config,
         "training",
     )
     save_explanations(
@@ -154,11 +169,11 @@ def run(config: ExplanationConfig) -> None:
         test_adv_explanations,
         test_orig_labels,
         test_adv_labels,
-        config.data_path,
+        config,
         "test",
     )
     # Visualize some explanations of adversarials and originals
-    if config.visuallize_samples:
+    if config.visualize_samples:
         visualize_explanations(
             train_orig_images[0:4],
             train_orig_explanations[0:4],
