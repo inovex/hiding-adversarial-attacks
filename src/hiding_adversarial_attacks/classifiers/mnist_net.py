@@ -42,8 +42,10 @@ class MNISTNet(pl.LightningModule):
 
     @classmethod
     def as_foolbox_wrap(cls, hparams, device):
-        assert hparams.checkpoint is not None
-        assert os.path.isfile(hparams.checkpoint)
+        assert hparams.checkpoint is not None, "Checkpoint is None"
+        assert os.path.isfile(
+            hparams.checkpoint
+        ), f"Checkpoint is invalid: '{hparams.checkpoint}'"
 
         model = cls(hparams).load_from_checkpoint(hparams.checkpoint)
         model.eval()
