@@ -15,7 +15,6 @@ class AdversarialAttackNames:
 @dataclass
 class AttackConfig:
     name: str = MISSING
-    attacked_classes: List = field(default_factory=lambda: [ALL_CLASSES])
     epsilons: List = field(
         default_factory=lambda: np.linspace(0.001, 0.1, num=3).tolist()
     )

@@ -36,7 +36,7 @@ class BaseDataModule(pl.LightningDataModule):
         batch_size: int = 64,
         val_split: float = 0.1,
         transform: transforms = transforms.ToTensor(),
-        attacked_classes: List[Union[str, int]] = ALL_CLASSES,
+        included_classes: List[Union[str, int]] = ALL_CLASSES,
         random_seed: int = 42,
     ):
         super().__init__()
@@ -48,7 +48,7 @@ class BaseDataModule(pl.LightningDataModule):
         self._batch_size = batch_size
         self._val_split = val_split
         self._transform = transform
-        self._attacked_classes = attacked_classes
+        self._included_classes = included_classes
         self._random_seed = random_seed
 
     def _get_vision_data_set(self, data_set_name: str):
@@ -76,8 +76,8 @@ class BaseDataModule(pl.LightningDataModule):
         self.train, self.validation, self.test = self._create_data_splits(full, test)
 
     def _create_data_splits(self, full, test):
-        if ALL_CLASSES not in self._attacked_classes:
-            full, test = self._filter_splits(full, test, self._attacked_classes)
+        if ALL_CLASSES not in self._included_classes:
+            full, test = self._filter_splits(full, test, self._included_classes)
         train_size, val_size = self._get_train_val_split_sizes(full)
         generator = torch.Generator().manual_seed(self._random_seed)
         train, val = random_split(full, [train_size, val_size], generator=generator)
@@ -87,26 +87,26 @@ class BaseDataModule(pl.LightningDataModule):
         self,
         full: VisionDatasetUnionType,
         test: VisionDatasetUnionType,
-        attacked_classes: List[int],
+        included_classes: List[int],
     ):
         """
         Filters the data set splits <full> and <test> **in place**,
         using the provided attacked_classes.
         :param full: Full training set (including validation)
         :param test: Full test set
-        :param attacked_classes: Tuple of class integer IDs or string "all".
+        :param included_classes: Tuple of class integer IDs or string "all".
         :return:
         """
-        assert type(attacked_classes) is list, "attacked_classes is not a list."
+        assert type(included_classes) is list, "attacked_classes is not a list."
         assert all(
-            isinstance(attacked_class, int) for attacked_class in attacked_classes
+            isinstance(attacked_class, int) for attacked_class in included_classes
         ), "attacked_classes does not contain only int members."
         assert all(
             0 <= attacked_class < self._num_classes
-            for attacked_class in attacked_classes
+            for attacked_class in included_classes
         ), "attacked_classes members need to be >= 0 and < 10."
         masks_full, masks_test = self._get_attacked_classes_masks(
-            full, test, attacked_classes
+            full, test, included_classes
         )
         full.targets = full.targets[masks_full]
         full.data = full.data[masks_full]
@@ -118,11 +118,11 @@ class BaseDataModule(pl.LightningDataModule):
     def _get_attacked_classes_masks(
         full: VisionDatasetUnionType,
         test: VisionDatasetUnionType,
-        attacked_classes: List[int],
+        included_classes: List[int],
     ):
         masks_full = torch.zeros(len(full), dtype=torch.bool)
         masks_test = torch.zeros(len(test), dtype=torch.bool)
-        for attacked_class in attacked_classes:
+        for attacked_class in included_classes:
             masks_full += full.targets == attacked_class
             masks_test += test.targets == attacked_class
         return masks_full, masks_test

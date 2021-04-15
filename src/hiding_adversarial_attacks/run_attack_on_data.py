@@ -29,6 +29,9 @@ from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.adversarial_attack_config import (
     AdversarialAttackConfig,
 )
+from hiding_adversarial_attacks.config.attack.adversarial_attack_config import (
+    ALL_CLASSES,
+)
 from hiding_adversarial_attacks.config.data_sets.data_set_config import DataSetNames
 from hiding_adversarial_attacks.data_modules.utils import get_data_module
 
@@ -111,11 +114,13 @@ def run(config: AdversarialAttackConfig) -> None:
 
     # Logging
     os.makedirs(config.log_path, exist_ok=True)
-    log_file_path = os.path.join(
-        config.log_path,
-        f"{int(datetime.now().timestamp())}-{config.data_set.name}-"
-        f"{config.attack.name}-{config.attack.epsilons}.log",
+    log_file_name = config.log_file_name.format(
+        timestamp=int(datetime.now().timestamp()),
+        data_set=config.data_set.name,
+        attack=config.attack.name,
+        epsilons=config.attack.epsilons,
     )
+    log_file_path = os.path.join(config.log_path, log_file_name)
     setup_logger(LOGGER, log_file_path, log_level=config.logging.log_level)
 
     # GPU or CPU
@@ -131,7 +136,6 @@ def run(config: AdversarialAttackConfig) -> None:
         batch_size=config.batch_size,
         val_split=0.0,
         transform=transforms.ToTensor(),
-        attacked_classes=list(config.attack.attacked_classes),
         random_seed=config.random_seed,
     )
 
@@ -152,7 +156,7 @@ def run(config: AdversarialAttackConfig) -> None:
         config.attack.epsilons,
         config.data_set.name,
         config.checkpoint,
-        config.attack.attacked_classes,
+        ALL_CLASSES,
     )
 
     # Run adversarial attack
@@ -171,14 +175,12 @@ def run(config: AdversarialAttackConfig) -> None:
     for train_attack_results, test_attack_results in zip(
         train_attack_results_list, test_attack_results_list
     ):
-        class_dir = f"class_{'_'.join(map(str, config.attack.attacked_classes))}"
-        target_path = os.path.join(
-            config.data_set.adversarial_path,
-            config.data_set.name,
-            config.attack.name,
-            f"epsilon_{test_attack_results.epsilon}",
-            class_dir,
+        output_dirname = config.output_dirname.format(
+            data_set=config.data_set.name,
+            attack=config.attack.name,
+            epsilon=test_attack_results.epsilon,
         )
+        target_path = os.path.join(config.data_set.adversarial_path, output_dirname)
         train_attack_results.save_results(target_path)
         test_attack_results.save_results(target_path)
 

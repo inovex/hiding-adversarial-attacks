@@ -46,6 +46,10 @@ class AdversarialAttackConfig:
 
     logging: LoggingConfig = LoggingConfig()
     log_path: str = os.path.join(logging.log_root, "attack_on_data")
+    log_file_name: str = (
+        "{timestamp}--data-set={data_set}--attack={attack}--eps={epsilons}.log"
+    )
+    output_dirname: str = "data-set={data_set}--attack={attack}--eps={epsilon}"
 
 
 cs = ConfigStore.instance()

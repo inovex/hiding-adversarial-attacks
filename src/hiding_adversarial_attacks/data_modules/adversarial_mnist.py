@@ -19,7 +19,7 @@ class AdversarialMNISTDataModule(BaseDataModule):
         batch_size: int = 64,
         val_split: float = 0.1,
         transform: transforms = None,
-        attacked_classes: List[Union[str, int]] = ALL_CLASSES,
+        included_classes: List[Union[str, int]] = ALL_CLASSES,
         random_seed: int = 42,
     ):
         super().__init__(
@@ -30,6 +30,6 @@ class AdversarialMNISTDataModule(BaseDataModule):
             batch_size=batch_size,
             val_split=val_split,
             transform=transform,
-            attacked_classes=attacked_classes,
+            included_classes=included_classes,
             random_seed=random_seed,
         )

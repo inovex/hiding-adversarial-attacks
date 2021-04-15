@@ -31,7 +31,7 @@ def get_data_module(
     batch_size: int,
     val_split: float,
     transform: transforms = None,
-    attacked_classes: List[str] = ALL_CLASSES,
+    included_classes: List[str] = ALL_CLASSES,
     random_seed: int = 42,
 ):
     assert (
@@ -43,7 +43,7 @@ def get_data_module(
         batch_size,
         val_split,
         transform,
-        attacked_classes,
+        included_classes,
         random_seed,
     )
     # Special trickery needed for MNIST as Y. LeCunn's website is still down
