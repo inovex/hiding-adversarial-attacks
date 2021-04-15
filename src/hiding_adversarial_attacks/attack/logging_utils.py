@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 
+from hiding_adversarial_attacks.attack.attack_results import AttackResults
 from hiding_adversarial_attacks.config.logger.logger import LoggingConfig
 
 
@@ -25,8 +26,9 @@ def setup_logger(
     logger.setLevel(log_level)
 
 
-def log_attack_results(logger, attack_results, set_size):
+def log_attack_results(logger, attack_results: AttackResults, set_size):
     logger.info(f"\t\t Total set size: {set_size}")
+    logger.info(f"\t\t Misclassified count: {attack_results.misclassified_count}")
     logger.info(f"\t\t Attacked image count: {attack_results.attacked_count}")
     logger.info(f"\t\t Adversarial count: {attack_results.adv_count}")
     logger.info(

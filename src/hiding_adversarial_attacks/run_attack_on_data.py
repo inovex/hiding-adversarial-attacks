@@ -17,8 +17,8 @@ from hiding_adversarial_attacks.attack.attack_results import (
     BatchAttackResults,
 )
 from hiding_adversarial_attacks.attack.foolbox_utils import (
-    filter_correctly_classified,
     get_attack,
+    get_correctly_classified_mask,
 )
 from hiding_adversarial_attacks.attack.logging_utils import (
     log_attack_info,
@@ -45,7 +45,20 @@ def attack_batch(
     attack: fb.Attack,
     epsilons: Union[Sequence[Union[float, None]], float, None],
 ) -> List[BatchAttackResults]:
-    images, labels = filter_correctly_classified(foolbox_model, images, labels)
+
+    # Get a mask of the images correctly classified by the model before being attacked
+    correctly_classified_mask = get_correctly_classified_mask(
+        foolbox_model, images, labels
+    )
+    # images that are not correctly classified by the model as-is
+    misclassified_images, misclassified_labels = (
+        images[~correctly_classified_mask],
+        labels[~correctly_classified_mask],
+    )
+    images, labels = (
+        images[correctly_classified_mask],
+        labels[correctly_classified_mask],
+    )
 
     if images.nelement() == 0:
         raise SystemExit(
@@ -75,8 +88,11 @@ def attack_batch(
             labels[adv_mask],
             adv_images,
             adv_labels,
+            misclassified_images,
+            misclassified_labels,
             attacked_count,
             adv_count,
+            len(misclassified_images),
             eps,
         )
         attack_results_list.append(batch_attack_results)
