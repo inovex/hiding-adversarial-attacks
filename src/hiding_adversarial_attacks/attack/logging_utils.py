@@ -31,6 +31,7 @@ def log_attack_results(logger, attack_results: AttackResults, set_size):
     logger.info(f"\t\t Misclassified count: {attack_results.misclassified_count}")
     logger.info(f"\t\t Attacked image count: {attack_results.attacked_count}")
     logger.info(f"\t\t Adversarial count: {attack_results.adv_count}")
+    logger.info(f"\t\t Failed count: {attack_results.adv_count}")
     logger.info(
         f"\t\t Percentage successfully attacked (adv_count / attacked_count): "
         f"{attack_results.adv_count / attack_results.attacked_count:.4%}%"

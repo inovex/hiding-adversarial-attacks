@@ -77,6 +77,8 @@ def attack_batch(
         adv_count = len(adv_mask.nonzero())
         attacked_count = len(images)
         adv_images = clipped_adv[adv_mask]
+        failed_adv_images = clipped_adv[~adv_mask]
+        failed_adv_labels = labels[~adv_mask]
         if adv_count > 0:
             adv_logits = foolbox_model(adv_images)
             adv_labels = torch.argmax(adv_logits, dim=-1)
@@ -88,10 +90,13 @@ def attack_batch(
             labels[adv_mask],
             adv_images,
             adv_labels,
+            failed_adv_images,
+            failed_adv_labels,
             misclassified_images,
             misclassified_labels,
             attacked_count,
             adv_count,
+            len(failed_adv_images),
             len(misclassified_images),
             eps,
         )
