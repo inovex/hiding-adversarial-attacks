@@ -33,22 +33,22 @@ def save_explanations(
     stage: str,
 ):
     os.makedirs(config.data_path, exist_ok=True)
-    suffix = "_expl.pt"
+    suffix = "expl.pt"
     if config.explainer.name == ExplainerNames.DEEP_LIFT:
         suffix = (
-            f"expl_{ExplainerNames.DEEP_LIFT}_"
-            f"bl={config.explainer.baseline.name}_"
+            f"expl--{ExplainerNames.DEEP_LIFT}--"
+            f"bl={config.explainer.baseline.name}--"
             f"mbi={config.explainer.multiply_by_inputs}.pt"
         )
     elif config.explainer.name == ExplainerNames.GRAD_CAM:
         suffix = (
-            f"expl_{ExplainerNames.GRAD_CAM}_"
-            f"l={config.explainer.layer_name}_"
+            f"expl--{ExplainerNames.GRAD_CAM}--"
+            f"l={config.explainer.layer_name}--"
             f"ra={config.explainer.relu_attributions}.pt"
         )
 
-    orig_path = os.path.join(config.data_path, f"{stage}_orig_{suffix}")
-    adv_path = os.path.join(config.data_path, f"{stage}_adv_{suffix}")
+    orig_path = os.path.join(config.data_path, f"{stage}_orig--{suffix}")
+    adv_path = os.path.join(config.data_path, f"{stage}_adv--{suffix}")
     torch.save((original_explanations.cpu(), labels.cpu()), orig_path)
     torch.save((adv_explanations.cpu(), adv_labels.cpu()), adv_path)
     print(f"Saved explanations to {config.data_path}")
