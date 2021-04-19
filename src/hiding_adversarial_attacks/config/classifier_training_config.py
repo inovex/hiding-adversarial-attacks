@@ -40,6 +40,9 @@ class ClassifierTrainingConfig:
 
     logging: LoggingConfig = LoggingConfig()
 
+    # Neptune options
+    tags: List[str] = field(default_factory=lambda: ["trash"])
+
 
 cs = ConfigStore.instance()
 cs.store(group="data_set", name="MNIST", node=MNISTConfig)

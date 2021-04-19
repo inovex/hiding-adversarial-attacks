@@ -3,7 +3,6 @@ import os
 import hydra
 from omegaconf import OmegaConf
 from pytorch_lightning import Trainer
-from pytorch_lightning import loggers as pl_loggers
 from torchvision.transforms import transforms
 
 from hiding_adversarial_attacks.config.classifier_training_config import (
@@ -20,7 +19,8 @@ def train(data_module, config: ClassifierTrainingConfig):
 
     checkpoint_callback = hydra.utils.instantiate(config.classifier.model_checkpoint)
 
-    neptune_logger = get_neptune_logger(config)
+    experiment_name = f"train-{config.data_set.name}-classifier"
+    neptune_logger = get_neptune_logger(config, experiment_name)
     trainer = Trainer(
         gpus=config.gpus, logger=neptune_logger, callbacks=[checkpoint_callback]
     )
@@ -33,9 +33,9 @@ def train(data_module, config: ClassifierTrainingConfig):
 def test(data_module, config: ClassifierTrainingConfig):
     test_loader = data_module.test_dataloader()
 
-    log_path = os.path.join(config.log_path, config.data_set.name)
-    tb_logger = pl_loggers.TensorBoardLogger(log_path)
-    trainer = Trainer(gpus=config.gpus, logger=tb_logger)
+    experiment_name = f"test-{config.data_set.name}-classifier"
+    neptune_logger = get_neptune_logger(config, experiment_name)
+    trainer = Trainer(gpus=config.gpus, logger=neptune_logger)
 
     if len(config.checkpoint) == 0 or not os.path.isfile(config.checkpoint):
         raise SystemExit(
