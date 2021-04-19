@@ -29,6 +29,7 @@ dependencies:
   # EXPERIMENT TRACKING & HYPERPARAMETER OPTIMIZATION
   - optuna
   - mlflow
+  - neptune-client
   # CODE FORMATTERS & TYPE CHECKING
   - black
   - mypy

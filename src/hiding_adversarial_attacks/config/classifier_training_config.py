@@ -1,4 +1,3 @@
-import os
 from dataclasses import dataclass, field
 from typing import Any, List
 
@@ -40,7 +39,6 @@ class ClassifierTrainingConfig:
     defaults: List[Any] = field(default_factory=lambda: defaults)
 
     logging: LoggingConfig = LoggingConfig()
-    log_path: str = os.path.join(logging.log_root, "classifier_training")
 
 
 cs = ConfigStore.instance()
