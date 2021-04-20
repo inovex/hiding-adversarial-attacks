@@ -23,7 +23,6 @@ defaults = [{"data_set": "MNIST"}, {"classifier": "MNISTClassifier"}]
 
 @dataclass
 class ClassifierTrainingConfig:
-
     random_seed: int = 42
     gpus: int = 1
     test: bool = False
@@ -41,7 +40,7 @@ class ClassifierTrainingConfig:
     logging: LoggingConfig = LoggingConfig()
 
     # Neptune options
-    tags: List[str] = field(default_factory=lambda: ["trash"])
+    tags: List[str] = field(default_factory=lambda: ["train-classifier", "trash"])
 
 
 cs = ConfigStore.instance()

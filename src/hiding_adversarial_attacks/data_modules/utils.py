@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 from torchvision.transforms import transforms
 
@@ -16,6 +16,12 @@ from hiding_adversarial_attacks.data_modules.cifar_10 import Cifar10DataModule
 from hiding_adversarial_attacks.data_modules.fashion_mnist import FashionMNISTDataModule
 from hiding_adversarial_attacks.data_modules.mnist import MNISTDataModule
 
+VisionDataModuleUnionType = Union[
+    MNISTDataModule,
+    FashionMNISTDataModule,
+    AdversarialMNISTDataModule,
+    Cifar10DataModule,
+]
 DATA_MODULE_MAPPING = {
     DataSetNames.MNIST: MNISTDataModule,
     DataSetNames.FASHION_MNIST: FashionMNISTDataModule,
@@ -33,7 +39,7 @@ def get_data_module(
     transform: transforms = None,
     included_classes: List[str] = ALL_CLASSES,
     random_seed: int = 42,
-):
+) -> VisionDataModuleUnionType:
     assert (
         data_set in DATA_MODULE_MAPPING
     ), f"The data set you specified does not exist: {data_set}"

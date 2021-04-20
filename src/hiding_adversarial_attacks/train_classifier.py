@@ -8,19 +8,24 @@ from torchvision.transforms import transforms
 from hiding_adversarial_attacks.config.classifier_training_config import (
     ClassifierTrainingConfig,
 )
-from hiding_adversarial_attacks.data_modules.utils import get_data_module
+from hiding_adversarial_attacks.data_modules.utils import (
+    VisionDataModuleUnionType,
+    get_data_module,
+)
 from hiding_adversarial_attacks.neptune_logger.utils import get_neptune_logger
 from hiding_adversarial_attacks.utils import get_model
 
 
-def train(data_module, config: ClassifierTrainingConfig):
+def train(data_module: VisionDataModuleUnionType, config: ClassifierTrainingConfig):
     train_loader = data_module.train_dataloader()
     validation_loader = data_module.val_dataloader()
 
     checkpoint_callback = hydra.utils.instantiate(config.classifier.model_checkpoint)
 
     experiment_name = f"train-{config.data_set.name}-classifier"
-    neptune_logger = get_neptune_logger(config, experiment_name)
+    tags = [*config.tags, config.data_set.name]
+    neptune_logger = get_neptune_logger(config, experiment_name, tags)
+
     trainer = Trainer(
         gpus=config.gpus, logger=neptune_logger, callbacks=[checkpoint_callback]
     )
