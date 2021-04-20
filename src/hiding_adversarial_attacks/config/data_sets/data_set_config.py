@@ -19,7 +19,7 @@ class AdversarialDataSetNames:
     ADVERSARIAL_CIFAR10: str = "AdversarialCIFAR10"
 
 
-@dataclass
+@dataclass(frozen=True)
 class DataSetConfig:
     name: str = MISSING
     image_width: int = MISSING
@@ -32,7 +32,7 @@ class DataSetConfig:
     adversarial_path: str = os.path.join(preprocessed_path, "adversarial")
 
 
-@dataclass
+@dataclass(frozen=True)
 class MNISTConfig(DataSetConfig):
     name: str = DataSetNames.MNIST
     bounds: Any = field(default_factory=lambda: (0, 1))
@@ -44,7 +44,7 @@ class MNISTConfig(DataSetConfig):
     num_classes: int = 10
 
 
-@dataclass
+@dataclass(frozen=True)
 class FashionMNISTConfig(MNISTConfig):
     name: str = DataSetNames.FASHION_MNIST
     image_width: int = 28
@@ -52,7 +52,7 @@ class FashionMNISTConfig(MNISTConfig):
     num_classes: int = 10
 
 
-@dataclass
+@dataclass(frozen=True)
 class Cifar10Config(MNISTConfig):
     name: str = DataSetNames.CIFAR10
     image_width: int = 32
@@ -60,16 +60,16 @@ class Cifar10Config(MNISTConfig):
     num_classes: int = 10
 
 
-@dataclass
+@dataclass(frozen=True)
 class AdversarialMNISTConfig(MNISTConfig):
     name: str = AdversarialDataSetNames.ADVERSARIAL_MNIST
 
 
-@dataclass
+@dataclass(frozen=True)
 class AdversarialFashionMNISTConfig(MNISTConfig):
     name: str = AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST
 
 
-@dataclass
+@dataclass(frozen=True)
 class AdversarialCifar10Config(Cifar10Config):
     name: str = AdversarialDataSetNames.ADVERSARIAL_CIFAR10

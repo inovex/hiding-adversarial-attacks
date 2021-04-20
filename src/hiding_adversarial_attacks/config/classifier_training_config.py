@@ -16,7 +16,6 @@ from hiding_adversarial_attacks.config.data_sets.data_set_config import (
     FashionMNISTConfig,
     MNISTConfig,
 )
-from hiding_adversarial_attacks.config.logger.logger import LoggingConfig
 
 defaults = [{"data_set": "MNIST"}, {"classifier": "MNISTClassifier"}]
 
@@ -37,10 +36,12 @@ class ClassifierTrainingConfig:
 
     defaults: List[Any] = field(default_factory=lambda: defaults)
 
-    logging: LoggingConfig = LoggingConfig()
+    # Set this to False if you want your checkpoints to be saved to Neptune
+    trash_run: bool = True
 
     # Neptune options
-    tags: List[str] = field(default_factory=lambda: ["train-classifier", "trash"])
+    # Tag 'trash' will be added to tags if trash_run is True
+    tags: List[str] = field(default_factory=lambda: ["train-classifier"])
 
 
 cs = ConfigStore.instance()
