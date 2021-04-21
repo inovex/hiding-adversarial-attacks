@@ -4,7 +4,7 @@ import neptune.new as neptune
 from omegaconf import OmegaConf
 from pytorch_lightning.loggers import NeptuneLogger
 
-NEPTUNE_PROJECT_NAME = "stefaniestoppel/hiding-adversarial-attacks"
+from hiding_adversarial_attacks.config.config import NEPTUNE_PROJECT_NAME
 
 
 def get_neptune_logger(
