@@ -216,9 +216,9 @@ def run(config: AdversarialAttackConfig) -> None:
     data_module = get_data_module(
         data_set=config.data_set.name,
         data_path=config.data_set.external_path,
-        download=config.download,
+        download=False,
         batch_size=config.batch_size,
-        val_split=config.val_split,
+        val_split=0.0,
         transform=transforms.ToTensor(),
         random_seed=config.random_seed,
     )

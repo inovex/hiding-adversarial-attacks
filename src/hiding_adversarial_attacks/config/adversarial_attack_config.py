@@ -37,8 +37,6 @@ class AdversarialAttackConfig:
     checkpoint: str = MISSING
 
     batch_size: int = 64
-    val_split: float = 0.0
-    download: bool = False
 
     data_set: DataSetConfig = MISSING
     classifier: ClassifierConfig = MISSING
