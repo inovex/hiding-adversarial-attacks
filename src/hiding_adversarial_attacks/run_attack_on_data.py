@@ -38,6 +38,64 @@ from hiding_adversarial_attacks.data_modules.utils import get_data_module
 LOGGER = logging.Logger(os.path.basename(__file__))
 
 
+def initialize_logging(config):
+    os.makedirs(config.log_path, exist_ok=True)
+    log_file_name = config.log_file_name.format(
+        timestamp=int(datetime.now().timestamp()),
+        data_set=config.data_set.name,
+        attack=config.attack.name,
+        epsilons=config.attack.epsilons,
+    )
+    log_file_path = os.path.join(config.log_path, log_file_name)
+    setup_logger(LOGGER, log_file_path, log_level=config.logging.log_level)
+
+
+def get_foolbox_model(config, device):
+    # Load foolbox wrapped model
+    if (
+        config.data_set.name == DataSetNames.MNIST
+        or config.data_set.name == DataSetNames.FASHION_MNIST
+    ):
+        foolbox_model = MNISTNet.as_foolbox_wrap(config, device)
+    else:
+        raise SystemExit(f"Data set '{config.data_set.name}' unknown. Exiting.")
+    return foolbox_model
+
+
+def save_attack_results(
+    config,
+    train_loader,
+    test_loader,
+    test_attack_results_list,
+    train_attack_results_list,
+):
+    LOGGER.info("")
+    LOGGER.info("******** Results *********")
+    for train_attack_results, test_attack_results in zip(
+        train_attack_results_list, test_attack_results_list
+    ):
+        output_dirname = config.output_dirname.format(
+            data_set=config.data_set.name,
+            attack=config.attack.name,
+            epsilon=test_attack_results.epsilon,
+        )
+        target_path = os.path.join(config.data_set.adversarial_path, output_dirname)
+        train_attack_results.save_results(target_path)
+        test_attack_results.save_results(target_path)
+
+        # Log results
+        LOGGER.info(f"---- Epsilon: {test_attack_results.epsilon}")
+        LOGGER.info(f"Output path: '{target_path}'")
+        LOGGER.info("\t Train: ")
+        log_attack_results(
+            LOGGER,
+            train_attack_results,
+            len(train_loader.dataset),
+        )
+        LOGGER.info("\t Test: ")
+        log_attack_results(LOGGER, test_attack_results, len(test_loader.dataset))
+
+
 def attack_batch(
     foolbox_model: fb.PyTorchModel,
     images: ep.Tensor,
@@ -134,15 +192,7 @@ def run(config: AdversarialAttackConfig) -> None:
     print(OmegaConf.to_yaml(config))
 
     # Logging
-    os.makedirs(config.log_path, exist_ok=True)
-    log_file_name = config.log_file_name.format(
-        timestamp=int(datetime.now().timestamp()),
-        data_set=config.data_set.name,
-        attack=config.attack.name,
-        epsilons=config.attack.epsilons,
-    )
-    log_file_path = os.path.join(config.log_path, log_file_name)
-    setup_logger(LOGGER, log_file_path, log_level=config.logging.log_level)
+    initialize_logging(config)
 
     # GPU or CPU
     device = torch.device(
@@ -164,14 +214,7 @@ def run(config: AdversarialAttackConfig) -> None:
     train_loader = data_module.train_dataloader(shuffle=False)
     test_loader = data_module.test_dataloader()
 
-    # Load foolbox wrapped model
-    if (
-        config.data_set.name == DataSetNames.MNIST
-        or config.data_set.name == DataSetNames.FASHION_MNIST
-    ):
-        foolbox_model = MNISTNet.as_foolbox_wrap(config, device)
-    else:
-        raise SystemExit(f"Data set '{config.data_set.name}' unknown. Exiting.")
+    foolbox_model = get_foolbox_model(config, device)
 
     log_attack_info(
         LOGGER,
@@ -184,7 +227,6 @@ def run(config: AdversarialAttackConfig) -> None:
 
     # Run adversarial attack
     attack = get_attack(config.attack.name)
-
     train_attack_results_list = run_attack(
         foolbox_model, attack, train_loader, config.attack.epsilons, "training", device
     )
@@ -193,31 +235,13 @@ def run(config: AdversarialAttackConfig) -> None:
     )
 
     # Log and save results
-    LOGGER.info("")
-    LOGGER.info("******** Results *********")
-    for train_attack_results, test_attack_results in zip(
-        train_attack_results_list, test_attack_results_list
-    ):
-        output_dirname = config.output_dirname.format(
-            data_set=config.data_set.name,
-            attack=config.attack.name,
-            epsilon=test_attack_results.epsilon,
-        )
-        target_path = os.path.join(config.data_set.adversarial_path, output_dirname)
-        train_attack_results.save_results(target_path)
-        test_attack_results.save_results(target_path)
-
-        # Log results
-        LOGGER.info(f"---- Epsilon: {test_attack_results.epsilon}")
-        LOGGER.info(f"Output path: '{target_path}'")
-        LOGGER.info("\t Train: ")
-        log_attack_results(
-            LOGGER,
-            train_attack_results,
-            len(train_loader.dataset),
-        )
-        LOGGER.info("\t Test: ")
-        log_attack_results(LOGGER, test_attack_results, len(test_loader.dataset))
+    save_attack_results(
+        config,
+        train_loader,
+        test_loader,
+        test_attack_results_list,
+        train_attack_results_list,
+    )
 
 
 if __name__ == "__main__":
