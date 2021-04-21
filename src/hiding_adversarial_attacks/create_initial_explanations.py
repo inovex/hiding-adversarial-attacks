@@ -12,13 +12,11 @@ from tqdm import tqdm
 
 from hiding_adversarial_attacks._neptune.utils import init_neptune_run
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
+from hiding_adversarial_attacks.config.config_validator import ConfigValidator
 from hiding_adversarial_attacks.config.create_explanations_config import (
     ExplanationConfig,
 )
-from hiding_adversarial_attacks.config.data_sets.data_set_config import (
-    AdversarialDataSetNames,
-    DataSetNames,
-)
+from hiding_adversarial_attacks.config.data_sets.data_set_config import DataSetNames
 from hiding_adversarial_attacks.config.explainers.explainer_config import ExplainerNames
 from hiding_adversarial_attacks.data_modules.utils import get_data_module
 from hiding_adversarial_attacks.explainers.base import BaseExplainer
@@ -143,6 +141,9 @@ def explain(
 
 @hydra.main(config_name="explanation_config")
 def run(config: ExplanationConfig) -> None:
+    config_validator = ConfigValidator()
+    config_validator.validate(config)
+
     print(OmegaConf.to_yaml(config))
 
     # Setup neptune
@@ -153,7 +154,7 @@ def run(config: ExplanationConfig) -> None:
     neptune_run["parameters"] = OmegaConf.to_container(config)
 
     data_module = get_data_module(
-        data_set=AdversarialDataSetNames.ADVERSARIAL_MNIST,
+        data_set=config.data_set.name,
         data_path=config.data_path,
         download=False,
         batch_size=config.batch_size,

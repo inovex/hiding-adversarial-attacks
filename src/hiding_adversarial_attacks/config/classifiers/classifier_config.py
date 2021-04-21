@@ -3,6 +3,12 @@ from dataclasses import dataclass
 from omegaconf import MISSING
 
 
+class ClassifierNames:
+    MNIST_CLASSIFIER: str = "MNISTClassifier"
+    FASHION_MNIST_CLASSIFIER: str = "FashionMNISTClassifier"
+    CIFAR10_CLASSIFIER: str = "Cifar10Classifier"
+
+
 @dataclass
 class ClassifierCheckpointConfig:
     _target_: str = "pytorch_lightning.callbacks.model_checkpoint.ModelCheckpoint"
@@ -37,16 +43,16 @@ class ClassifierConfig:
 
 @dataclass
 class MNISTClassifierConfig(ClassifierConfig):
-    name: str = "MNISTClassifier"
+    name: str = ClassifierNames.MNIST_CLASSIFIER
 
 
 @dataclass
 class FashionMNISTClassifierConfig(ClassifierConfig):
-    name: str = "FashionMNISTClassifier"
+    name: str = ClassifierNames.FASHION_MNIST_CLASSIFIER
 
 
 @dataclass
 class Cifar10ClassifierConfig(ClassifierConfig):
-    name: str = "Cifar10Classifier"
+    name: str = ClassifierNames.CIFAR10_CLASSIFIER
     lr: float = 0.1
     gamma: float = 0.7

@@ -33,6 +33,7 @@ from hiding_adversarial_attacks.config.adversarial_attack_config import (
 from hiding_adversarial_attacks.config.attack.adversarial_attack_config import (
     ALL_CLASSES,
 )
+from hiding_adversarial_attacks.config.config_validator import ConfigValidator
 from hiding_adversarial_attacks.config.data_sets.data_set_config import DataSetNames
 from hiding_adversarial_attacks.data_modules.utils import get_data_module
 
@@ -194,6 +195,9 @@ def run_attack(
 
 @hydra.main(config_name="adversarial_attack_config")
 def run(config: AdversarialAttackConfig) -> None:
+    config_validator = ConfigValidator()
+    config_validator.validate(config)
+
     print(OmegaConf.to_yaml(config))
 
     # Setup neptune

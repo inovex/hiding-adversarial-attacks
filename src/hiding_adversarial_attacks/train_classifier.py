@@ -12,6 +12,7 @@ from hiding_adversarial_attacks.callbacks.neptune_callback import NeptuneLogging
 from hiding_adversarial_attacks.config.classifier_training_config import (
     ClassifierTrainingConfig,
 )
+from hiding_adversarial_attacks.config.config_validator import ConfigValidator
 from hiding_adversarial_attacks.data_modules.utils import (
     VisionDataModuleUnionType,
     get_data_module,
@@ -59,6 +60,9 @@ def test(data_module, neptune_logger: NeptuneLogger, config: ClassifierTrainingC
 
 @hydra.main(config_name="classifier_training_config")
 def run(config: ClassifierTrainingConfig) -> None:
+    config_validator = ConfigValidator()
+    config_validator.validate(config)
+
     logger.info("Starting train_classifier.py")
     logger.info(f"cwd: {os.getcwd()}")
     logger.info("**** Parameters: ******")

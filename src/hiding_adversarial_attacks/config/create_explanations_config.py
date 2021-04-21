@@ -29,7 +29,7 @@ from hiding_adversarial_attacks.config.logger.logger import LoggingConfig
 
 defaults = [
     {"data_set": "AdversarialFashionMNIST"},
-    {"classifier": "MNISTClassifier"},
+    {"classifier": "FashionMNISTClassifier"},
     {"explainer": "DeepLiftExplainer"},
     {"explainer.baseline": "ZeroBaseline"},
 ]
