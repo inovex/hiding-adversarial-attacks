@@ -170,6 +170,8 @@ def run(config: AdversarialAttackConfig) -> None:
         or config.data_set.name == DataSetNames.FASHION_MNIST
     ):
         foolbox_model = MNISTNet.as_foolbox_wrap(config, device)
+    else:
+        raise SystemExit(f"Data set '{config.data_set.name}' unknown. Exiting.")
 
     log_attack_info(
         LOGGER,
