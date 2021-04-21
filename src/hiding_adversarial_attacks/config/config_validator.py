@@ -15,7 +15,6 @@ class ConfigValidator:
         "data_set '{data_set}' and data_path '{data_path}' mismatch."
     )
 
-    # fmt: off
     DATA_SET_CLASSIFIER_MAPPING = {
         DataSetNames.MNIST: ClassifierNames.MNIST_CLASSIFIER,
         DataSetNames.FASHION_MNIST: ClassifierNames.FASHION_MNIST_CLASSIFIER,
@@ -24,7 +23,6 @@ class ConfigValidator:
         AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST: ClassifierNames.FASHION_MNIST_CLASSIFIER,  # noqa: E501
         AdversarialDataSetNames.ADVERSARIAL_CIFAR10: ClassifierNames.CIFAR10_CLASSIFIER,
     }
-    # fmt: on
     DATA_SET_DATA_PATH_MATCHER = {
         DataSetNames.MNIST: f"data-set={DataSetNames.MNIST}",
         DataSetNames.FASHION_MNIST: f"data-set={DataSetNames.FASHION_MNIST}",
