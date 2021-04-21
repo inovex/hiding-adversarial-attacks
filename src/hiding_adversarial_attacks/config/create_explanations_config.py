@@ -56,6 +56,13 @@ class ExplanationConfig:
 
     visualize_samples: bool = True
 
+    # Set this to False if you want your data to be saved to Neptune
+    trash_run: bool = True
+
+    # Neptune options
+    # Tag 'trash' will be added to tags if trash_run is True
+    tags: List[str] = field(default_factory=lambda: ["create-explanations"])
+
 
 cs = ConfigStore.instance()
 

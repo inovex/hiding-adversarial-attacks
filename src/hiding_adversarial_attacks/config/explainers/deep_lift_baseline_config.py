@@ -9,21 +9,21 @@ class DeepLiftBaselineNames:
     LOCAL_MEAN = "local_mean"
 
 
-@dataclass(frozen=True)
+@dataclass
 class DeepLiftBaselineConfig:
     name: str = MISSING
 
 
-@dataclass(frozen=True)
+@dataclass
 class ZeroBaselineConfig(DeepLiftBaselineConfig):
     name: str = DeepLiftBaselineNames.ZERO
 
 
-@dataclass(frozen=True)
+@dataclass
 class LocalMeanBaselineConfig(DeepLiftBaselineConfig):
     name: str = DeepLiftBaselineNames.LOCAL_MEAN
 
 
-@dataclass(frozen=True)
+@dataclass
 class BlurBaselineConfig(DeepLiftBaselineConfig):
     name: str = DeepLiftBaselineNames.BLUR

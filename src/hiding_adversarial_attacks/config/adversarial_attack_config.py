@@ -51,7 +51,7 @@ class AdversarialAttackConfig:
     )
     output_dirname: str = "data-set={data_set}--attack={attack}--eps={epsilon}"
 
-    # Set this to False if you want your checkpoints to be saved to Neptune
+    # Set this to False if you want your attacked data to be saved to Neptune
     trash_run: bool = True
 
     # Neptune options

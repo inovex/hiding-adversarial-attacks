@@ -2,6 +2,7 @@ import os
 from typing import Any, Tuple, Union
 
 import hydra
+import neptune.new as neptune
 import torch
 from captum.attr import visualization as viz
 from omegaconf import OmegaConf
@@ -9,6 +10,7 @@ from torch import Tensor
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from hiding_adversarial_attacks._neptune.utils import init_neptune_run
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.create_explanations_config import (
     ExplanationConfig,
@@ -24,36 +26,6 @@ from hiding_adversarial_attacks.explainers.utils import get_explainer
 from hiding_adversarial_attacks.utils import tensor_to_pil_numpy
 
 
-def save_explanations(
-    original_explanations: torch.Tensor,
-    adv_explanations: torch.Tensor,
-    labels: torch.Tensor,
-    adv_labels: torch.Tensor,
-    config: ExplanationConfig,
-    stage: str,
-):
-    os.makedirs(config.data_path, exist_ok=True)
-    suffix = "expl.pt"
-    if config.explainer.name == ExplainerNames.DEEP_LIFT:
-        suffix = (
-            f"expl--{ExplainerNames.DEEP_LIFT}--"
-            f"bl={config.explainer.baseline.name}--"
-            f"mbi={config.explainer.multiply_by_inputs}.pt"
-        )
-    elif config.explainer.name == ExplainerNames.GRAD_CAM:
-        suffix = (
-            f"expl--{ExplainerNames.GRAD_CAM}--"
-            f"l={config.explainer.layer_name}--"
-            f"ra={config.explainer.relu_attributions}.pt"
-        )
-
-    orig_path = os.path.join(config.data_path, f"{stage}_orig--{suffix}")
-    adv_path = os.path.join(config.data_path, f"{stage}_adv--{suffix}")
-    torch.save((original_explanations.cpu(), labels.cpu()), orig_path)
-    torch.save((adv_explanations.cpu(), adv_labels.cpu()), adv_path)
-    print(f"Saved explanations to {config.data_path}")
-
-
 def get_model_from_checkpoint(
     data_set_name: str, model_checkpoint: str, device: torch.device
 ):
@@ -63,6 +35,71 @@ def get_model_from_checkpoint(
         raise SystemExit(f"ERROR: Unknown data set name: {data_set_name}. Exiting.")
     model = model.to(device)
     return model
+
+
+def get_explanations_path(config):
+    explanations_dir = "exp"
+    if config.explainer.name == ExplainerNames.DEEP_LIFT:
+        explanations_dir = (
+            f"exp={ExplainerNames.DEEP_LIFT}--"
+            f"bl={config.explainer.baseline.name}--"
+            f"mbi={config.explainer.multiply_by_inputs}"
+        )
+    elif config.explainer.name == ExplainerNames.GRAD_CAM:
+        explanations_dir = (
+            f"exp--{ExplainerNames.GRAD_CAM}--"
+            f"l={config.explainer.layer_name}--"
+            f"ra={config.explainer.relu_attributions}"
+        )
+    explanations_path = os.path.join(config.data_path, explanations_dir)
+    os.makedirs(explanations_path, exist_ok=True)
+    return explanations_path
+
+
+def save_explanations(
+    explanations_path: str,
+    original_explanations: torch.Tensor,
+    adv_explanations: torch.Tensor,
+    labels: torch.Tensor,
+    adv_labels: torch.Tensor,
+    neptune_run: neptune.Run,
+    config: ExplanationConfig,
+    stage: str,
+):
+    orig_exp_path = os.path.join(explanations_path, f"{stage}_orig_exp.pt")
+    adv_exp_path = os.path.join(explanations_path, f"{stage}_adv_exp.pt")
+    torch.save((original_explanations.cpu(), labels.cpu()), orig_exp_path)
+    torch.save((adv_explanations.cpu(), adv_labels.cpu()), adv_exp_path)
+    print(f"Saved explanations to {explanations_path}")
+
+    # Upload attack results to Neptune
+    if not config.trash_run:
+        neptune_run["explanations"].upload_files(f"{explanations_path}/*.pt")
+
+
+def visualize_explanations(
+    images: torch.Tensor,
+    explanations: torch.Tensor,
+    labels: torch.Tensor,
+    title: str,
+    neptune_run: neptune.Run,
+    config: ExplanationConfig,
+):
+    imgs = tensor_to_pil_numpy(images)
+    expls = tensor_to_pil_numpy(explanations)
+
+    for i, (image, explanation, label) in enumerate(zip(imgs, expls, labels)):
+        _title = f"{title}, label: {label}"
+        fig, ax = viz.visualize_image_attr(
+            explanation,
+            image,
+            method="blended_heat_map",
+            sign="all",
+            show_colorbar=True,
+            title=_title,
+        )
+        if not config.trash_run:
+            neptune_run[f"plot/{_title}"].upload(fig)
 
 
 def explain(
@@ -82,6 +119,7 @@ def explain(
 
         orig_explanations_batch = explainer.explain(_images, _labels)
         adv_explanations_batch = explainer.explain(_adv_images, _adv_labels)
+
         orig_labels_all = torch.cat((orig_labels_all, _labels.detach().cpu()), 0)
         adv_labels_all = torch.cat((adv_labels_all, _adv_labels.detach().cpu()), 0)
         orig_explanations = torch.cat(
@@ -106,6 +144,13 @@ def explain(
 @hydra.main(config_name="explanation_config")
 def run(config: ExplanationConfig) -> None:
     print(OmegaConf.to_yaml(config))
+
+    # Setup neptune
+    tags = [*config.tags, config.data_set.name]
+    if config.trash_run:
+        tags.append("trash")
+    neptune_run = init_neptune_run(tags)
+    neptune_run["parameters"] = OmegaConf.to_container(config)
 
     data_module = get_data_module(
         data_set=AdversarialDataSetNames.ADVERSARIAL_MNIST,
@@ -155,23 +200,6 @@ def run(config: ExplanationConfig) -> None:
         test_adv_images,
     ) = explain(explainer, test_loader, device)
 
-    # Save explanations
-    save_explanations(
-        train_orig_explanations,
-        train_adv_explanations,
-        train_orig_labels,
-        train_adv_labels,
-        config,
-        "training",
-    )
-    save_explanations(
-        test_orig_explanations,
-        test_adv_explanations,
-        test_orig_labels,
-        test_adv_labels,
-        config,
-        "test",
-    )
     # Visualize some explanations of adversarials and originals
     if config.visualize_samples:
         visualize_explanations(
@@ -179,31 +207,40 @@ def run(config: ExplanationConfig) -> None:
             train_orig_explanations[0:4],
             train_orig_labels[0:4],
             f"Original explanation - {config.explainer.name}",
+            neptune_run,
+            config,
         )
         visualize_explanations(
             train_adv_images[0:4],
             train_adv_explanations[0:4],
             train_adv_labels[0:4],
             f"Adversarial explanation - {config.explainer.name}",
+            neptune_run,
+            config,
         )
 
-
-def visualize_explanations(
-    images: torch.Tensor, explanations: torch.Tensor, labels: torch.Tensor, title: str
-):
-    imgs = tensor_to_pil_numpy(images)
-    expls = tensor_to_pil_numpy(explanations)
-
-    for image, explanation, label in zip(imgs, expls, labels):
-        _title = f"{title}, label: {label}"
-        viz.visualize_image_attr(
-            explanation,
-            image,
-            method="blended_heat_map",
-            sign="all",
-            show_colorbar=True,
-            title=_title,
-        )
+    # Save explanations
+    explanations_path = get_explanations_path(config)
+    save_explanations(
+        explanations_path,
+        train_orig_explanations,
+        train_adv_explanations,
+        train_orig_labels,
+        train_adv_labels,
+        neptune_run,
+        config,
+        "training",
+    )
+    save_explanations(
+        explanations_path,
+        test_orig_explanations,
+        test_adv_explanations,
+        test_orig_labels,
+        test_adv_labels,
+        neptune_run,
+        config,
+        "test",
+    )
 
 
 if __name__ == "__main__":
