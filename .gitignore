@@ -54,3 +54,4 @@ MANIFEST
 
 # Logs
 logs/*
+outputs/
