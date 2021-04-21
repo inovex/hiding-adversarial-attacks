@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 from torchvision.transforms import transforms
 from tqdm import tqdm
 
+from hiding_adversarial_attacks._neptune.utils import init_neptune_run
 from hiding_adversarial_attacks.attack.attack_results import (
     AttackResults,
     BatchAttackResults,
@@ -38,18 +39,6 @@ from hiding_adversarial_attacks.data_modules.utils import get_data_module
 LOGGER = logging.Logger(os.path.basename(__file__))
 
 
-def initialize_logging(config):
-    os.makedirs(config.log_path, exist_ok=True)
-    log_file_name = config.log_file_name.format(
-        timestamp=int(datetime.now().timestamp()),
-        data_set=config.data_set.name,
-        attack=config.attack.name,
-        epsilons=config.attack.epsilons,
-    )
-    log_file_path = os.path.join(config.log_path, log_file_name)
-    setup_logger(LOGGER, log_file_path, log_level=config.logging.log_level)
-
-
 def get_foolbox_model(config, device):
     # Load foolbox wrapped model
     if (
@@ -62,12 +51,25 @@ def get_foolbox_model(config, device):
     return foolbox_model
 
 
+def get_log_file_path(config):
+    os.makedirs(config.log_path, exist_ok=True)
+    log_file_name = config.log_file_name.format(
+        timestamp=int(datetime.now().timestamp()),
+        data_set=config.data_set.name,
+        attack=config.attack.name,
+        epsilons=config.attack.epsilons,
+    )
+    log_file_path = os.path.join(config.log_path, log_file_name)
+    return log_file_path
+
+
 def save_attack_results(
+    neptune_run,
     config,
-    train_loader,
-    test_loader,
     test_attack_results_list,
     train_attack_results_list,
+    train_data_set_size,
+    test_data_set_size,
 ):
     LOGGER.info("")
     LOGGER.info("******** Results *********")
@@ -83,6 +85,10 @@ def save_attack_results(
         train_attack_results.save_results(target_path)
         test_attack_results.save_results(target_path)
 
+        # Upload attack results to Neptune
+        if not config.trash_run:
+            neptune_run["attack_results"].upload_files(f"{target_path}/*.pt")
+
         # Log results
         LOGGER.info(f"---- Epsilon: {test_attack_results.epsilon}")
         LOGGER.info(f"Output path: '{target_path}'")
@@ -90,10 +96,10 @@ def save_attack_results(
         log_attack_results(
             LOGGER,
             train_attack_results,
-            len(train_loader.dataset),
+            train_data_set_size,
         )
         LOGGER.info("\t Test: ")
-        log_attack_results(LOGGER, test_attack_results, len(test_loader.dataset))
+        log_attack_results(LOGGER, test_attack_results, test_data_set_size)
 
 
 def attack_batch(
@@ -133,7 +139,6 @@ def attack_batch(
         zip(epsilons, robust_accuracy, clipped, is_adv)
     ):
         adv_count = len(adv_mask.nonzero())
-        attacked_count = len(images)
         adv_images = clipped_adv[adv_mask]
         failed_adv_images = clipped_adv[~adv_mask]
         failed_adv_labels = labels[~adv_mask]
@@ -152,7 +157,7 @@ def attack_batch(
             failed_adv_labels,
             misclassified_images,
             misclassified_labels,
-            attacked_count,
+            len(images),
             adv_count,
             len(failed_adv_images),
             len(misclassified_images),
@@ -191,8 +196,16 @@ def run_attack(
 def run(config: AdversarialAttackConfig) -> None:
     print(OmegaConf.to_yaml(config))
 
+    # Setup neptune
+    tags = [*config.tags, config.data_set.name]
+    if config.trash_run:
+        tags.append("trash")
+    neptune_run = init_neptune_run(tags)
+    neptune_run["parameters"] = OmegaConf.to_container(config)
+
     # Logging
-    initialize_logging(config)
+    log_file_path = get_log_file_path(config)
+    setup_logger(LOGGER, log_file_path, log_level=config.logging.log_level)
 
     # GPU or CPU
     device = torch.device(
@@ -203,9 +216,9 @@ def run(config: AdversarialAttackConfig) -> None:
     data_module = get_data_module(
         data_set=config.data_set.name,
         data_path=config.data_set.external_path,
-        download=False,
+        download=config.download,
         batch_size=config.batch_size,
-        val_split=0.0,
+        val_split=config.val_split,
         transform=transforms.ToTensor(),
         random_seed=config.random_seed,
     )
@@ -235,13 +248,20 @@ def run(config: AdversarialAttackConfig) -> None:
     )
 
     # Log and save results
+    train_data_set_size = len(train_loader.dataset)
+    test_data_set_size = len(test_loader.dataset)
     save_attack_results(
+        neptune_run,
         config,
-        train_loader,
-        test_loader,
         test_attack_results_list,
         train_attack_results_list,
+        train_data_set_size,
+        test_data_set_size,
     )
+
+    # Upload log file to neptune
+    if not config.trash_run:
+        neptune_run["logs"].upload(log_file_path)
 
 
 if __name__ == "__main__":

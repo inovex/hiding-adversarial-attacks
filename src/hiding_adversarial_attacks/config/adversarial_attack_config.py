@@ -51,6 +51,13 @@ class AdversarialAttackConfig:
     )
     output_dirname: str = "data-set={data_set}--attack={attack}--eps={epsilon}"
 
+    # Set this to False if you want your checkpoints to be saved to Neptune
+    trash_run: bool = True
+
+    # Neptune options
+    # Tag 'trash' will be added to tags if trash_run is True
+    tags: List[str] = field(default_factory=lambda: ["attack-data"])
+
 
 cs = ConfigStore.instance()
 cs.store(group="data_set", name="MNIST", node=MNISTConfig)
