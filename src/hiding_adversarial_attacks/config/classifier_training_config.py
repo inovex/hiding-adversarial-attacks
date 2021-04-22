@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass, field
 from typing import Any, List
 
@@ -16,6 +17,7 @@ from hiding_adversarial_attacks.config.data_sets.data_set_config import (
     FashionMNISTConfig,
     MNISTConfig,
 )
+from hiding_adversarial_attacks.config.logger.logger import LoggingConfig
 
 defaults = [{"data_set": "MNIST"}, {"classifier": "MNISTClassifier"}]
 
@@ -35,6 +37,9 @@ class ClassifierTrainingConfig:
     classifier: ClassifierConfig = MISSING
 
     defaults: List[Any] = field(default_factory=lambda: defaults)
+
+    # Path where logs will be saved / moved to
+    log_path: str = os.path.join(LoggingConfig.log_root, "train_classifier")
 
     # Set this to False if you want your checkpoints to be saved to Neptune
     trash_run: bool = True

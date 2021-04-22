@@ -32,7 +32,9 @@ def train(
 
     checkpoint_callback = hydra.utils.instantiate(config.classifier.model_checkpoint)
 
-    neptune_callback = NeptuneLoggingCallback(trash_run=config.trash_run)
+    neptune_callback = NeptuneLoggingCallback(
+        log_path=config.log_path, trash_run=config.trash_run
+    )
     trainer = Trainer(
         gpus=config.gpus,
         logger=neptune_logger,
@@ -78,13 +80,15 @@ def run(config: ClassifierTrainingConfig) -> None:
         random_seed=config.random_seed,
     )
 
-    experiment_name = (
-        f"{'test' if config.test else 'train'}-{config.data_set.name}-classifier"
-    )
+    experiment_name = config.data_set.name
     tags = [*config.tags, config.data_set.name]
     if config.trash_run:
         tags.append("trash")
     neptune_logger = get_neptune_logger(config, experiment_name, tags)
+
+    config.log_path = os.path.join(
+        config.log_path, neptune_logger.name, neptune_logger.version
+    )
 
     if config.test:
         test(data_module, neptune_logger, config)
