@@ -22,6 +22,6 @@ def get_neptune_logger(
     return neptune_logger
 
 
-def init_neptune_run(tags: List[Union[str, Any]] = None):
+def init_neptune_run(tags: List[Union[str, Any]] = None) -> neptune.Run:
     run = neptune.init(project=NEPTUNE_PROJECT_NAME, tags=tags)
     return run

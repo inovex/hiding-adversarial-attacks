@@ -1,6 +1,5 @@
 import logging
 import os
-from datetime import datetime
 from typing import List, Sequence, Union
 
 import eagerpy as ep
@@ -55,7 +54,6 @@ def get_foolbox_model(config, device):
 def get_log_file_path(config):
     os.makedirs(config.log_path, exist_ok=True)
     log_file_name = config.log_file_name.format(
-        timestamp=int(datetime.now().timestamp()),
         data_set=config.data_set.name,
         attack=config.attack.name,
         epsilons=config.attack.epsilons,
@@ -65,13 +63,13 @@ def get_log_file_path(config):
 
 
 def save_attack_results(
-    neptune_run,
     config,
     test_attack_results_list,
     train_attack_results_list,
     train_data_set_size,
     test_data_set_size,
 ):
+    output_paths = []
     LOGGER.info("")
     LOGGER.info("******** Results *********")
     for train_attack_results, test_attack_results in zip(
@@ -85,10 +83,7 @@ def save_attack_results(
         target_path = os.path.join(config.data_set.adversarial_path, output_dirname)
         train_attack_results.save_results(target_path)
         test_attack_results.save_results(target_path)
-
-        # Upload attack results to Neptune
-        if not config.trash_run:
-            neptune_run["attack_results"].upload_files(f"{target_path}/*.pt")
+        output_paths.append(target_path)
 
         # Log results
         LOGGER.info(f"---- Epsilon: {test_attack_results.epsilon}")
@@ -101,6 +96,8 @@ def save_attack_results(
         )
         LOGGER.info("\t Test: ")
         log_attack_results(LOGGER, test_attack_results, test_data_set_size)
+
+    return output_paths
 
 
 def attack_batch(
@@ -208,6 +205,9 @@ def run(config: AdversarialAttackConfig) -> None:
     neptune_run["parameters"] = OmegaConf.to_container(config)
 
     # Logging
+    experiment_name = config.data_set.name
+    run_id = neptune_run.get_structure()["sys"]["id"].fetch()
+    config.log_path = os.path.join(config.log_path, experiment_name, run_id)
     log_file_path = get_log_file_path(config)
     setup_logger(LOGGER, log_file_path, log_level=config.logging.log_level)
 
@@ -245,17 +245,26 @@ def run(config: AdversarialAttackConfig) -> None:
     # Run adversarial attack
     attack = get_attack(config.attack.name)
     train_attack_results_list = run_attack(
-        foolbox_model, attack, train_loader, config.attack.epsilons, "training", device
+        foolbox_model,
+        attack,
+        train_loader,
+        config.attack.epsilons,
+        "training",
+        device,
     )
     test_attack_results_list = run_attack(
-        foolbox_model, attack, test_loader, config.attack.epsilons, "test", device
+        foolbox_model,
+        attack,
+        test_loader,
+        config.attack.epsilons,
+        "test",
+        device,
     )
 
     # Log and save results
     train_data_set_size = len(train_loader.dataset)
     test_data_set_size = len(test_loader.dataset)
-    save_attack_results(
-        neptune_run,
+    result_paths = save_attack_results(
         config,
         test_attack_results_list,
         train_attack_results_list,
@@ -263,9 +272,16 @@ def run(config: AdversarialAttackConfig) -> None:
         test_data_set_size,
     )
 
-    # Upload log file to neptune
     if not config.trash_run:
+        print("Uploading log files and attack results to Neptune...")
+        # Upload log file to neptune
         neptune_run["logs"].upload(log_file_path)
+
+        # Upload attack results (*.pt files) to Neptune
+        for result_path in result_paths:
+            neptune_run["attack_results"].upload_files(f"{result_path}/*.pt")
+
+    print("Done! :)")
 
 
 if __name__ == "__main__":
