@@ -80,14 +80,14 @@ def visualize_explanations(
     explanations: torch.Tensor,
     labels: torch.Tensor,
     title: str,
-    neptune_run: neptune.Run,
     config: ExplanationConfig,
 ):
     imgs = tensor_to_pil_numpy(images)
     expls = tensor_to_pil_numpy(explanations)
+    fig_paths = []
 
     for i, (image, explanation, label) in enumerate(zip(imgs, expls, labels)):
-        _title = f"{title}, label: {label}"
+        _title = f"{title}, label: {label}, id: {i}"
         fig, ax = viz.visualize_image_attr(
             explanation,
             image,
@@ -97,7 +97,12 @@ def visualize_explanations(
             title=_title,
         )
         if not config.trash_run:
-            neptune_run[f"plot/{_title}"].upload(fig)
+            title = f"{title}_label={label}_id={i}.png"
+            title = title.replace(" ", "-")
+            fig_path = os.path.join(config.log_path, f"{title}")
+            fig.savefig(fig_path)
+            fig_paths.append((title, fig_path))
+    return fig_paths
 
 
 def explain(
@@ -150,7 +155,14 @@ def run(config: ExplanationConfig) -> None:
     config.tags.append(config.data_set.name)
     if config.trash_run:
         config.tags.append("trash")
-    neptune_run = init_neptune_run(config.tags)
+    neptune_run = init_neptune_run(list(config.tags))
+
+    # Logging / saving visualizations
+    experiment_name = config.data_set.name
+    run_id = neptune_run.get_structure()["sys"]["id"].fetch()
+    config.log_path = os.path.join(config.log_path, experiment_name, run_id)
+    os.makedirs(config.log_path, exist_ok=True)
+
     neptune_run["parameters"] = OmegaConf.to_container(config)
 
     data_module = get_data_module(
@@ -203,22 +215,26 @@ def run(config: ExplanationConfig) -> None:
 
     # Visualize some explanations of adversarials and originals
     if config.visualize_samples:
-        visualize_explanations(
+        train_fig_paths = visualize_explanations(
             train_orig_images[0:4],
             train_orig_explanations[0:4],
             train_orig_labels[0:4],
             f"Original explanation - {config.explainer.name}",
-            neptune_run,
             config,
         )
-        visualize_explanations(
+        test_fig_paths = visualize_explanations(
             train_adv_images[0:4],
             train_adv_explanations[0:4],
             train_adv_labels[0:4],
             f"Adversarial explanation - {config.explainer.name}",
-            neptune_run,
             config,
         )
+        if not config.trash_run:
+            for (_train_title, train_fig), (_test_title, test_fig) in zip(
+                train_fig_paths, test_fig_paths
+            ):
+                neptune_run[f"plot/{_train_title}"].upload(train_fig)
+                neptune_run[f"plot/{_test_title}"].upload(test_fig)
 
     # Save explanations
     explanations_path = get_explanations_path(config)

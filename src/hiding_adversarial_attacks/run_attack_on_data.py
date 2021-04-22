@@ -201,7 +201,7 @@ def run(config: AdversarialAttackConfig) -> None:
     config.tags.append(config.data_set.name)
     if config.trash_run:
         config.tags.append("trash")
-    neptune_run = init_neptune_run(config.tags)
+    neptune_run = init_neptune_run(list(config.tags))
 
     # Logging
     experiment_name = config.data_set.name
