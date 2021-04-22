@@ -198,11 +198,10 @@ def run(config: AdversarialAttackConfig) -> None:
     print(OmegaConf.to_yaml(config))
 
     # Setup neptune
-    tags = [*config.tags, config.data_set.name]
+    config.tags.append(config.data_set.name)
     if config.trash_run:
-        tags.append("trash")
-    neptune_run = init_neptune_run(tags)
-    neptune_run["parameters"] = OmegaConf.to_container(config)
+        config.tags.append("trash")
+    neptune_run = init_neptune_run(config.tags)
 
     # Logging
     experiment_name = config.data_set.name
@@ -210,6 +209,8 @@ def run(config: AdversarialAttackConfig) -> None:
     config.log_path = os.path.join(config.log_path, experiment_name, run_id)
     log_file_path = get_log_file_path(config)
     setup_logger(LOGGER, log_file_path, log_level=config.logging.log_level)
+
+    neptune_run["parameters"] = OmegaConf.to_container(config)
 
     # GPU or CPU
     device = torch.device(

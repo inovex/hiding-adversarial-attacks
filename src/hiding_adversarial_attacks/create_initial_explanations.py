@@ -147,10 +147,10 @@ def run(config: ExplanationConfig) -> None:
     print(OmegaConf.to_yaml(config))
 
     # Setup neptune
-    tags = [*config.tags, config.data_set.name]
+    config.tags.append(config.data_set.name)
     if config.trash_run:
-        tags.append("trash")
-    neptune_run = init_neptune_run(tags)
+        config.tags.append("trash")
+    neptune_run = init_neptune_run(config.tags)
     neptune_run["parameters"] = OmegaConf.to_container(config)
 
     data_module = get_data_module(

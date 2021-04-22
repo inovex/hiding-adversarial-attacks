@@ -81,10 +81,10 @@ def run(config: ClassifierTrainingConfig) -> None:
     )
 
     experiment_name = config.data_set.name
-    tags = [*config.tags, config.data_set.name]
+    config.tags.append(config.data_set.name)
     if config.trash_run:
-        tags.append("trash")
-    neptune_logger = get_neptune_logger(config, experiment_name, tags)
+        config.tags.append("trash")
+    neptune_logger = get_neptune_logger(config, experiment_name, config.tags)
 
     config.log_path = os.path.join(
         config.log_path, neptune_logger.name, neptune_logger.version
