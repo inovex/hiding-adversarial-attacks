@@ -28,9 +28,7 @@ class MNISTNet(pl.LightningModule):
         self.save_hyperparameters()
 
         # metrics
-        self.train_accuracy = torchmetrics.Accuracy()
-        self.validation_accuracy = torchmetrics.Accuracy()
-        self.test_accuracy = torchmetrics.Accuracy()
+        self._setup_metrics()
 
         # network structure
         self.conv1 = nn.Conv2d(1, 32, 3, 1)
@@ -39,6 +37,12 @@ class MNISTNet(pl.LightningModule):
         self.dropout2 = nn.Dropout(0.5)
         self.fc1 = nn.Linear(9216, 128)
         self.fc2 = nn.Linear(128, 10)
+
+    def _setup_metrics(self):
+        # Classification accuracy
+        self.train_accuracy = torchmetrics.Accuracy()
+        self.validation_accuracy = torchmetrics.Accuracy()
+        self.test_accuracy = torchmetrics.Accuracy()
 
     @classmethod
     def as_foolbox_wrap(cls, hparams, device):
@@ -111,7 +115,8 @@ class MNISTNet(pl.LightningModule):
 
     def training_epoch_end(self, outs):
         self.log(
-            self.classifier_config.train_accuracy_epoch, self.train_accuracy.compute()
+            self.classifier_config.train_accuracy_epoch,
+            self.train_accuracy.compute(),
         )
 
     def validation_epoch_end(self, outs):
@@ -122,5 +127,6 @@ class MNISTNet(pl.LightningModule):
 
     def test_epoch_end(self, outs):
         self.log(
-            self.classifier_config.test_accuracy_epoch, self.test_accuracy.compute()
+            self.classifier_config.test_accuracy_epoch,
+            self.test_accuracy.compute(),
         )

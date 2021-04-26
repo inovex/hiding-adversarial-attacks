@@ -35,6 +35,9 @@ class ConfigValidator:
     def validate(self, config):
         self._validate_classifier_matches_data_set(config)
         self._validate_data_path_matches_data_set(config)
+        if "name" in config:
+            if config.name == "ManipulatedModelTrainingConfig":
+                self._validate_manipulated_model_training_config(config)
 
     def _validate_classifier_matches_data_set(self, config):
         data_set_name = config.data_set.name
@@ -54,3 +57,12 @@ class ConfigValidator:
             ), self.ERROR_DATA_SET_DATA_PATH_MISMATCH.format(
                 data_set=data_set_name, data_path=data_path
             )
+
+    @staticmethod
+    def _validate_manipulated_model_training_config(config):
+        if not config.test:
+            assert (
+                config.classifier_checkpoint != ""
+            ), "classifier_checkpoint is unset for training"
+        else:
+            assert config.checkpoint != "", "checkpoint is unset for testing"

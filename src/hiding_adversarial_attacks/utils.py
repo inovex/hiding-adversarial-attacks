@@ -10,7 +10,13 @@ from torchvision.transforms import ToPILImage
 
 from hiding_adversarial_attacks.classifiers.cifar_net import CifarNet
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
-from hiding_adversarial_attacks.config.data_sets.data_set_config import DataSetNames
+from hiding_adversarial_attacks.config.data_sets.data_set_config import (
+    AdversarialDataSetNames,
+    DataSetNames,
+)
+from hiding_adversarial_attacks.manipulated_classifiers.manipulated_mnist_net import (
+    ManipulatedMNISTNet,
+)
 
 toPilImage = ToPILImage()
 
@@ -30,15 +36,33 @@ def timeit(func):
 
 
 def get_model(config):
-    if (
-        config.data_set.name == DataSetNames.MNIST
-        or config.data_set.name == DataSetNames.FASHION_MNIST
-    ):
+    if config.data_set.name in [
+        DataSetNames.MNIST,
+        DataSetNames.FASHION_MNIST,
+        AdversarialDataSetNames.ADVERSARIAL_MNIST,
+    ]:
         return MNISTNet(config)
     elif config.data_set.name == DataSetNames.CIFAR10:
         return CifarNet(config)
     else:
-        raise SystemExit(f"Unknown data set specified: {config.data_set}. Exiting.")
+        raise SystemExit(
+            f"Unknown data set specified: {config.data_set.name}. Exiting."
+        )
+
+
+def get_manipulatable_model(config):
+    if config.data_set.name in [
+        AdversarialDataSetNames.ADVERSARIAL_MNIST,
+    ]:
+        classifier_model = MNISTNet(config).load_from_checkpoint(
+            config.classifier_checkpoint
+        )
+        model = ManipulatedMNISTNet(classifier_model, config)
+        return model
+    else:
+        raise SystemExit(
+            f"Unknown data set specified: {config.data_set.name}. Exiting."
+        )
 
 
 class SplitArgs(argparse.Action):

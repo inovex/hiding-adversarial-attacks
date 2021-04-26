@@ -24,6 +24,8 @@ defaults = [{"data_set": "MNIST"}, {"classifier": "MNISTClassifier"}]
 
 @dataclass
 class ClassifierTrainingConfig:
+    name: str = "ClassifierTrainingConfig"
+
     random_seed: int = 42
     gpus: int = 1
     test: bool = False

@@ -2,16 +2,13 @@ from typing import Union
 
 import pytorch_lightning as pl
 
-from hiding_adversarial_attacks.config.create_explanations_config import (
-    ExplanationConfig,
-)
 from hiding_adversarial_attacks.config.explainers.explainer_config import ExplainerNames
 from hiding_adversarial_attacks.explainers.deep_lift import DeepLiftExplainer
 from hiding_adversarial_attacks.explainers.layer_grad_cam import LayerGradCamExplainer
 
 
 def get_explainer(
-    model: pl.LightningModule, config: ExplanationConfig
+    model: pl.LightningModule, config
 ) -> Union[DeepLiftExplainer, LayerGradCamExplainer]:
 
     explainer_name = config.explainer.name
