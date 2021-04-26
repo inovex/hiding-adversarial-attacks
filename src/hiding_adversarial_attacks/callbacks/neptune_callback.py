@@ -11,8 +11,8 @@ class NeptuneLoggingCallback(Callback):
         self.trash_run = trash_run
 
     def on_train_end(self, trainer, pl_module):
+        cwd = os.getcwd()
         if not self.trash_run:
-            cwd = os.getcwd()
             self._move_logs_and_outputs(
                 self.log_path, cwd, trainer.logger.name, trainer.logger.version
             )
@@ -30,7 +30,7 @@ class NeptuneLoggingCallback(Callback):
         for log in glob.glob(os.path.join(cwd, "*.log")):
             shutil.move(
                 log,
-                os.path.join(log_path, log),
+                os.path.join(log_path, os.path.basename(log)),
             )
 
     def _upload_checkpoints(self, trainer):
