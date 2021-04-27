@@ -34,6 +34,42 @@ def get_model_from_checkpoint(
     return model
 
 
+def save_and_upload_fig(file_name, fig, config, neptune_run):
+    fig.savefig(os.path.join(config.log_path, file_name))
+    neptune_run[f"plot/{file_name}"].upload(fig)
+
+
+def visualize(
+    config,
+    train_adv_explanations,
+    train_adv_images,
+    train_adv_labels,
+    train_orig_explanations,
+    train_orig_images,
+    train_orig_labels,
+):
+    indeces = torch.arange(0, 4)
+    original_titles = [
+        f"original_expl={config.explainer.name}_idx={idx}_label={label}"
+        for idx, label in zip(indeces, train_orig_labels)
+    ]
+    adversarial_titles = [
+        f"adv_expl={config.explainer.name}_idx={idx}_label={label}"
+        for idx, label in zip(indeces, train_adv_labels)
+    ]
+    train_figures = visualize_explanations(
+        train_orig_images[indeces],
+        train_orig_explanations[indeces],
+        original_titles,
+    )
+    test_figures = visualize_explanations(
+        train_adv_images[indeces],
+        train_adv_explanations[indeces],
+        adversarial_titles,
+    )
+    return test_figures, train_figures
+
+
 def get_explanations_path(config):
     explanations_dir = "exp"
     if config.explainer.name == ExplainerNames.DEEP_LIFT:
@@ -183,34 +219,27 @@ def run(config: ExplanationConfig) -> None:
     ) = explain(explainer, test_loader, device)
 
     # Visualize some explanations of adversarials and originals
-    if config.visualize_samples:
-        indeces = torch.arange(0, 4)
-        train_figures = visualize_explanations(
-            train_orig_images,
-            train_orig_explanations,
-            train_orig_labels,
-            indeces,
-            f"original_expl={config.explainer.name}",
-        )
-        test_figures = visualize_explanations(
-            train_adv_images,
-            train_adv_explanations,
-            train_adv_labels,
-            indeces,
-            f"adversarial_expl={config.explainer.name}",
-        )
+    test_figures, train_figures = visualize(
+        config,
+        train_adv_explanations,
+        train_adv_images,
+        train_adv_labels,
+        train_orig_explanations,
+        train_orig_images,
+        train_orig_labels,
+    )
 
-        if not config.trash_run:
-            for (_train_fig, _train_ax), (_test_fig, _test_ax) in zip(
-                train_figures, test_figures
-            ):
-                _train_file_name = f"{_train_ax.get_title()}.png"
-                _test_file_name = f"{_test_ax.get_title()}.png"
-                _train_fig.savefig(os.path.join(config.log_path, _train_file_name))
-                _test_fig.savefig(os.path.join(config.log_path, _test_file_name))
-
-                neptune_run[f"plot/{_train_file_name}"].upload(_train_fig)
-                neptune_run[f"plot/{_test_file_name}"].upload(_test_fig)
+    # Save and upload explanations
+    if not config.trash_run:
+        for (_train_fig, _train_ax), (_test_fig, _test_ax) in zip(
+            train_figures, test_figures
+        ):
+            save_and_upload_fig(
+                f"{_train_ax.get_title()}.png", _train_fig, config, neptune_run
+            )
+            save_and_upload_fig(
+                f"{_test_ax.get_title()}.png", _test_fig, config, neptune_run
+            )
 
     # Save explanations
     explanations_path = get_explanations_path(config)

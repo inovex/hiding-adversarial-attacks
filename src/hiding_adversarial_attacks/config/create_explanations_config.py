@@ -54,8 +54,6 @@ class ExplanationConfig:
     logging: LoggingConfig = LoggingConfig()
     log_path: str = os.path.join(logging.log_root, "explanation")
 
-    visualize_samples: bool = True
-
     # Set this to False if you want your data to be saved to Neptune
     trash_run: bool = True
 
