@@ -1,7 +1,7 @@
 import argparse
-import os
 from functools import wraps
 from time import time
+from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,11 +15,6 @@ from hiding_adversarial_attacks.config.data_sets.data_set_config import (
     AdversarialDataSetNames,
     DataSetNames,
 )
-from hiding_adversarial_attacks.manipulated_classifiers.manipulated_mnist_net import (
-    ManipulatedMNISTNet,
-)
-
-ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 
 def timeit(func):
@@ -43,21 +38,6 @@ def get_model(config):
         return MNISTNet(config)
     elif config.data_set.name == DataSetNames.CIFAR10:
         return CifarNet(config)
-    else:
-        raise SystemExit(
-            f"Unknown data set specified: {config.data_set.name}. Exiting."
-        )
-
-
-def get_manipulatable_model(config):
-    if config.data_set.name in [
-        AdversarialDataSetNames.ADVERSARIAL_MNIST,
-    ]:
-        classifier_model = MNISTNet(config).load_from_checkpoint(
-            config.classifier_checkpoint
-        )
-        model = ManipulatedMNISTNet(classifier_model, config)
-        return model
     else:
         raise SystemExit(
             f"Unknown data set specified: {config.data_set.name}. Exiting."
@@ -92,25 +72,21 @@ def to_pil_image(tensor, mode="L"):
 def visualize_explanations(
     images: torch.Tensor,
     explanations: torch.Tensor,
-    labels: torch.Tensor,
-    indeces: torch.Tensor,
-    title_prefix: str,
+    titles: List[str],
 ):
 
-    imgs = tensor_to_pil_numpy(images[indeces])
-    expls = tensor_to_pil_numpy(explanations[indeces])
-    lbls = labels[indeces]
+    imgs = tensor_to_pil_numpy(images)
+    expls = tensor_to_pil_numpy(explanations)
     figures = []
 
-    for idx, image, explanation, label in zip(indeces, imgs, expls, lbls):
-        _title = f"{title_prefix}_idx={idx}_label={label}"
+    for image, explanation, title in zip(imgs, expls, titles):
         fig, ax = viz.visualize_image_attr(
             explanation,
             image,
             method="blended_heat_map",
             sign="all",
             show_colorbar=True,
-            title=_title,
+            title=title,
         )
         figures.append((fig, ax))
     return figures
