@@ -4,7 +4,6 @@ from typing import Any, Tuple, Union
 import hydra
 import neptune.new as neptune
 import torch
-from captum.attr import visualization as viz
 from omegaconf import OmegaConf
 from torch import Tensor
 from torch.utils.data import DataLoader
@@ -21,7 +20,7 @@ from hiding_adversarial_attacks.config.explainers.explainer_config import Explai
 from hiding_adversarial_attacks.data_modules.utils import get_data_module
 from hiding_adversarial_attacks.explainers.base import BaseExplainer
 from hiding_adversarial_attacks.explainers.utils import get_explainer
-from hiding_adversarial_attacks.utils import tensor_to_pil_numpy
+from hiding_adversarial_attacks.utils import visualize_explanations
 
 
 def get_model_from_checkpoint(
@@ -73,36 +72,6 @@ def save_explanations(
     # Upload attack results to Neptune
     if not config.trash_run:
         neptune_run["explanations"].upload_files(f"{explanations_path}/*.pt")
-
-
-def visualize_explanations(
-    images: torch.Tensor,
-    explanations: torch.Tensor,
-    labels: torch.Tensor,
-    title: str,
-    config: ExplanationConfig,
-):
-    imgs = tensor_to_pil_numpy(images)
-    expls = tensor_to_pil_numpy(explanations)
-    fig_paths = []
-
-    for i, (image, explanation, label) in enumerate(zip(imgs, expls, labels)):
-        _title = f"{title}, label: {label}, id: {i}"
-        fig, ax = viz.visualize_image_attr(
-            explanation,
-            image,
-            method="blended_heat_map",
-            sign="all",
-            show_colorbar=True,
-            title=_title,
-        )
-        if not config.trash_run:
-            title = f"{title}_label={label}_id={i}.png"
-            title = title.replace(" ", "-")
-            fig_path = os.path.join(config.log_path, f"{title}")
-            fig.savefig(fig_path)
-            fig_paths.append((title, fig_path))
-    return fig_paths
 
 
 def explain(
@@ -215,26 +184,33 @@ def run(config: ExplanationConfig) -> None:
 
     # Visualize some explanations of adversarials and originals
     if config.visualize_samples:
-        train_fig_paths = visualize_explanations(
-            train_orig_images[0:4],
-            train_orig_explanations[0:4],
-            train_orig_labels[0:4],
-            f"Original explanation - {config.explainer.name}",
-            config,
+        indeces = torch.arange(0, 4)
+        train_figures = visualize_explanations(
+            train_orig_images,
+            train_orig_explanations,
+            train_orig_labels,
+            indeces,
+            f"original_expl={config.explainer.name}",
         )
-        test_fig_paths = visualize_explanations(
-            train_adv_images[0:4],
-            train_adv_explanations[0:4],
-            train_adv_labels[0:4],
-            f"Adversarial explanation - {config.explainer.name}",
-            config,
+        test_figures = visualize_explanations(
+            train_adv_images,
+            train_adv_explanations,
+            train_adv_labels,
+            indeces,
+            f"adversarial_expl={config.explainer.name}",
         )
+
         if not config.trash_run:
-            for (_train_title, train_fig), (_test_title, test_fig) in zip(
-                train_fig_paths, test_fig_paths
+            for (_train_fig, _train_ax), (_test_fig, _test_ax) in zip(
+                train_figures, test_figures
             ):
-                neptune_run[f"plot/{_train_title}"].upload(train_fig)
-                neptune_run[f"plot/{_test_title}"].upload(test_fig)
+                _train_file_name = f"{_train_ax.get_title()}.png"
+                _test_file_name = f"{_test_ax.get_title()}.png"
+                _train_fig.savefig(os.path.join(config.log_path, _train_file_name))
+                _test_fig.savefig(os.path.join(config.log_path, _test_file_name))
+
+                neptune_run[f"plot/{_train_file_name}"].upload(_train_fig)
+                neptune_run[f"plot/{_test_file_name}"].upload(_test_fig)
 
     # Save explanations
     explanations_path = get_explanations_path(config)

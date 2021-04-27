@@ -6,6 +6,7 @@ from time import time
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from captum.attr._utils import visualization as viz
 from torchvision.transforms import ToPILImage
 
 from hiding_adversarial_attacks.classifiers.cifar_net import CifarNet
@@ -17,8 +18,6 @@ from hiding_adversarial_attacks.config.data_sets.data_set_config import (
 from hiding_adversarial_attacks.manipulated_classifiers.manipulated_mnist_net import (
     ManipulatedMNISTNet,
 )
-
-toPilImage = ToPILImage()
 
 ROOT_DIR = os.path.abspath(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
@@ -86,14 +85,35 @@ def tensor_to_pil_numpy(rgb_tensor):
     return np.transpose(rgb_tensor.cpu().detach().numpy(), (0, 2, 3, 1))
 
 
-def inverse_normalize(tensor, mean, std):
-    for t, m, s in zip(tensor, mean, std):
-        t.mul_(s).add_(m)
-    return tensor
-
-
 def to_pil_image(tensor, mode="L"):
     return ToPILImage(mode=mode)(tensor)
+
+
+def visualize_explanations(
+    images: torch.Tensor,
+    explanations: torch.Tensor,
+    labels: torch.Tensor,
+    indeces: torch.Tensor,
+    title_prefix: str,
+):
+
+    imgs = tensor_to_pil_numpy(images[indeces])
+    expls = tensor_to_pil_numpy(explanations[indeces])
+    lbls = labels[indeces]
+    figures = []
+
+    for idx, image, explanation, label in zip(indeces, imgs, expls, lbls):
+        _title = f"{title_prefix}_idx={idx}_label={label}"
+        fig, ax = viz.visualize_image_attr(
+            explanation,
+            image,
+            method="blended_heat_map",
+            sign="all",
+            show_colorbar=True,
+            title=_title,
+        )
+        figures.append((fig, ax))
+    return figures
 
 
 if __name__ == "__main__":
