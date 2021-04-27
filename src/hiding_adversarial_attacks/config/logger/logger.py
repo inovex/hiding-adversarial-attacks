@@ -2,7 +2,7 @@ import logging
 import os
 from dataclasses import dataclass
 
-from hiding_adversarial_attacks.utils import ROOT_DIR
+from hiding_adversarial_attacks.config.config import ROOT_DIR
 
 
 @dataclass
