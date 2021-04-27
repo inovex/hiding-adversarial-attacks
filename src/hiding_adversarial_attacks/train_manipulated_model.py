@@ -9,7 +9,11 @@ from pytorch_lightning.loggers import NeptuneLogger
 
 from hiding_adversarial_attacks._neptune.utils import get_neptune_logger
 from hiding_adversarial_attacks.callbacks.neptune_callback import NeptuneLoggingCallback
+from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.config_validator import ConfigValidator
+from hiding_adversarial_attacks.config.data_sets.data_set_config import (
+    AdversarialDataSetNames,
+)
 from hiding_adversarial_attacks.config.manipulated_model_training_config import (
     ManipulatedModelTrainingConfig,
 )
@@ -17,9 +21,27 @@ from hiding_adversarial_attacks.data_modules.utils import (
     VisionDataModuleUnionType,
     get_data_module,
 )
-from hiding_adversarial_attacks.utils import get_manipulatable_model, get_model
+from hiding_adversarial_attacks.manipulated_classifiers.manipulated_mnist_net import (
+    ManipulatedMNISTNet,
+)
+from hiding_adversarial_attacks.utils import get_model
 
 logger = logging.getLogger(__file__)
+
+
+def get_manipulatable_model(config):
+    if config.data_set.name in [
+        AdversarialDataSetNames.ADVERSARIAL_MNIST,
+    ]:
+        classifier_model = MNISTNet(config).load_from_checkpoint(
+            config.classifier_checkpoint
+        )
+        model = ManipulatedMNISTNet(classifier_model, config)
+        return model
+    else:
+        raise SystemExit(
+            f"Unknown data set specified: {config.data_set.name}. Exiting."
+        )
 
 
 def train(
@@ -98,9 +120,11 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
         config.tags.append("trash")
     neptune_logger = get_neptune_logger(config, experiment_name, list(config.tags))
 
+    # Override log path
     config.log_path = os.path.join(
         config.log_path, neptune_logger.name, neptune_logger.version
     )
+    os.makedirs(config.log_path, exist_ok=True)
 
     if config.test:
         test(data_module, neptune_logger, device, config)

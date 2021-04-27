@@ -1,5 +1,6 @@
 import os
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any, List, Tuple
 
 from hydra.core.config_store import ConfigStore
@@ -9,6 +10,8 @@ from hiding_adversarial_attacks.config.classifier_training_config import (
     ClassifierTrainingConfig,
 )
 from hiding_adversarial_attacks.config.classifiers.classifier_config import (
+    Cifar10ClassifierConfig,
+    FashionMNISTClassifierConfig,
     MNISTClassifierConfig,
 )
 from hiding_adversarial_attacks.config.data_sets.data_set_config import (
@@ -27,7 +30,9 @@ from hiding_adversarial_attacks.config.explainers.explainer_config import (
 from hiding_adversarial_attacks.config.logger.logger import LoggingConfig
 from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     MSELoss,
+    PCCLoss,
     SimilarityLoss,
+    SSIMLoss,
 )
 
 defaults = [
@@ -37,6 +42,12 @@ defaults = [
     {"explainer": "DeepLiftExplainer"},
     {"explainer.baseline": "ZeroBaseline"},
 ]
+
+
+class Stage(Enum):
+    STAGE_TRAIN = "train"
+    STAGE_VAL = "val"
+    STAGE_TEST = "test"
 
 
 @dataclass
@@ -78,6 +89,14 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     # Path where logs will be saved / moved to
     log_path: str = os.path.join(LoggingConfig.log_root, "manipulate_model")
 
+    # How often to log explanations & other images to Neptune
+    image_log_intervals: Any = field(
+        default_factory=lambda: {
+            Stage.STAGE_TRAIN.value: 300,
+            Stage.STAGE_VAL.value: 100,
+        }
+    )
+
     # Neptune options
     # Tag 'trash' will be added to tags if trash_run is True
     tags: List[str] = field(default_factory=lambda: ["manipulate-model"])
@@ -86,15 +105,12 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
 cs = ConfigStore.instance()
 cs.store(group="data_set", name="AdversarialMNIST", node=AdversarialMNISTConfig)
 cs.store(group="classifier", name="MNISTClassifier", node=MNISTClassifierConfig)
-# cs.store(
-#     group="classifier",
-#     name="FashionMNISTClassifier",
-#     node=FashionMNISTClassifierConfig,
-# )
-# cs.store(
-#     group="classifier", name="Cifar10Classifier", node=Cifar10ClassifierConfig
-# )
-cs.store(group="similarity_loss", name="MSE", node=MSELoss)
+cs.store(
+    group="classifier",
+    name="FashionMNISTClassifier",
+    node=FashionMNISTClassifierConfig,
+)
+cs.store(group="classifier", name="Cifar10Classifier", node=Cifar10ClassifierConfig)
 cs.store(group="explainer", name="DeepLiftExplainer", node=DeepLiftConfig)
 cs.store(group="explainer.baseline", name="ZeroBaseline", node=ZeroBaselineConfig)
 cs.store(group="explainer.baseline", name="BlurBaseline", node=BlurBaselineConfig)
@@ -104,6 +120,9 @@ cs.store(
     node=LocalMeanBaselineConfig,
 )
 cs.store(group="explainer", name="GradCamExplainer", node=LayerGradCamConfig)
+cs.store(group="similarity_loss", name="MSE", node=MSELoss)
+cs.store(group="similarity_loss", name="PCC", node=PCCLoss)
+cs.store(group="similarity_loss", name="SSIM", node=SSIMLoss)
 cs.store(
     name="manipulated_model_training_config",
     node=ManipulatedModelTrainingConfig,

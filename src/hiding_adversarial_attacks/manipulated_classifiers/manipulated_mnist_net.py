@@ -1,23 +1,24 @@
 from __future__ import print_function
 
-from enum import Enum
+import os
 
+import matplotlib.pyplot as plt
 import pytorch_lightning as pl
 import torch.nn.functional as F
 import torchmetrics
 from eagerpy import torch
+from omegaconf import OmegaConf
 
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossMapping,
 )
+from hiding_adversarial_attacks.config.manipulated_model_training_config import Stage
 from hiding_adversarial_attacks.explainers.utils import get_explainer
-
-
-class Stage(Enum):
-    STAGE_TRAIN = "train"
-    STAGE_VAL = "val"
-    STAGE_TEST = "test"
+from hiding_adversarial_attacks.utils import (
+    tensor_to_pil_numpy,
+    visualize_single_explanation,
+)
 
 
 class ManipulatedMNISTNet(pl.LightningModule):
@@ -32,11 +33,22 @@ class ManipulatedMNISTNet(pl.LightningModule):
         # self.gamma = hparams.gamma
         self.loss_weights = hparams.loss_weights
 
+        # Logging
+        self.image_log_intervals = hparams.image_log_intervals
+        self.image_log_path = os.path.join(hparams.log_path, "image_log")
+        os.makedirs(self.image_log_path, exist_ok=True)
+
         # Explainer
         self.explainer = get_explainer(self.model, hparams)
 
+        # Explanation similarity loss
         self.similarity_loss = SimilarityLossMapping[hparams.similarity_loss.name]
+
+        # Metrics tracking
         self._setup_metrics()
+
+        self.hparams = OmegaConf.to_container(hparams)
+        self.save_hyperparameters()
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
@@ -50,18 +62,18 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
     def _predict(self, batch, stage: Stage):
         (
-            original_image,
-            adversarial_image,
-            original_label,
-            adversarial_label,
+            original_images,
+            adversarial_images,
+            original_labels,
+            adversarial_labels,
         ) = batch
 
         # Create explanation maps
-        original_explanation_map = self.explainer.explain(
-            original_image, original_label
+        original_explanation_maps = self.explainer.explain(
+            original_images, original_labels
         )
-        adversarial_explanation_map = self.explainer.explain(
-            adversarial_image, original_label
+        adversarial_explanation_maps = self.explainer.explain(
+            adversarial_images, original_labels
         )
 
         # Calculate combined loss
@@ -71,12 +83,12 @@ class ManipulatedMNISTNet(pl.LightningModule):
             cross_entropy_adv,
             explanation_similarity,
         ) = self.combined_loss(
-            original_image,
-            adversarial_image,
-            original_explanation_map,
-            adversarial_explanation_map,
-            original_label,
-            adversarial_label,
+            original_images,
+            adversarial_images,
+            original_explanation_maps,
+            adversarial_explanation_maps,
+            original_labels,
+            adversarial_labels,
             stage,
         )
         self.log_losses(
@@ -89,10 +101,66 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         # Log explanation similarity metrics with logger
         self.log_similarity_metrics(
-            original_explanation_map, adversarial_explanation_map, stage
+            original_explanation_maps, adversarial_explanation_maps, stage
         )
 
+        # Safe original and adversarial explanations locally and to Neptune
+        if self.global_step % self.image_log_intervals[stage.value] == 0:
+            figure, axes = self._visualize_explanations(
+                original_images,
+                adversarial_images,
+                original_explanation_maps,
+                adversarial_explanation_maps,
+                original_labels,
+                adversarial_labels,
+            )
+            fig_name = f"step={self.global_step}_explanations.png"
+            fig_path = os.path.join(self.image_log_path, fig_name)
+            figure.savefig(fig_path)
+            # self.logger.experiment.log_artifact(
+            #     fig_path, f"image_log/{fig_name}"
+            # )
+
         return total_loss
+
+    def _visualize_explanations(
+        self,
+        original_images,
+        adversarial_images,
+        original_explanation_maps,
+        adversarial_explanation_maps,
+        original_labels,
+        adversarial_labels,
+    ):
+        n_rows = 8 if self.hparams.batch_size > 8 else self.hparams.batch_size
+        indeces = torch.arange(0, n_rows).raw
+
+        original_titles = [
+            f"Original exp, label: {label}" for label in original_labels[indeces]
+        ]
+        adversarial_titles = [
+            f"Adversarial exp, label: {label}" for label in adversarial_labels[indeces]
+        ]
+        orig_images = tensor_to_pil_numpy(original_images[indeces])
+        orig_expl = tensor_to_pil_numpy(original_explanation_maps[indeces])
+        adv_images = tensor_to_pil_numpy(adversarial_images[indeces])
+        adv_expl = tensor_to_pil_numpy(adversarial_explanation_maps[indeces])
+
+        fig, axes = plt.subplots(nrows=n_rows, ncols=2, figsize=(12, 12))
+        for i, (row_axis, index) in enumerate(zip(axes, indeces)):
+            visualize_single_explanation(
+                orig_images[index],
+                orig_expl[index],
+                original_titles[index],
+                (fig, row_axis[0]),
+            )
+            visualize_single_explanation(
+                adv_images[index],
+                adv_expl[index],
+                adversarial_titles[index],
+                (fig, row_axis[1]),
+            )
+        return fig, axes
 
     def combined_loss(
         self,

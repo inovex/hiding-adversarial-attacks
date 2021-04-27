@@ -1,12 +1,13 @@
 import argparse
 from functools import wraps
 from time import time
-from typing import List
+from typing import List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from captum.attr._utils import visualization as viz
+from matplotlib.pyplot import axis, figure
 from torchvision.transforms import ToPILImage
 
 from hiding_adversarial_attacks.classifiers.cifar_net import CifarNet
@@ -73,6 +74,7 @@ def visualize_explanations(
     images: torch.Tensor,
     explanations: torch.Tensor,
     titles: List[str],
+    plt_fig_axis: Union[None, Tuple[figure, axis]] = None,
 ):
 
     imgs = tensor_to_pil_numpy(images)
@@ -80,16 +82,27 @@ def visualize_explanations(
     figures = []
 
     for image, explanation, title in zip(imgs, expls, titles):
-        fig, ax = viz.visualize_image_attr(
-            explanation,
-            image,
-            method="blended_heat_map",
-            sign="all",
-            show_colorbar=True,
-            title=title,
-        )
+        ax, fig = visualize_single_explanation(image, explanation, title, plt_fig_axis)
         figures.append((fig, ax))
     return figures
+
+
+def visualize_single_explanation(
+    image: np.array,
+    explanation: np.array,
+    title: str,
+    plt_fig_axis: Union[None, Tuple[figure, axis]] = None,
+):
+    fig, ax = viz.visualize_image_attr(
+        explanation,
+        image,
+        method="blended_heat_map",
+        sign="all",
+        show_colorbar=True,
+        plt_fig_axis=plt_fig_axis,
+        title=title,
+    )
+    return ax, fig
 
 
 if __name__ == "__main__":
