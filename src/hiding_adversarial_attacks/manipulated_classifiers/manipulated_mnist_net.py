@@ -6,7 +6,6 @@ import pytorch_lightning as pl
 import torch.nn.functional as F
 import torchmetrics
 from eagerpy import torch
-from torch.optim.lr_scheduler import StepLR
 
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
@@ -30,7 +29,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         # Hyperparams
         self.lr = hparams.lr
-        self.gamma = hparams.gamma
+        # self.gamma = hparams.gamma
         self.loss_weights = hparams.loss_weights
 
         # Explainer
@@ -39,62 +38,10 @@ class ManipulatedMNISTNet(pl.LightningModule):
         self.similarity_loss = SimilarityLossMapping[hparams.similarity_loss.name]
         self._setup_metrics()
 
-    def _setup_metrics(self):
-        # Classification accuracy - original and adversarial
-        self.train_accuracy_orig = torchmetrics.Accuracy()
-        self.validation_accuracy_orig = torchmetrics.Accuracy()
-        self.test_accuracy_orig = torchmetrics.Accuracy()
-        self.train_accuracy_adv = torchmetrics.Accuracy()
-        self.validation_accuracy_adv = torchmetrics.Accuracy()
-        self.test_accuracy_adv = torchmetrics.Accuracy()
-
-        # Similarity metrics for explanations
-        # -- MSE
-        self.train_mse = torchmetrics.MeanSquaredError()
-        self.validation_mse = torchmetrics.MeanSquaredError()
-        self.test_mse = torchmetrics.MeanSquaredError()
-
-        # -- Structural Similarity Index Measure (SSIM)
-        self.train_ssim = torchmetrics.SSIM()
-        self.validation_ssim = torchmetrics.SSIM()
-        self.test_ssim = torchmetrics.SSIM()
-
-        # # -- Pearson Cross Correlation
-        # self.train_pcc = torchmetrics.PearsonCorrcoef()
-        # self.validation_pcc = torchmetrics.PearsonCorrcoef()
-        # self.test_pcc = torchmetrics.PearsonCorrcoef()
-
-    def log_orig_acc(self, pred, target, stage: Stage):
-        if stage == Stage.STAGE_TRAIN:
-            self.train_accuracy_orig(pred, target)
-        elif stage == Stage.STAGE_VAL:
-            self.validation_accuracy_orig(pred, target)
-        elif stage == Stage.STAGE_TEST:
-            self.test_accuracy_orig(pred, target)
-
-    def log_adv_acc(self, pred, target, stage: Stage):
-        if stage == Stage.STAGE_TRAIN:
-            self.train_accuracy_adv(pred, target)
-        elif stage == Stage.STAGE_VAL:
-            self.validation_accuracy_adv(pred, target)
-        elif stage == Stage.STAGE_TEST:
-            self.test_accuracy_adv(pred, target)
-
-    def log_similarity_metrics(self, pred, target, stage: Stage):
-        if stage == Stage.STAGE_TRAIN:
-            self.train_mse(pred, target)
-            self.train_ssim(pred, target)
-        elif stage == Stage.STAGE_VAL:
-            self.validation_mse(pred, target)
-            self.validation_ssim(pred, target)
-        elif stage == Stage.STAGE_TEST:
-            self.test_mse(pred, target)
-            self.test_ssim(pred, target)
-
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
-        scheduler = StepLR(optimizer, step_size=1, gamma=self.gamma)
-        return [optimizer], [scheduler]
+        # scheduler = StepLR(optimizer, step_size=1, gamma=self.gamma)
+        return optimizer
 
     def forward(self, x):
         softmax_output = self.model(x)
@@ -186,6 +133,36 @@ class ManipulatedMNISTNet(pl.LightningModule):
             explanation_similarity,
         )
 
+    def training_step(self, batch, batch_idx):
+        total_loss = self._predict(batch, Stage.STAGE_TRAIN)
+        return total_loss
+
+    def validation_step(self, batch, batch_idx):
+        total_loss = self._predict(batch, Stage.STAGE_VAL)
+        return total_loss
+
+    def test_step(self, batch, batch_idx):
+        total_loss = self._predict(batch, Stage.STAGE_TEST)
+        return total_loss
+
+    def training_epoch_end(self, outs):
+        self.train_accuracy_orig.compute()
+        self.train_accuracy_adv.compute()
+        # self.train_ssim.compute()
+        self.train_mse.compute()
+
+    def validation_epoch_end(self, outs):
+        self.validation_accuracy_orig.compute()
+        self.validation_accuracy_adv.compute()
+        # self.validation_ssim.compute()
+        self.validation_mse.compute()
+
+    def test_epoch_end(self, outs):
+        self.test_accuracy_orig.compute()
+        self.test_accuracy_adv.compute()
+        # self.test_ssim.compute()
+        self.test_mse.compute()
+
     def log_losses(
         self,
         total_loss,
@@ -215,35 +192,57 @@ class ManipulatedMNISTNet(pl.LightningModule):
             prog_bar=True,
         )
 
-    def training_step(self, batch, batch_idx):
-        total_loss = self._predict(batch, Stage.STAGE_TRAIN)
-        return total_loss
+    def _setup_metrics(self):
+        # Classification accuracy - original and adversarial
+        self.train_accuracy_orig = torchmetrics.Accuracy()
+        self.validation_accuracy_orig = torchmetrics.Accuracy()
+        self.test_accuracy_orig = torchmetrics.Accuracy()
+        self.train_accuracy_adv = torchmetrics.Accuracy()
+        self.validation_accuracy_adv = torchmetrics.Accuracy()
+        self.test_accuracy_adv = torchmetrics.Accuracy()
 
-    def validation_step(self, batch, batch_idx):
-        total_loss = self._predict(batch, Stage.STAGE_VAL)
-        return total_loss
+        # Similarity metrics for explanations
+        # -- MSE
+        self.train_mse = torchmetrics.MeanSquaredError()
+        self.validation_mse = torchmetrics.MeanSquaredError()
+        self.test_mse = torchmetrics.MeanSquaredError()
 
-    def test_step(self, batch, batch_idx):
-        total_loss = self._predict(batch, Stage.STAGE_TEST)
-        return total_loss
+        # -- Structural Similarity Index Measure (SSIM)
+        self.train_ssim = torchmetrics.SSIM()
+        self.validation_ssim = torchmetrics.SSIM()
+        self.test_ssim = torchmetrics.SSIM()
 
-    def training_epoch_end(self, outs):
-        self.train_accuracy_orig.compute()
-        self.train_accuracy_adv.compute()
-        self.train_ssim.compute()
-        self.train_mse.compute()
+        # # -- Pearson Cross Correlation
+        # self.train_pcc = torchmetrics.PearsonCorrcoef()
+        # self.validation_pcc = torchmetrics.PearsonCorrcoef()
+        # self.test_pcc = torchmetrics.PearsonCorrcoef()
 
-    def validation_epoch_end(self, outs):
-        self.validation_accuracy_orig.compute()
-        self.validation_accuracy_adv.compute()
-        self.validation_ssim.compute()
-        self.validation_mse.compute()
+    def log_orig_acc(self, pred, target, stage: Stage):
+        if stage == Stage.STAGE_TRAIN:
+            self.train_accuracy_orig(pred, target)
+        elif stage == Stage.STAGE_VAL:
+            self.validation_accuracy_orig(pred, target)
+        elif stage == Stage.STAGE_TEST:
+            self.test_accuracy_orig(pred, target)
 
-    def test_epoch_end(self, outs):
-        self.test_accuracy_orig.compute()
-        self.test_accuracy_adv.compute()
-        self.test_ssim.compute()
-        self.test_mse.compute()
+    def log_adv_acc(self, pred, target, stage: Stage):
+        if stage == Stage.STAGE_TRAIN:
+            self.train_accuracy_adv(pred, target)
+        elif stage == Stage.STAGE_VAL:
+            self.validation_accuracy_adv(pred, target)
+        elif stage == Stage.STAGE_TEST:
+            self.test_accuracy_adv(pred, target)
+
+    def log_similarity_metrics(self, pred, target, stage: Stage):
+        if stage == Stage.STAGE_TRAIN:
+            self.train_mse(pred, target)
+            # self.train_ssim(pred, target)
+        elif stage == Stage.STAGE_VAL:
+            self.validation_mse(pred, target)
+            # self.validation_ssim(pred, target)
+        elif stage == Stage.STAGE_TEST:
+            self.test_mse(pred, target)
+            # self.test_ssim(pred, target)
 
 
 def assert_not_none(tensor, loss_name):

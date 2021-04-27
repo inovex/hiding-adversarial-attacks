@@ -69,10 +69,10 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     # Hyperparameters
     similarity_loss: SimilarityLoss = MISSING
 
-    lr: float = 5e-5
-    gamma: float = 0.07
+    lr: float = 5e-3
+    # gamma: float = 0.07
     loss_weights: Tuple[float, float, float] = field(
-        default_factory=lambda: (1.0, 1.0, 1e6)
+        default_factory=lambda: (0.0, 0.0, 1000)
     )
 
     # Path where logs will be saved / moved to
