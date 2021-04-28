@@ -205,10 +205,10 @@ class ManipulatedMNISTNet(pl.LightningModule):
         indeces = torch.arange(0, n_rows).raw
 
         original_titles = [
-            f"Original exp, label: {label}" for label in original_labels[indeces]
+            f"Original, label: {label}" for label in original_labels[indeces]
         ]
         adversarial_titles = [
-            f"Adversarial exp, label: {label}" for label in adversarial_labels[indeces]
+            f"Adversarial, label: {label}" for label in adversarial_labels[indeces]
         ]
         orig_images = tensor_to_pil_numpy(original_images[indeces])
         orig_expl = tensor_to_pil_numpy(original_explanation_maps[indeces])
@@ -217,10 +217,14 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         fig, axes = plt.subplots(nrows=n_rows, ncols=2, figsize=(12, 12))
         for i, (row_axis, index) in enumerate(zip(axes, indeces)):
+            explanation_similarity = self.similarity_loss(
+                original_explanation_maps[index],
+                adversarial_explanation_maps[index],
+            )
             visualize_single_explanation(
                 orig_images[index],
                 orig_expl[index],
-                original_titles[index],
+                f"{original_titles[index]}, sim: {explanation_similarity}",
                 (fig, row_axis[0]),
             )
             visualize_single_explanation(
@@ -229,6 +233,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 adversarial_titles[index],
                 (fig, row_axis[1]),
             )
+        fig.tight_layout()
         return fig, axes
 
     def log_losses(
