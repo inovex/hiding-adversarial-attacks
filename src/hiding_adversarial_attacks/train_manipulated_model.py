@@ -113,6 +113,8 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
 
     experiment_name = config.data_set.name
     config.tags.append(config.data_set.name)
+    config.tags.append(config.explainer.name)
+    config.tags.append("test" if config.test else "train")
     if config.trash_run:
         config.tags.append("trash")
     neptune_logger = get_neptune_logger(config, experiment_name, list(config.tags))
