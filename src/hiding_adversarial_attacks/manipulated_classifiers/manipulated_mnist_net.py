@@ -114,12 +114,12 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 original_labels,
                 adversarial_labels,
             )
-            fig_name = f"step={self.global_step}_explanations.png"
+            fig_name = (
+                f"epoch={self.trainer.current_epoch}_"
+                f"step={self.global_step}_explanations.png"
+            )
             fig_path = os.path.join(self.image_log_path, fig_name)
             figure.savefig(fig_path)
-            # self.logger.experiment.log_artifact(
-            #     fig_path, f"image_log/{fig_name}"
-            # )
 
         return total_loss
 
