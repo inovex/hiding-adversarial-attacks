@@ -123,45 +123,6 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         return total_loss
 
-    def _visualize_explanations(
-        self,
-        original_images,
-        adversarial_images,
-        original_explanation_maps,
-        adversarial_explanation_maps,
-        original_labels,
-        adversarial_labels,
-    ):
-        n_rows = 8 if self.hparams.batch_size > 8 else self.hparams.batch_size
-        indeces = torch.arange(0, n_rows).raw
-
-        original_titles = [
-            f"Original exp, label: {label}" for label in original_labels[indeces]
-        ]
-        adversarial_titles = [
-            f"Adversarial exp, label: {label}" for label in adversarial_labels[indeces]
-        ]
-        orig_images = tensor_to_pil_numpy(original_images[indeces])
-        orig_expl = tensor_to_pil_numpy(original_explanation_maps[indeces])
-        adv_images = tensor_to_pil_numpy(adversarial_images[indeces])
-        adv_expl = tensor_to_pil_numpy(adversarial_explanation_maps[indeces])
-
-        fig, axes = plt.subplots(nrows=n_rows, ncols=2, figsize=(12, 12))
-        for i, (row_axis, index) in enumerate(zip(axes, indeces)):
-            visualize_single_explanation(
-                orig_images[index],
-                orig_expl[index],
-                original_titles[index],
-                (fig, row_axis[0]),
-            )
-            visualize_single_explanation(
-                adv_images[index],
-                adv_expl[index],
-                adversarial_titles[index],
-                (fig, row_axis[1]),
-            )
-        return fig, axes
-
     def combined_loss(
         self,
         original_image: torch.Tensor,
@@ -230,6 +191,45 @@ class ManipulatedMNISTNet(pl.LightningModule):
         self.test_accuracy_adv.compute()
         # self.test_ssim.compute()
         self.test_mse.compute()
+
+    def _visualize_explanations(
+        self,
+        original_images,
+        adversarial_images,
+        original_explanation_maps,
+        adversarial_explanation_maps,
+        original_labels,
+        adversarial_labels,
+    ):
+        n_rows = 8 if self.hparams.batch_size > 8 else self.hparams.batch_size
+        indeces = torch.arange(0, n_rows).raw
+
+        original_titles = [
+            f"Original exp, label: {label}" for label in original_labels[indeces]
+        ]
+        adversarial_titles = [
+            f"Adversarial exp, label: {label}" for label in adversarial_labels[indeces]
+        ]
+        orig_images = tensor_to_pil_numpy(original_images[indeces])
+        orig_expl = tensor_to_pil_numpy(original_explanation_maps[indeces])
+        adv_images = tensor_to_pil_numpy(adversarial_images[indeces])
+        adv_expl = tensor_to_pil_numpy(adversarial_explanation_maps[indeces])
+
+        fig, axes = plt.subplots(nrows=n_rows, ncols=2, figsize=(12, 12))
+        for i, (row_axis, index) in enumerate(zip(axes, indeces)):
+            visualize_single_explanation(
+                orig_images[index],
+                orig_expl[index],
+                original_titles[index],
+                (fig, row_axis[0]),
+            )
+            visualize_single_explanation(
+                adv_images[index],
+                adv_expl[index],
+                adversarial_titles[index],
+                (fig, row_axis[1]),
+            )
+        return fig, axes
 
     def log_losses(
         self,

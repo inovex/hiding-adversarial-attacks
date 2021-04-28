@@ -8,7 +8,9 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import NeptuneLogger
 
 from hiding_adversarial_attacks._neptune.utils import get_neptune_logger
-from hiding_adversarial_attacks.callbacks.neptune_callback import NeptuneLoggingCallback
+from hiding_adversarial_attacks.callbacks.neptune_callback import (
+    ModelManipulationNeptuneLoggingCallback,
+)
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.config_validator import ConfigValidator
 from hiding_adversarial_attacks.config.data_sets.data_set_config import (
@@ -55,17 +57,19 @@ def train(
 
     checkpoint_callback = hydra.utils.instantiate(config.checkpoint_config)
 
-    neptune_callback = NeptuneLoggingCallback(
-        log_path=config.log_path, trash_run=config.trash_run
+    model = get_manipulatable_model(config)
+    model.to(device)
+
+    neptune_callback = ModelManipulationNeptuneLoggingCallback(
+        log_path=config.log_path,
+        image_log_path=model.image_log_path,
+        trash_run=config.trash_run,
     )
     trainer = Trainer(
         gpus=config.gpus,
         logger=neptune_logger,
         callbacks=[checkpoint_callback, neptune_callback],
     )
-
-    model = get_manipulatable_model(config)
-    model.to(device)
 
     trainer.fit(model, train_loader, validation_loader)
 

@@ -39,3 +39,18 @@ class NeptuneLoggingCallback(Callback):
         ):
             model_name = "checkpoints/" + checkpoint.split("/")[-1]
             trainer.logger.experiment.log_artifact(checkpoint, model_name)
+
+
+class ModelManipulationNeptuneLoggingCallback(NeptuneLoggingCallback):
+    def __init__(self, log_path: str, image_log_path: str, trash_run=False):
+        super().__init__(log_path=log_path, trash_run=trash_run)
+        self.image_log_path = image_log_path
+
+    def on_train_end(self, trainer, pl_module):
+        super().on_train_end(trainer, pl_module)
+        self._upload_image_log(trainer)
+
+    def _upload_image_log(self, trainer):
+        for image_path in glob.glob(os.path.join(self.image_log_path, "*.png")):
+            image_name = f"image_log/{os.path.basename(image_path)}"
+            trainer.logger.experiment.log_artifact(image_path, image_name)
