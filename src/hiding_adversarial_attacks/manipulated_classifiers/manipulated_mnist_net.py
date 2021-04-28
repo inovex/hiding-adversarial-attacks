@@ -66,6 +66,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
             adversarial_images,
             original_labels,
             adversarial_labels,
+            batch_indeces,
         ) = batch
 
         # Create explanation maps

@@ -41,7 +41,7 @@ class AdversarialMNIST(MNIST):
             os.path.join(self.processed_folder, data_adv_file)
         )
 
-    def __getitem__(self, index: int) -> Tuple[Any, Any, Any, Any]:
+    def __getitem__(self, index: int) -> Tuple[Any, Any, Any, Any, int]:
         """
         Args:
             index (int): Index
@@ -67,7 +67,7 @@ class AdversarialMNIST(MNIST):
             target = self.target_transform(target)
             adv_target = self.target_transform(adv_target)
 
-        return img, adv_img, target, adv_target
+        return img, adv_img, target, adv_target, index
 
     @property
     def raw_folder(self) -> str:
