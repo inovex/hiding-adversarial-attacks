@@ -12,10 +12,7 @@ from torchvision.transforms import ToPILImage
 
 from hiding_adversarial_attacks.classifiers.cifar_net import CifarNet
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
-from hiding_adversarial_attacks.config.data_sets.data_set_config import (
-    AdversarialDataSetNames,
-    DataSetNames,
-)
+from hiding_adversarial_attacks.config.data_sets.data_set_config import DataSetNames
 
 
 def timeit(func):
@@ -31,11 +28,7 @@ def timeit(func):
 
 
 def get_model(config):
-    if config.data_set.name in [
-        DataSetNames.MNIST,
-        DataSetNames.FASHION_MNIST,
-        AdversarialDataSetNames.ADVERSARIAL_MNIST,
-    ]:
+    if config.data_set.name in [DataSetNames.MNIST, DataSetNames.FASHION_MNIST]:
         return MNISTNet(config)
     elif config.data_set.name == DataSetNames.CIFAR10:
         return CifarNet(config)
