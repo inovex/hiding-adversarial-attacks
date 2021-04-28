@@ -24,7 +24,6 @@ from hiding_adversarial_attacks.data_modules.utils import (
 from hiding_adversarial_attacks.manipulated_classifiers.manipulated_mnist_net import (
     ManipulatedMNISTNet,
 )
-from hiding_adversarial_attacks.utils import get_model
 
 logger = logging.getLogger(__file__)
 
@@ -82,11 +81,7 @@ def test(
 
     trainer = Trainer(gpus=config.gpus, logger=neptune_logger)
 
-    if len(config.checkpoint) == 0 or not os.path.isfile(config.checkpoint):
-        raise SystemExit(
-            "---- ERROR: Please specify a valid checkpoint path. Exiting. -----"
-        )
-    model = get_model(config).load_from_checkpoint(config.checkpoint)
+    model = get_manipulatable_model(config).load_from_checkpoint(config.checkpoint)
 
     trainer.test(model, test_loader, ckpt_path="best")
 
