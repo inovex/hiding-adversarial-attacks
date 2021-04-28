@@ -65,8 +65,9 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
 
     defaults: List[Any] = field(default_factory=lambda: defaults)
 
-    # Paths of attacked data and classifier weights
+    # Paths of attacked data
     data_path: str = MISSING  # path to the adversarially attacked data set
+    # Path to weights of attacked classifier
     classifier_checkpoint: str = ""
 
     # Config for saving checkpoints
@@ -94,6 +95,7 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
         default_factory=lambda: {
             Stage.STAGE_TRAIN.value: 300,
             Stage.STAGE_VAL.value: 100,
+            Stage.STAGE_TEST.value: 50,
         }
     )
 

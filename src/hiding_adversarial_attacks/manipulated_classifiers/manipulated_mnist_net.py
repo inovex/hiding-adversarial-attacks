@@ -105,7 +105,10 @@ class ManipulatedMNISTNet(pl.LightningModule):
         )
 
         # Safe original and adversarial explanations locally and to Neptune
-        if self.global_step % self.image_log_intervals[stage.value] == 0:
+        if (
+            stage.value in self.image_log_intervals
+            and self.global_step % self.image_log_intervals[stage.value] == 0
+        ):
             figure, axes = self._visualize_explanations(
                 original_images,
                 adversarial_images,
