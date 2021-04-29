@@ -91,18 +91,37 @@ def get_explanations_path(config):
 
 def save_explanations(
     explanations_path: str,
+    original_images: torch.Tensor,
+    adv_images: torch.Tensor,
     original_explanations: torch.Tensor,
     adv_explanations: torch.Tensor,
     labels: torch.Tensor,
     adv_labels: torch.Tensor,
+    indices: torch.Tensor,
     neptune_run: neptune.Run,
     config: ExplanationConfig,
     stage: str,
 ):
     orig_exp_path = os.path.join(explanations_path, f"{stage}_orig_exp.pt")
+    orig_path = os.path.join(explanations_path, f"{stage}_orig.pt")
     adv_exp_path = os.path.join(explanations_path, f"{stage}_adv_exp.pt")
-    torch.save((original_explanations.cpu(), labels.cpu()), orig_exp_path)
-    torch.save((adv_explanations.cpu(), adv_labels.cpu()), adv_exp_path)
+    adv_path = os.path.join(explanations_path, f"{stage}_adv.pt")
+    torch.save(
+        (original_explanations.cpu(), labels.cpu(), indices.long().cpu()),
+        orig_exp_path,
+    )
+    torch.save(
+        (original_images.cpu(), labels.cpu()),
+        orig_path,
+    )
+    torch.save(
+        (adv_explanations.cpu(), adv_labels.cpu(), indices.long().cpu()),
+        adv_exp_path,
+    )
+    torch.save(
+        (adv_images.cpu(), adv_labels.cpu()),
+        adv_path,
+    )
     print(f"Saved explanations to {explanations_path}")
 
     # Upload attack results to Neptune
@@ -112,18 +131,20 @@ def save_explanations(
 
 def explain(
     explainer: BaseExplainer, data_loader: DataLoader, device: torch.device
-) -> Tuple[Any, Any, Union[Tensor, Any], Any, Any, Any]:
+) -> Tuple[Any, Any, Union[Tensor, Any], Any, Any, Any, Any]:
 
     orig_images_all, adv_images_all = torch.Tensor(), torch.Tensor()
     orig_explanations, adv_explanations = torch.Tensor(), torch.Tensor()
     orig_labels_all = torch.Tensor()
     adv_labels_all = torch.Tensor()
+    explanation_indices = torch.Tensor()
 
     for images, adv_images, labels, adv_labels, indices in tqdm(data_loader):
         _images = images.to(device)
         _adv_images = adv_images.to(device)
         _labels = labels.long().to(device)
         _adv_labels = adv_labels.long().to(device)
+        _indices = indices.long().to(device)
 
         orig_explanations_batch = explainer.explain(_images, _labels)
         adv_explanations_batch = explainer.explain(_adv_images, _adv_labels)
@@ -139,6 +160,10 @@ def explain(
         orig_images_all = torch.cat((orig_images_all, _images.detach().cpu()), 0)
         adv_images_all = torch.cat((adv_images_all, _adv_images.detach().cpu()), 0)
 
+        explanation_indices = torch.cat(
+            (explanation_indices, _indices.detach().cpu()), 0
+        )
+
     return (
         orig_explanations,
         adv_explanations,
@@ -146,6 +171,7 @@ def explain(
         adv_labels_all,
         orig_images_all,
         adv_images_all,
+        explanation_indices,
     )
 
 
@@ -208,6 +234,7 @@ def run(config: ExplanationConfig) -> None:
         train_adv_labels,
         train_orig_images,
         train_adv_images,
+        train_expl_indices,
     ) = explain(explainer, train_loader, device)
     (
         test_orig_explanations,
@@ -216,6 +243,7 @@ def run(config: ExplanationConfig) -> None:
         test_adv_labels,
         test_orig_images,
         test_adv_images,
+        test_expl_indices,
     ) = explain(explainer, test_loader, device)
 
     # Visualize some explanations of adversarials and originals
@@ -245,20 +273,26 @@ def run(config: ExplanationConfig) -> None:
     explanations_path = get_explanations_path(config)
     save_explanations(
         explanations_path,
+        train_orig_images,
+        train_adv_images,
         train_orig_explanations,
         train_adv_explanations,
         train_orig_labels,
         train_adv_labels,
+        train_expl_indices,
         neptune_run,
         config,
         "training",
     )
     save_explanations(
         explanations_path,
+        test_orig_images,
+        test_adv_images,
         test_orig_explanations,
         test_adv_explanations,
         test_orig_labels,
         test_adv_labels,
+        test_expl_indices,
         neptune_run,
         config,
         "test",
