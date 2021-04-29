@@ -74,7 +74,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
             original_images, original_labels
         )
         adversarial_explanation_maps = self.explainer.explain(
-            adversarial_images, original_labels
+            adversarial_images, adversarial_labels
         )
 
         # Calculate combined loss
