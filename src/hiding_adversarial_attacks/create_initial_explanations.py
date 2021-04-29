@@ -119,7 +119,7 @@ def explain(
     orig_labels_all = torch.Tensor()
     adv_labels_all = torch.Tensor()
 
-    for images, adv_images, labels, adv_labels in tqdm(data_loader):
+    for images, adv_images, labels, adv_labels, indices in tqdm(data_loader):
         _images = images.to(device)
         _adv_images = adv_images.to(device)
         _labels = labels.long().to(device)
