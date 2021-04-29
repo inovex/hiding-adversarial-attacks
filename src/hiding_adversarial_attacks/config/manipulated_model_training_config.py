@@ -65,8 +65,10 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
 
     defaults: List[Any] = field(default_factory=lambda: defaults)
 
-    # Paths of attacked data
-    data_path: str = MISSING  # path to the adversarially attacked data set
+    # Path of attacked data
+    data_path: str = MISSING
+    # Path of explanations
+    explanations_path: str = MISSING
     # Path to weights of attacked classifier
     classifier_checkpoint: str = ""
 
@@ -81,7 +83,7 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     # Hyperparameters
     similarity_loss: SimilarityLoss = MISSING
 
-    lr: float = 5e-3
+    lr: float = 0.001
     # gamma: float = 0.07
     loss_weights: Tuple[float, float, float] = field(
         default_factory=lambda: (0.0, 0.0, 1000)

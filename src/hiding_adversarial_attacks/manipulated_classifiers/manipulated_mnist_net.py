@@ -12,9 +12,13 @@ from omegaconf import OmegaConf
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossMapping,
+    SimilarityLossNames,
 )
 from hiding_adversarial_attacks.config.manipulated_model_training_config import Stage
 from hiding_adversarial_attacks.explainers.utils import get_explainer
+from hiding_adversarial_attacks.manipulated_classifiers.metricized_explanations import (
+    MetricizedTopAndBottomExplanations,
+)
 from hiding_adversarial_attacks.utils import (
     tensor_to_pil_numpy,
     visualize_single_explanation,
@@ -49,6 +53,34 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         self.hparams = OmegaConf.to_container(hparams)
         self.save_hyperparameters()
+
+    def set_metricized_explanations(
+        self,
+        metricized_top_and_bottom_explanation: MetricizedTopAndBottomExplanations,
+    ):
+        self.metricized_explanations = metricized_top_and_bottom_explanation
+
+    def on_train_start(self):
+        assert self.metricized_explanations is not None
+        top_and_bottom_indices = (
+            self.metricized_explanations.top_and_bottom_indices.detach().cpu().tolist()
+        )
+        self.logger.experiment.log_text(
+            "top_and_bottom_indices",
+            f"{top_and_bottom_indices}",
+        )
+        self.logger.experiment.log_text(
+            "top_and_bottom_mse",
+            f"{self.metricized_explanations.losses[SimilarityLossNames.MSE]}",
+        )
+        self.logger.experiment.log_text(
+            "top_and_bottom_ssim",
+            f"{self.metricized_explanations.losses[SimilarityLossNames.SSIM]}",
+        )
+        self.logger.experiment.log_text(
+            "top_and_bottom_sorted_by",
+            f"{self.metricized_explanations.sorted_by}",
+        )
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
@@ -110,20 +142,16 @@ class ManipulatedMNISTNet(pl.LightningModule):
             stage.value in self.image_log_intervals
             and self.global_step % self.image_log_intervals[stage.value] == 0
         ):
-            figure, axes = self._visualize_explanations(
-                original_images,
-                adversarial_images,
-                original_explanation_maps,
+            self._visualize_batch_explanations(
                 adversarial_explanation_maps,
-                original_labels,
+                adversarial_images,
                 adversarial_labels,
+                original_explanation_maps,
+                original_images,
+                original_labels,
             )
-            fig_name = (
-                f"epoch={self.trainer.current_epoch}_"
-                f"step={self.global_step}_explanations.png"
-            )
-            fig_path = os.path.join(self.image_log_path, fig_name)
-            figure.savefig(fig_path)
+
+            self._visualize_top_and_bottom_k_explanations()
 
         return total_loss
 
@@ -195,6 +223,63 @@ class ManipulatedMNISTNet(pl.LightningModule):
         self.test_accuracy_adv.compute()
         # self.test_ssim.compute()
         self.test_mse.compute()
+
+    def _visualize_batch_explanations(
+        self,
+        adversarial_explanation_maps,
+        adversarial_images,
+        adversarial_labels,
+        original_explanation_maps,
+        original_images,
+        original_labels,
+    ):
+        figure, axes = self._visualize_explanations(
+            original_images,
+            adversarial_images,
+            original_explanation_maps,
+            adversarial_explanation_maps,
+            original_labels,
+            adversarial_labels,
+        )
+        fig_name = (
+            f"epoch={self.trainer.current_epoch}_"
+            f"step={self.global_step}_explanations.png"
+        )
+        fig_path = os.path.join(self.image_log_path, fig_name)
+        figure.savefig(fig_path)
+
+    def _visualize_top_and_bottom_k_explanations(self):
+        # visualize top and bottom k explanations from initial evaluation
+        if self.global_step == 0:
+            orig_explanation_maps = (
+                self.metricized_explanations.top_and_bottom_original_explanations
+            )
+            adv_explanation_maps = (
+                self.metricized_explanations.top_and_bottom_adversarial_explanations
+            )
+        else:
+            orig_explanation_maps = self.explainer.explain(
+                self.metricized_explanations.top_and_bottom_original_images,
+                self.metricized_explanations.top_and_bottom_original_labels,
+            )
+            adv_explanation_maps = self.explainer.explain(
+                self.metricized_explanations.top_and_bottom_adversarial_images,
+                self.metricized_explanations.top_and_bottom_adversarial_labels,
+            )
+        (top_bottom_k_figure, top_bottom_k_axes,) = self._visualize_explanations(
+            self.metricized_explanations.top_and_bottom_original_images,
+            self.metricized_explanations.top_and_bottom_adversarial_images,
+            orig_explanation_maps,
+            adv_explanation_maps,
+            self.metricized_explanations.top_and_bottom_original_labels,
+            self.metricized_explanations.top_and_bottom_adversarial_labels,
+        )
+        top_bottom_k_fig_name = (
+            f"epoch={self.trainer.current_epoch}_"
+            f"step={self.global_step}_top_bottom_k_explanations.png"
+        )
+        top_bottom_k_fig_path = os.path.join(self.image_log_path, top_bottom_k_fig_name)
+        top_bottom_k_figure.savefig(top_bottom_k_fig_path)
 
     def _visualize_explanations(
         self,
