@@ -31,6 +31,10 @@ from hiding_adversarial_attacks.manipulated_classifiers.manipulated_mnist_net im
 from hiding_adversarial_attacks.manipulated_classifiers.metricized_explanations import (
     MetricizedTopAndBottomExplanations,
 )
+from hiding_adversarial_attacks.utils import (
+    tensor_to_pil_numpy,
+    visualize_single_explanation,
+)
 
 logger = logging.getLogger(__file__)
 
@@ -51,43 +55,39 @@ def get_manipulatable_model(config):
 
 
 def load_explanations(config, device: torch.device):
-    training_adv_expl = torch.load(
-        os.path.join(config.explanations_path, "training_adv_exp.pt"),
-        map_location=device,
-    )
-    training_orig_expl = torch.load(
+    (training_orig_expl, training_orig_labels, training_orig_indices,) = torch.load(
         os.path.join(config.explanations_path, "training_orig_exp.pt"),
         map_location=device,
     )
-    test_adv_expl = torch.load(
-        os.path.join(config.explanations_path, "test_adv_exp.pt"),
+    training_adv_expl, training_adv_labels, training_adv_indices = torch.load(
+        os.path.join(config.explanations_path, "training_adv_exp.pt"),
         map_location=device,
     )
-    test_orig_expl = torch.load(
-        os.path.join(config.explanations_path, "test_orig_exp.pt"),
-        map_location=device,
+    return (
+        training_orig_expl,
+        training_orig_labels,
+        training_orig_indices,
+        training_adv_expl,
+        training_adv_labels,
+        training_adv_indices,
     )
-    return training_orig_expl, training_adv_expl, test_orig_expl, test_adv_expl
 
 
 def load_attacked_data(config, device: torch.device):
-    training_adv = torch.load(
-        os.path.join(config.data_path, "training_adv.pt"),
+    training_orig_images, training_orig_labels = torch.load(
+        os.path.join(config.explanations_path, "training_orig.pt"),
         map_location=device,
     )
-    training_orig = torch.load(
-        os.path.join(config.data_path, "training_orig.pt"),
+    training_adversarial_images, training_adversarial_labels = torch.load(
+        os.path.join(config.explanations_path, "training_adv.pt"),
         map_location=device,
     )
-    test_adv = torch.load(
-        os.path.join(config.data_path, "test_adv.pt"),
-        map_location=device,
+    return (
+        training_orig_images,
+        training_orig_labels,
+        training_adversarial_images,
+        training_adversarial_labels,
     )
-    test_orig = torch.load(
-        os.path.join(config.data_path, "test_orig.pt"),
-        map_location=device,
-    )
-    return training_orig, training_adv, test_orig, test_adv
 
 
 def get_metricized_top_and_bottom_explanations(
@@ -95,14 +95,20 @@ def get_metricized_top_and_bottom_explanations(
 ) -> MetricizedTopAndBottomExplanations:
     (
         training_orig_expl,
+        training_orig_labels,
+        training_orig_indices,
         training_adv_expl,
-        test_orig_expl,
-        test_adv_expl,
+        training_adv_labels,
+        training_adv_indices,
     ) = load_explanations(config, device)
 
-    training_orig, training_adv, test_orig, test_adv = load_attacked_data(
-        config, device
-    )
+    (
+        training_orig_images,
+        _training_orig_labels,
+        training_adv_images,
+        _training_adv_labels,
+    ) = load_attacked_data(config, device)
+
     similarity_loss = SimilarityLossMapping[config.similarity_loss.name]
     batched_sim_loss = vmap(similarity_loss)
     (
@@ -115,9 +121,25 @@ def get_metricized_top_and_bottom_explanations(
         bottom_similarities,
         bottom_indices,
     ) = get_top_and_bottom_k_explanations(
-        training_adv_expl[0],
-        training_orig_expl[0],
+        training_adv_expl,
+        training_orig_expl,
         batched_sim_loss,
+    )
+
+    train_img_top = tensor_to_pil_numpy(training_orig_images[top_indices])
+    train_expl_top = tensor_to_pil_numpy(top_orig_expl)
+    visualize_single_explanation(
+        train_img_top[2],
+        train_expl_top[2],
+        f"Orig label: {training_orig_labels[top_indices][2]}",
+    )
+
+    train_adv_top = tensor_to_pil_numpy(training_adv_images[top_indices])
+    train_adv_expl_top = tensor_to_pil_numpy(top_adv_expl)
+    visualize_single_explanation(
+        train_adv_top[2],
+        train_adv_expl_top[2],
+        f"Adv label: {training_adv_labels[top_indices][2]}",
     )
 
     metricized_top_and_bottom_explanations = MetricizedTopAndBottomExplanations(
@@ -125,18 +147,18 @@ def get_metricized_top_and_bottom_explanations(
         sorted_by=config.similarity_loss.name,
         top_k_indices=top_indices,
         bottom_k_indices=bottom_indices,
-        top_k_original_images=training_orig[0][top_indices],
+        top_k_original_images=training_orig_images[top_indices],
         top_k_original_explanations=top_orig_expl,
-        top_k_original_labels=training_orig[1][top_indices].long(),
-        top_k_adversarial_images=training_adv[0][top_indices],
+        top_k_original_labels=training_orig_labels[top_indices].long(),
+        top_k_adversarial_images=training_adv_images[top_indices],
         top_k_adversarial_explanations=top_adv_expl,
-        top_k_adversarial_labels=training_adv[1][top_indices].long(),
-        bottom_k_original_images=training_orig[0][bottom_indices],
+        top_k_adversarial_labels=training_adv_labels[top_indices].long(),
+        bottom_k_original_images=training_orig_images[bottom_indices],
         bottom_k_original_explanations=bottom_orig_expl,
-        bottom_k_original_labels=training_orig[1][bottom_indices].long(),
-        bottom_k_adversarial_images=training_adv[0][bottom_indices],
+        bottom_k_original_labels=training_orig_labels[bottom_indices].long(),
+        bottom_k_adversarial_images=training_adv_images[bottom_indices],
         bottom_k_adversarial_explanations=bottom_adv_expl,
-        bottom_k_adversarial_labels=training_adv[1][bottom_indices].long(),
+        bottom_k_adversarial_labels=training_adv_labels[bottom_indices].long(),
     )
     return metricized_top_and_bottom_explanations
 
@@ -147,14 +169,15 @@ def get_top_and_bottom_k_explanations(
     batched_sim_loss,
 ):
     similarity_results = batched_sim_loss(training_orig_expl, training_adv_expl)
-    # largest mse
-    bottom_similarities, bottom_indices = torch.topk(similarity_results, 4)
+    # largest similarity
+    bottom_similarities, _b_indices = torch.topk(similarity_results, 4)
     bottom_similarities, bottom_indices = (
         torch.flip(bottom_similarities, dims=(0,)),
-        torch.flip(bottom_indices, dims=(0,)),
+        torch.flip(_b_indices, dims=(0,)).long(),
     )
-    # smallest mse
-    top_similarities, top_indices = torch.topk(similarity_results, 4, largest=False)
+    # smallest similarity
+    top_similarities, _t_indices = torch.topk(similarity_results, 4, largest=False)
+    top_indices = _t_indices.long()
     return (
         training_orig_expl[top_indices],
         training_adv_expl[top_indices],
