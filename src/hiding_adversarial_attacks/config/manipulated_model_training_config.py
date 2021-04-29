@@ -95,7 +95,7 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     # How often to log explanations & other images to Neptune
     image_log_intervals: Any = field(
         default_factory=lambda: {
-            Stage.STAGE_TRAIN.value: 300,
+            Stage.STAGE_TRAIN.value: 600,
             Stage.STAGE_VAL.value: 100,
             Stage.STAGE_TEST.value: 50,
         }
