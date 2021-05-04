@@ -33,6 +33,7 @@ from hiding_adversarial_attacks.manipulated_classifiers.metricized_explanations 
 )
 from hiding_adversarial_attacks.utils import (
     tensor_to_pil_numpy,
+    visualize_difference_image_np,
     visualize_single_explanation,
 )
 
@@ -128,20 +129,30 @@ def get_metricized_top_and_bottom_explanations(
 
     train_img_top = tensor_to_pil_numpy(training_orig_images[top_indices])
     train_expl_top = tensor_to_pil_numpy(top_orig_expl)
+    train_adv_top = tensor_to_pil_numpy(training_adv_images[top_indices])
+    train_adv_expl_top = tensor_to_pil_numpy(top_adv_expl)
+
+    # Visualize explanations
     visualize_single_explanation(
         train_img_top[2],
         train_expl_top[2],
         f"Orig label: {training_orig_labels[top_indices][2]}",
         display_figure=True,
     )
-
-    train_adv_top = tensor_to_pil_numpy(training_adv_images[top_indices])
-    train_adv_expl_top = tensor_to_pil_numpy(top_adv_expl)
     visualize_single_explanation(
         train_adv_top[2],
         train_adv_expl_top[2],
         f"Adv label: {training_adv_labels[top_indices][2]}",
         display_figure=True,
+    )
+    # Visualize difference images
+    visualize_difference_image_np(
+        train_adv_expl_top[2],
+        train_expl_top[2],
+        title="Explanation diff: adv vs. orig",
+    )
+    visualize_difference_image_np(
+        train_img_top[2], train_adv_top[2], title="Image diff: adv vs. orig"
     )
 
     metricized_top_and_bottom_explanations = MetricizedTopAndBottomExplanations(

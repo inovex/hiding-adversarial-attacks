@@ -8,6 +8,7 @@ import numpy as np
 import torch
 from captum.attr._utils import visualization as viz
 from matplotlib.pyplot import axis, figure
+from numpy import ndarray
 from torchvision.transforms import ToPILImage
 
 from hiding_adversarial_attacks.classifiers.cifar_net import CifarNet
@@ -48,11 +49,20 @@ def display_tensor_as_image(tensor: torch.Tensor, cmap: str = "gray"):
     plt.show()
 
 
-def display_adversarial_difference_image(
+def visualize_adversarial_difference_image(
     adversarial: torch.Tensor, original: torch.Tensor, cmap: str = "gray"
 ):
     adv_difference = torch.abs(adversarial - original)
     display_tensor_as_image(adv_difference, cmap=cmap)
+
+
+def visualize_difference_image_np(
+    adversarial: ndarray, original: ndarray, title: str = "", cmap: str = "gray"
+):
+    adv_difference = np.abs(adversarial - original)
+    plt.imshow(adv_difference, cmap=cmap)
+    plt.title("my random fig")
+    plt.show()
 
 
 def tensor_to_pil_numpy(rgb_tensor):
@@ -114,4 +124,4 @@ if __name__ == "__main__":
         "preprocessed/adversarial/MNIST/DeepFool/epsilon_0.225/"
         "class_1/training_adv.pt"
     )
-    display_adversarial_difference_image(adv[0][0], orig[0][0])
+    visualize_adversarial_difference_image(adv[0][0], orig[0][0])
