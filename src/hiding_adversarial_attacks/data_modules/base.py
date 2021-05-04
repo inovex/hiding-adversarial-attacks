@@ -97,7 +97,9 @@ class BaseDataModule(pl.LightningDataModule):
         :param included_classes: Tuple of class integer IDs or string "all".
         :return:
         """
-        assert type(included_classes) is list, "attacked_classes is not a list."
+        assert (
+            type(included_classes) is list
+        ), f"attacked_classes is not of type list, but {type(included_classes)}"
         assert all(
             isinstance(attacked_class, int) for attacked_class in included_classes
         ), "attacked_classes does not contain only int members."
@@ -112,6 +114,16 @@ class BaseDataModule(pl.LightningDataModule):
         full.data = full.data[masks_full]
         test.targets = test.targets[masks_test]
         test.data = test.data[masks_test]
+        if (
+            hasattr(test, "adv_data")
+            and hasattr(full, "adv_data")
+            and hasattr(test, "adv_targets")
+            and hasattr(full, "adv_targets")
+        ):
+            full.adv_targets = full.adv_targets[masks_full]
+            full.adv_data = full.adv_data[masks_full]
+            test.adv_targets = test.adv_targets[masks_test]
+            test.adv_data = test.adv_data[masks_test]
         return full, test
 
     @staticmethod

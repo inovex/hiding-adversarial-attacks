@@ -6,6 +6,9 @@ from typing import Any, List, Tuple
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
 
+from hiding_adversarial_attacks.config.attack.adversarial_attack_config import (
+    ALL_CLASSES,
+)
 from hiding_adversarial_attacks.config.classifier_training_config import (
     ClassifierTrainingConfig,
 )
@@ -88,6 +91,8 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     loss_weights: Tuple[float, float, float] = field(
         default_factory=lambda: (1.0, 1.0, 100000)
     )
+    # IDs of classes to train with
+    included_classes: List[Any] = field(default_factory=lambda: [ALL_CLASSES])
 
     # Path where logs will be saved / moved to
     log_path: str = os.path.join(LoggingConfig.log_root, "manipulate_model")
