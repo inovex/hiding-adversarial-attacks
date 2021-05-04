@@ -1,13 +1,14 @@
 from __future__ import print_function
 
 import os
+from typing import Dict
 
 import matplotlib.pyplot as plt
 import pytorch_lightning as pl
 import torch.nn.functional as F
-import torchmetrics
 from eagerpy import torch
 from omegaconf import OmegaConf
+from torchmetrics import SSIM, Accuracy, MeanSquaredError, MetricCollection
 
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
@@ -15,6 +16,9 @@ from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossNames,
 )
 from hiding_adversarial_attacks.config.manipulated_model_training_config import Stage
+from hiding_adversarial_attacks.custom_metrics.batched_pearson_corrcoef import (
+    BatchedPearsonCorrcoef,
+)
 from hiding_adversarial_attacks.explainers.utils import get_explainer
 from hiding_adversarial_attacks.manipulated_classifiers.metricized_explanations import (
     MetricizedTopAndBottomExplanations,
@@ -137,11 +141,6 @@ class ManipulatedMNISTNet(pl.LightningModule):
             stage.value,
         )
 
-        # Log explanation similarity metrics with logger
-        self.log_similarity_metrics(
-            original_explanation_maps, adversarial_explanation_maps, stage
-        )
-
         # Safe original and adversarial explanations locally and to Neptune
         if (
             stage.value in self.image_log_intervals
@@ -171,7 +170,6 @@ class ManipulatedMNISTNet(pl.LightningModule):
         stage: Stage,
     ):
         orig_pred_label = self(original_image).raw
-        self.log_orig_acc(orig_pred_label, original_label, stage)
 
         # Part 1: CrossEntropy for original image
         cross_entropy_orig = F.cross_entropy(orig_pred_label, original_label)
@@ -181,7 +179,6 @@ class ManipulatedMNISTNet(pl.LightningModule):
         adv_pred_label = self(adversarial_image).raw
         cross_entropy_adv = F.cross_entropy(adv_pred_label, adversarial_label)
         assert_not_none(cross_entropy_adv, "cross_entropy_adv")
-        self.log_adv_acc(adv_pred_label, adversarial_label, stage)
 
         # Part 3: Similarity between original and adversarial explanation maps
         explanation_similarity = self.similarity_loss(
@@ -192,6 +189,19 @@ class ManipulatedMNISTNet(pl.LightningModule):
             + (self.loss_weights[1] * cross_entropy_adv)
             + (self.loss_weights[2] * explanation_similarity)
         )
+
+        # Log metrics
+        self.log_classification_metrics(
+            orig_pred_label,
+            original_label,
+            adv_pred_label,
+            adversarial_label,
+            stage,
+        )
+        self.log_similarity_metrics(
+            original_explanation_map, adversarial_explanation_map, stage
+        )
+
         return (
             total_loss,
             cross_entropy_orig,
@@ -212,46 +222,139 @@ class ManipulatedMNISTNet(pl.LightningModule):
         return total_loss
 
     def training_epoch_end(self, outs):
-        train_acc_orig = self.train_accuracy_orig.compute()
-        train_acc_adv = self.train_accuracy_adv.compute()
-        train_ssim = self.train_ssim.compute()
-        train_mse = self.train_mse.compute()
-        train_pcc = self.train_pcc.compute()
-        self.log_epoch_similarities(
-            train_ssim, train_mse, train_pcc, Stage.STAGE_TRAIN.value
+        self.log_epoch_metrics(
+            self.train_similarity_metrics.compute(),
+            self.train_classification_metrics.compute(),
+            Stage.STAGE_TRAIN.value,
         )
-        self.log_epoch_accuracies(
-            train_acc_orig, train_acc_adv, Stage.STAGE_TRAIN.value
-        )
-        self.train_ssim.reset()
-        self.train_mse.reset()
-        self.train_pcc.reset()
+        self.train_similarity_metrics.reset()
 
     def validation_epoch_end(self, outs):
-        val_acc_orig = self.validation_accuracy_orig.compute()
-        val_acc_adv = self.validation_accuracy_adv.compute()
-        val_ssim = self.validation_ssim.compute()
-        val_mse = self.validation_mse.compute()
-        val_pcc = self.validation_pcc.compute()
-        self.log_epoch_similarities(val_ssim, val_mse, val_pcc, Stage.STAGE_VAL.value)
-        self.log_epoch_accuracies(val_acc_orig, val_acc_adv, Stage.STAGE_VAL.value)
-        self.validation_ssim.reset()
-        self.validation_mse.reset()
-        self.validation_pcc.reset()
+        self.log_epoch_metrics(
+            self.validation_similarity_metrics.compute(),
+            self.validation_classification_metrics.compute(),
+            Stage.STAGE_VAL.value,
+        )
+        self.validation_similarity_metrics.reset()
 
     def test_epoch_end(self, outs):
-        test_acc_orig = self.test_accuracy_orig.compute()
-        test_acc_adv = self.test_accuracy_adv.compute()
-        test_ssim = self.test_ssim.compute()
-        test_mse = self.test_mse.compute()
-        test_pcc = self.test_pcc.compute()
-        self.log_epoch_similarities(
-            test_ssim, test_mse, test_pcc, Stage.STAGE_TEST.value
+        self.log_epoch_metrics(
+            self.test_similarity_metrics.compute(),
+            self.test_classification_metrics.compute(),
+            Stage.STAGE_TEST.value,
         )
-        self.log_epoch_accuracies(test_acc_orig, test_acc_adv, Stage.STAGE_TEST.value)
-        self.test_ssim.reset()
-        self.test_mse.reset()
-        self.test_pcc.reset()
+        self.test_similarity_metrics.reset()
+
+    def log_epoch_metrics(
+        self, similarity_metrics: Dict, classification_metrics: Dict, stage: str
+    ):
+        self.log_epoch_similarities(similarity_metrics, stage)
+        self.log_epoch_accuracies(classification_metrics, stage)
+
+    def log_epoch_accuracies(self, similarity_metrics: Dict, stage_name: str):
+        self.log(
+            f"{stage_name}_orig_acc",
+            similarity_metrics[f"{stage_name}_orig_acc"],
+            prog_bar=False,
+        )
+        self.log(
+            f"{stage_name}_adv_acc",
+            similarity_metrics[f"{stage_name}_adv_acc"],
+            prog_bar=False,
+        )
+
+    def log_epoch_similarities(self, similarity_metrics: Dict, stage_name: str):
+        self.log(
+            f"{stage_name}_exp_mse",
+            similarity_metrics[f"{stage_name}_exp_mse"],
+            prog_bar=False,
+        )
+        self.log(
+            f"{stage_name}_exp_ssim",
+            similarity_metrics[f"{stage_name}_exp_ssim"],
+            prog_bar=False,
+        )
+        self.log(
+            f"{stage_name}_exp_pcc",
+            similarity_metrics[f"{stage_name}_exp_pcc"],
+            prog_bar=False,
+        )
+
+    def log_losses(
+        self,
+        total_loss,
+        cross_entropy_orig,
+        cross_entropy_adv,
+        explanation_similarity,
+        stage_name: str,
+    ):
+        self.log(f"{stage_name}_total_loss", total_loss, on_step=True, logger=True)
+        self.log(
+            f"{stage_name}_ce_orig",
+            cross_entropy_orig,
+            on_step=True,
+            logger=True,
+        )
+        self.log(
+            f"{stage_name}_ce_adv",
+            cross_entropy_adv,
+            on_step=True,
+            logger=True,
+        )
+        self.log(
+            f"{stage_name}_exp_sim",
+            explanation_similarity,
+            on_step=True,
+            logger=True,
+            prog_bar=True,
+        )
+
+    def _setup_metrics(self):
+        # Explanation similarity metrics
+        similarity_metrics_dict = {
+            "exp_ssim": SSIM(),
+            "exp_pcc": BatchedPearsonCorrcoef(),
+            "exp_mse": MeanSquaredError(),
+        }
+        similarity_metrics = MetricCollection(similarity_metrics_dict)
+        self.train_similarity_metrics = similarity_metrics.clone(prefix="train_")
+        self.validation_similarity_metrics = similarity_metrics.clone(prefix="val_")
+        self.test_similarity_metrics = similarity_metrics.clone(prefix="test_")
+
+        # Classification performance metrics
+        classification_metrics_dict = {
+            "orig_acc": Accuracy(),
+            "adv_acc": Accuracy(),
+        }
+        classification_metrics = MetricCollection(classification_metrics_dict)
+        self.train_classification_metrics = classification_metrics.clone(
+            prefix="train_"
+        )
+        self.validation_classification_metrics = classification_metrics.clone(
+            prefix="val_"
+        )
+        self.test_classification_metrics = classification_metrics.clone(prefix="test_")
+
+    def log_similarity_metrics(self, pred, target, stage: Stage):
+        if stage == Stage.STAGE_TRAIN:
+            self.train_similarity_metrics(pred, target)
+        elif stage == Stage.STAGE_VAL:
+            self.validation_similarity_metrics(pred, target)
+        elif stage == Stage.STAGE_TEST:
+            self.test_similarity_metrics(pred, target)
+
+    def log_classification_metrics(
+        self, orig_pred, orig_target, adv_pred, adv_target, stage: Stage
+    ):
+        if stage == Stage.STAGE_TRAIN:
+            self.train_classification_metrics["orig_acc"](orig_pred, orig_target)
+            self.train_classification_metrics["adv_acc"](adv_pred, adv_target)
+        elif stage == Stage.STAGE_VAL:
+            self.validation_classification_metrics["orig_acc"](orig_pred, orig_target)
+            self.validation_classification_metrics["adv_acc"](adv_pred, adv_target)
+        elif stage == Stage.STAGE_TEST:
+            self.test_classification_metrics["orig_acc"](orig_pred, orig_target)
+            self.test_classification_metrics["adv_acc"](adv_pred, adv_target)
 
     def _visualize_batch_explanations(
         self,
@@ -362,126 +465,6 @@ class ManipulatedMNISTNet(pl.LightningModule):
             )
         fig.tight_layout()
         return fig, axes
-
-    def log_epoch_accuracies(self, orig_acc, adv_acc, stage_name: str):
-        self.log(
-            f"orig_acc_{stage_name}",
-            orig_acc,
-            prog_bar=False,
-        )
-        self.log(
-            f"adv_acc_{stage_name}",
-            adv_acc,
-            prog_bar=False,
-        )
-
-    def log_epoch_similarities(self, ssim, mse, pcc, stage_name: str):
-        self.log(
-            f"exp_sim_mse_{stage_name}",
-            mse,
-            prog_bar=False,
-        )
-        self.log(
-            f"exp_sim_ssim_{stage_name}",
-            ssim,
-            prog_bar=False,
-        )
-        self.log(
-            f"exp_sim_pcc_{stage_name}",
-            pcc,
-            prog_bar=False,
-        )
-
-    def log_losses(
-        self,
-        total_loss,
-        cross_entropy_orig,
-        cross_entropy_adv,
-        explanation_similarity,
-        stage_name: str,
-    ):
-        self.log(f"total_loss_{stage_name}", total_loss, on_step=True, logger=True)
-        self.log(
-            f"ce_orig_{stage_name}",
-            cross_entropy_orig,
-            on_step=True,
-            logger=True,
-        )
-        self.log(
-            f"ce_adv_{stage_name}",
-            cross_entropy_adv,
-            on_step=True,
-            logger=True,
-        )
-        self.log(
-            f"exp_sim_{stage_name}",
-            explanation_similarity,
-            on_step=True,
-            logger=True,
-            prog_bar=True,
-        )
-
-    def _setup_metrics(self):
-        # Classification accuracy - original and adversarial
-        self.train_accuracy_orig = torchmetrics.Accuracy()
-        self.validation_accuracy_orig = torchmetrics.Accuracy()
-        self.test_accuracy_orig = torchmetrics.Accuracy()
-        self.train_accuracy_adv = torchmetrics.Accuracy()
-        self.validation_accuracy_adv = torchmetrics.Accuracy()
-        self.test_accuracy_adv = torchmetrics.Accuracy()
-
-        # Similarity metrics for explanations
-        # -- MSE
-        self.train_mse = torchmetrics.MeanSquaredError()
-        self.validation_mse = torchmetrics.MeanSquaredError()
-        self.test_mse = torchmetrics.MeanSquaredError()
-
-        # -- Structural Similarity Index Measure (SSIM)
-        self.train_ssim = torchmetrics.SSIM()
-        self.validation_ssim = torchmetrics.SSIM()
-        self.test_ssim = torchmetrics.SSIM()
-
-        # # -- Pearson Cross Correlation
-        self.train_pcc = torchmetrics.PearsonCorrcoef()
-        self.validation_pcc = torchmetrics.PearsonCorrcoef()
-        self.test_pcc = torchmetrics.PearsonCorrcoef()
-
-    def log_orig_acc(self, pred, target, stage: Stage):
-        if stage == Stage.STAGE_TRAIN:
-            self.train_accuracy_orig(pred, target)
-        elif stage == Stage.STAGE_VAL:
-            self.validation_accuracy_orig(pred, target)
-        elif stage == Stage.STAGE_TEST:
-            self.test_accuracy_orig(pred, target)
-
-    def log_adv_acc(self, pred, target, stage: Stage):
-        if stage == Stage.STAGE_TRAIN:
-            self.train_accuracy_adv(pred, target)
-        elif stage == Stage.STAGE_VAL:
-            self.validation_accuracy_adv(pred, target)
-        elif stage == Stage.STAGE_TEST:
-            self.test_accuracy_adv(pred, target)
-
-    def log_similarity_metrics(self, pred, target, stage: Stage):
-        self.update_pearson_corrcoeff(pred, target, stage)
-        if stage == Stage.STAGE_TRAIN:
-            self.train_mse(pred, target)
-            self.train_ssim(pred, target)
-        elif stage == Stage.STAGE_VAL:
-            self.validation_mse(pred, target)
-            self.validation_ssim(pred, target)
-        elif stage == Stage.STAGE_TEST:
-            self.test_mse(pred, target)
-            self.test_ssim(pred, target)
-
-    def update_pearson_corrcoeff(self, pred, target, stage: Stage):
-        for pred_single, target_single in zip(pred, target):
-            if stage == Stage.STAGE_TRAIN:
-                self.train_pcc(pred_single.view(-1), target_single.view(-1))
-            elif stage == Stage.STAGE_VAL:
-                self.validation_pcc(pred_single.view(-1), target_single.view(-1))
-            elif stage == Stage.STAGE_TEST:
-                self.test_pcc(pred_single.view(-1), target_single.view(-1))
 
 
 def assert_not_none(tensor, loss_name):
