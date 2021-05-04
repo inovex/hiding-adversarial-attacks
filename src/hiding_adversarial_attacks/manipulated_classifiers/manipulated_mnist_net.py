@@ -79,6 +79,10 @@ class ManipulatedMNISTNet(pl.LightningModule):
             f"{self.metricized_explanations.losses[SimilarityLossNames.SSIM]}",
         )
         self.logger.experiment.log_text(
+            "top_and_bottom_pcc",
+            f"{self.metricized_explanations.losses[SimilarityLossNames.PCC]}",
+        )
+        self.logger.experiment.log_text(
             "top_and_bottom_sorted_by",
             f"{self.metricized_explanations.sorted_by}",
         )
@@ -208,22 +212,46 @@ class ManipulatedMNISTNet(pl.LightningModule):
         return total_loss
 
     def training_epoch_end(self, outs):
-        self.train_accuracy_orig.compute()
-        self.train_accuracy_adv.compute()
-        # self.train_ssim.compute()
-        self.train_mse.compute()
+        train_acc_orig = self.train_accuracy_orig.compute()
+        train_acc_adv = self.train_accuracy_adv.compute()
+        train_ssim = self.train_ssim.compute()
+        train_mse = self.train_mse.compute()
+        train_pcc = self.train_pcc.compute()
+        self.log_epoch_similarities(
+            train_ssim, train_mse, train_pcc, Stage.STAGE_TRAIN.value
+        )
+        self.log_epoch_accuracies(
+            train_acc_orig, train_acc_adv, Stage.STAGE_TRAIN.value
+        )
+        self.train_ssim.reset()
+        self.train_mse.reset()
+        self.train_pcc.reset()
 
     def validation_epoch_end(self, outs):
-        self.validation_accuracy_orig.compute()
-        self.validation_accuracy_adv.compute()
-        # self.validation_ssim.compute()
-        self.validation_mse.compute()
+        val_acc_orig = self.validation_accuracy_orig.compute()
+        val_acc_adv = self.validation_accuracy_adv.compute()
+        val_ssim = self.validation_ssim.compute()
+        val_mse = self.validation_mse.compute()
+        val_pcc = self.validation_pcc.compute()
+        self.log_epoch_similarities(val_ssim, val_mse, val_pcc, Stage.STAGE_VAL.value)
+        self.log_epoch_accuracies(val_acc_orig, val_acc_adv, Stage.STAGE_VAL.value)
+        self.validation_ssim.reset()
+        self.validation_mse.reset()
+        self.validation_pcc.reset()
 
     def test_epoch_end(self, outs):
-        self.test_accuracy_orig.compute()
-        self.test_accuracy_adv.compute()
-        # self.test_ssim.compute()
-        self.test_mse.compute()
+        test_acc_orig = self.test_accuracy_orig.compute()
+        test_acc_adv = self.test_accuracy_adv.compute()
+        test_ssim = self.test_ssim.compute()
+        test_mse = self.test_mse.compute()
+        test_pcc = self.test_pcc.compute()
+        self.log_epoch_similarities(
+            test_ssim, test_mse, test_pcc, Stage.STAGE_TEST.value
+        )
+        self.log_epoch_accuracies(test_acc_orig, test_acc_adv, Stage.STAGE_TEST.value)
+        self.test_ssim.reset()
+        self.test_mse.reset()
+        self.test_pcc.reset()
 
     def _visualize_batch_explanations(
         self,
@@ -335,6 +363,35 @@ class ManipulatedMNISTNet(pl.LightningModule):
         fig.tight_layout()
         return fig, axes
 
+    def log_epoch_accuracies(self, orig_acc, adv_acc, stage_name: str):
+        self.log(
+            f"orig_acc_{stage_name}",
+            orig_acc,
+            prog_bar=False,
+        )
+        self.log(
+            f"adv_acc_{stage_name}",
+            adv_acc,
+            prog_bar=False,
+        )
+
+    def log_epoch_similarities(self, ssim, mse, pcc, stage_name: str):
+        self.log(
+            f"exp_sim_mse_{stage_name}",
+            mse,
+            prog_bar=False,
+        )
+        self.log(
+            f"exp_sim_ssim_{stage_name}",
+            ssim,
+            prog_bar=False,
+        )
+        self.log(
+            f"exp_sim_pcc_{stage_name}",
+            pcc,
+            prog_bar=False,
+        )
+
     def log_losses(
         self,
         total_loss,
@@ -385,9 +442,9 @@ class ManipulatedMNISTNet(pl.LightningModule):
         self.test_ssim = torchmetrics.SSIM()
 
         # # -- Pearson Cross Correlation
-        # self.train_pcc = torchmetrics.PearsonCorrcoef()
-        # self.validation_pcc = torchmetrics.PearsonCorrcoef()
-        # self.test_pcc = torchmetrics.PearsonCorrcoef()
+        self.train_pcc = torchmetrics.PearsonCorrcoef()
+        self.validation_pcc = torchmetrics.PearsonCorrcoef()
+        self.test_pcc = torchmetrics.PearsonCorrcoef()
 
     def log_orig_acc(self, pred, target, stage: Stage):
         if stage == Stage.STAGE_TRAIN:
@@ -406,15 +463,25 @@ class ManipulatedMNISTNet(pl.LightningModule):
             self.test_accuracy_adv(pred, target)
 
     def log_similarity_metrics(self, pred, target, stage: Stage):
+        self.update_pearson_corrcoeff(pred, target, stage)
         if stage == Stage.STAGE_TRAIN:
             self.train_mse(pred, target)
-            # self.train_ssim(pred, target)
+            self.train_ssim(pred, target)
         elif stage == Stage.STAGE_VAL:
             self.validation_mse(pred, target)
-            # self.validation_ssim(pred, target)
+            self.validation_ssim(pred, target)
         elif stage == Stage.STAGE_TEST:
             self.test_mse(pred, target)
-            # self.test_ssim(pred, target)
+            self.test_ssim(pred, target)
+
+    def update_pearson_corrcoeff(self, pred, target, stage: Stage):
+        for pred_single, target_single in zip(pred, target):
+            if stage == Stage.STAGE_TRAIN:
+                self.train_pcc(pred_single.view(-1), target_single.view(-1))
+            elif stage == Stage.STAGE_VAL:
+                self.validation_pcc(pred_single.view(-1), target_single.view(-1))
+            elif stage == Stage.STAGE_TEST:
+                self.test_pcc(pred_single.view(-1), target_single.view(-1))
 
 
 def assert_not_none(tensor, loss_name):

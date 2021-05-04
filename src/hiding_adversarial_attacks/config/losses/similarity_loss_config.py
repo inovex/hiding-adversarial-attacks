@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from omegaconf import MISSING
-from torchmetrics.functional import mean_squared_error, ssim
+from torchmetrics.functional import mean_squared_error, pearson_corrcoef, ssim
 
 
 class SimilarityLossNames:
@@ -13,6 +13,7 @@ class SimilarityLossNames:
 SimilarityLossMapping = {
     SimilarityLossNames.MSE: mean_squared_error,
     SimilarityLossNames.SSIM: ssim,
+    SimilarityLossNames.PCC: pearson_corrcoef,
 }
 
 

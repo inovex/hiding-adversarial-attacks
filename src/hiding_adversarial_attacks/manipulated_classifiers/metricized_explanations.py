@@ -4,6 +4,7 @@ import torch
 
 from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossMapping,
+    SimilarityLossNames,
 )
 
 
@@ -92,19 +93,17 @@ class MetricizedTopAndBottomExplanations:
         for loss_name, loss_func in SimilarityLossMapping.items():
             losses[loss_name] = []
             for (
-                top_and_bottom_original_image,
-                top_and_bottom_adversarial_image,
+                top_and_bottom_original_explanation,
+                top_and_bottom_adversarial_explanation,
             ) in zip(
-                self.top_and_bottom_original_images,
-                self.top_and_bottom_adversarial_images,
+                self.top_and_bottom_original_explanations,
+                self.top_and_bottom_adversarial_explanations,
             ):
-                losses[loss_name].append(
-                    loss_func(
-                        top_and_bottom_original_image.unsqueeze(dim=0),
-                        top_and_bottom_adversarial_image.unsqueeze(dim=0),
-                    )
-                    .detach()
-                    .cpu()
-                    .item()
-                )
+                if loss_name is SimilarityLossNames.PCC:
+                    orig = top_and_bottom_original_explanation.view(-1)
+                    adv = top_and_bottom_adversarial_explanation.view(-1)
+                else:
+                    orig = top_and_bottom_original_explanation.unsqueeze(dim=0)
+                    adv = top_and_bottom_adversarial_explanation.unsqueeze(dim=0)
+                losses[loss_name].append(loss_func(orig, adv).detach().cpu().item())
         return losses
