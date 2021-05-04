@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from captum.attr._utils import visualization as viz
+from matplotlib.figure import Figure
 from matplotlib.pyplot import axis, figure
 from numpy import ndarray
 from torchvision.transforms import ToPILImage
@@ -57,12 +58,33 @@ def visualize_adversarial_difference_image(
 
 
 def visualize_difference_image_np(
-    adversarial: ndarray, original: ndarray, title: str = "", cmap: str = "gray"
+    adversarial: ndarray,
+    original: ndarray,
+    title: str = None,
+    cmap: str = "gray",
+    plt_fig_axis: Union[None, Tuple[figure, axis]] = None,
+    display_figure: bool = True,
 ):
-    adv_difference = np.abs(adversarial - original)
-    plt.imshow(adv_difference, cmap=cmap)
-    plt.title("my random fig")
-    plt.show()
+    # Create plot if figure, axis not provided
+    if plt_fig_axis is not None:
+        plt_fig, plt_axis = plt_fig_axis
+    else:
+        if display_figure:
+            plt_fig, plt_axis = plt.subplots(figsize=(6, 6))
+        else:
+            plt_fig = Figure(figsize=(6, 6))
+            plt_axis = plt_fig.subplots()
+
+    diff_image = np.abs(adversarial - original)
+    plt_axis.imshow(diff_image, cmap=cmap)
+
+    if title:
+        plt_axis.set_title(title)
+
+    if display_figure:
+        plt.show()
+
+    return plt_fig, plt_axis
 
 
 def tensor_to_pil_numpy(rgb_tensor):

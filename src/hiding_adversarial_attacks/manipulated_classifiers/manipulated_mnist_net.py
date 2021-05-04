@@ -21,6 +21,7 @@ from hiding_adversarial_attacks.manipulated_classifiers.metricized_explanations 
 )
 from hiding_adversarial_attacks.utils import (
     tensor_to_pil_numpy,
+    visualize_difference_image_np,
     visualize_single_explanation,
 )
 
@@ -304,7 +305,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         adv_images = tensor_to_pil_numpy(adversarial_images[indeces])
         adv_expl = tensor_to_pil_numpy(adversarial_explanation_maps[indeces])
 
-        fig, axes = plt.subplots(nrows=n_rows, ncols=2, figsize=(12, 12))
+        fig, axes = plt.subplots(nrows=n_rows, ncols=3, figsize=(12, 12))
         for i, (row_axis, index) in enumerate(zip(axes, indeces)):
             explanation_similarity = self.similarity_loss(
                 original_explanation_maps[index],
@@ -322,6 +323,13 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 adv_expl[index],
                 adversarial_titles[index],
                 (fig, row_axis[1]),
+                display_figure=False,
+            )
+            visualize_difference_image_np(
+                orig_expl[index],
+                adv_expl[index],
+                title="Explanation diff",
+                plt_fig_axis=(fig, row_axis[2]),
                 display_figure=False,
             )
         fig.tight_layout()
