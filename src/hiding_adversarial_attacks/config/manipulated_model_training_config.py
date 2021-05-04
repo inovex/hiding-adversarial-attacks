@@ -53,8 +53,8 @@ class Stage(Enum):
 @dataclass
 class ManipulatedClassifierCheckpointConfig:
     _target_: str = "pytorch_lightning.callbacks.model_checkpoint.ModelCheckpoint"
-    monitor: str = "total_loss_val"
-    filename: str = "model-{epoch:02d}-{total_loss_val:.2f}"
+    monitor: str = "val_total_loss"
+    filename: str = "model-{epoch:02d}-{val_total_loss:.2f}"
     save_top_k: int = 3
     mode: str = "min"
 
@@ -83,10 +83,10 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     # Hyperparameters
     similarity_loss: SimilarityLoss = MISSING
 
-    lr: float = 0.001
+    lr: float = 0.0001
     # gamma: float = 0.07
     loss_weights: Tuple[float, float, float] = field(
-        default_factory=lambda: (0.0, 0.0, 1000)
+        default_factory=lambda: (1.0, 1.0, 100000)
     )
 
     # Path where logs will be saved / moved to
