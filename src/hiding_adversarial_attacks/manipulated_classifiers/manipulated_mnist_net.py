@@ -315,12 +315,14 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 orig_expl[index],
                 f"{original_titles[index]}, sim: {explanation_similarity}",
                 (fig, row_axis[0]),
+                display_figure=False,
             )
             visualize_single_explanation(
                 adv_images[index],
                 adv_expl[index],
                 adversarial_titles[index],
                 (fig, row_axis[1]),
+                display_figure=False,
             )
         fig.tight_layout()
         return fig, axes

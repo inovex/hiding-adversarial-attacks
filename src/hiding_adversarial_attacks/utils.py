@@ -68,6 +68,7 @@ def visualize_explanations(
     explanations: torch.Tensor,
     titles: List[str],
     plt_fig_axis: Union[None, Tuple[figure, axis]] = None,
+    display_figure: bool = False,
 ):
 
     imgs = tensor_to_pil_numpy(images)
@@ -75,7 +76,9 @@ def visualize_explanations(
     figures = []
 
     for image, explanation, title in zip(imgs, expls, titles):
-        ax, fig = visualize_single_explanation(image, explanation, title, plt_fig_axis)
+        ax, fig = visualize_single_explanation(
+            image, explanation, title, plt_fig_axis, display_figure
+        )
         figures.append((fig, ax))
     return figures
 
@@ -85,6 +88,7 @@ def visualize_single_explanation(
     explanation: np.array,
     title: str,
     plt_fig_axis: Union[None, Tuple[figure, axis]] = None,
+    display_figure: bool = False,
 ):
     fig, ax = viz.visualize_image_attr(
         explanation,
@@ -94,6 +98,7 @@ def visualize_single_explanation(
         show_colorbar=True,
         plt_fig_axis=plt_fig_axis,
         title=title,
+        use_pyplot=display_figure,
     )
     return ax, fig
 

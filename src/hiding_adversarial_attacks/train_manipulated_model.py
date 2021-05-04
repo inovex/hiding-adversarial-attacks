@@ -132,6 +132,7 @@ def get_metricized_top_and_bottom_explanations(
         train_img_top[2],
         train_expl_top[2],
         f"Orig label: {training_orig_labels[top_indices][2]}",
+        display_figure=True,
     )
 
     train_adv_top = tensor_to_pil_numpy(training_adv_images[top_indices])
@@ -140,6 +141,7 @@ def get_metricized_top_and_bottom_explanations(
         train_adv_top[2],
         train_adv_expl_top[2],
         f"Adv label: {training_adv_labels[top_indices][2]}",
+        display_figure=True,
     )
 
     metricized_top_and_bottom_explanations = MetricizedTopAndBottomExplanations(
