@@ -67,6 +67,8 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         self.zero_explanation_count = 0
 
+        self.initial_total_loss = None
+
     def set_metricized_explanations(
         self,
         metricized_top_and_bottom_explanation: MetricizedTopAndBottomExplanations,
@@ -197,6 +199,8 @@ class ManipulatedMNISTNet(pl.LightningModule):
             + (self.loss_weights[1] * cross_entropy_adv)
             + (self.loss_weights[2] * explanation_similarity)
         )
+        if self.global_step == 0:
+            self.initial_total_loss = total_loss
 
         # Log metrics
         self.log_classification_metrics(
@@ -296,23 +300,27 @@ class ManipulatedMNISTNet(pl.LightningModule):
         explanation_similarity,
         stage_name: str,
     ):
-        self.log(f"{stage_name}_total_loss", total_loss, on_step=True, logger=True)
+        self.log(f"{stage_name}_total_loss", total_loss, logger=True)
+        if self.initial_total_loss is not None:
+            normalized_total_loss = total_loss / self.initial_total_loss
+            self.log(
+                f"{stage_name}_normalized_total_loss",
+                normalized_total_loss,
+                logger=True,
+            )
         self.log(
             f"{stage_name}_ce_orig",
             cross_entropy_orig,
-            on_step=True,
             logger=True,
         )
         self.log(
             f"{stage_name}_ce_adv",
             cross_entropy_adv,
-            on_step=True,
             logger=True,
         )
         self.log(
             f"{stage_name}_exp_sim",
             explanation_similarity,
-            on_step=True,
             logger=True,
             prog_bar=True,
         )
@@ -458,7 +466,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 print("WARNING: original explanation contains all zeros!")
                 self.zero_explanation_count += 1
                 continue
-            if np.count_nonzero(orig_expl[index]) == 0:
+            if np.count_nonzero(adv_expl[index]) == 0:
                 print("WARNING: adversarial explanation contains all zeros!")
                 self.zero_explanation_count += 1
                 continue

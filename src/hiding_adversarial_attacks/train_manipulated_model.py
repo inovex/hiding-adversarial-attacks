@@ -364,7 +364,7 @@ def train(
 
     trainer.fit(model, train_loader, validation_loader)
 
-    return trainer.callback_metrics[VAL_TOTAL_LOSS].item()
+    return trainer.callback_metrics["val_normalized_total_loss"].item()
 
 
 def test(
