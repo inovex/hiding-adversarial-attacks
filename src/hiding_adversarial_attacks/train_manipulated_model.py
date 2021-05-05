@@ -91,6 +91,39 @@ def load_attacked_data(config, device: torch.device):
     )
 
 
+def filter_included_classes(
+    training_adv_expl,
+    training_adv_images,
+    training_adv_indices,
+    training_adv_labels,
+    training_orig_expl,
+    training_orig_images,
+    training_orig_indices,
+    training_orig_labels,
+    config,
+    device,
+):
+    mask = torch.zeros(len(training_orig_labels), dtype=torch.bool, device=device)
+    for included_class in config.included_classes:
+        mask += training_orig_labels == included_class
+    training_orig_expl = training_orig_expl[mask]
+    training_orig_labels = training_orig_labels[mask]
+    training_orig_indices = training_orig_indices[mask]
+    training_adv_expl = training_adv_expl[mask]
+    training_adv_labels = training_adv_labels[mask]
+    training_adv_indices = training_adv_indices[mask]
+    training_orig_images = training_orig_images[mask]
+    training_adv_images = training_adv_images[mask]
+    return (
+        training_adv_expl,
+        training_adv_images,
+        training_adv_labels,
+        training_orig_expl,
+        training_orig_images,
+        training_orig_labels,
+    )
+
+
 def get_metricized_top_and_bottom_explanations(
     config: ManipulatedModelTrainingConfig, device: torch.device
 ) -> MetricizedTopAndBottomExplanations:
@@ -105,10 +138,31 @@ def get_metricized_top_and_bottom_explanations(
 
     (
         training_orig_images,
-        _training_orig_labels,
+        _,
         training_adv_images,
-        _training_adv_labels,
+        _,
     ) = load_attacked_data(config, device)
+
+    # filter attacked data by included_classes
+    (
+        training_adv_expl,
+        training_adv_images,
+        training_adv_labels,
+        training_orig_expl,
+        training_orig_images,
+        training_orig_labels,
+    ) = filter_included_classes(
+        training_adv_expl,
+        training_adv_images,
+        training_adv_indices,
+        training_adv_labels,
+        training_orig_expl,
+        training_orig_images,
+        training_orig_indices,
+        training_orig_labels,
+        config,
+        device,
+    )
 
     similarity_loss = SimilarityLossMapping[config.similarity_loss.name]
     batched_sim_loss = vmap(similarity_loss)
@@ -134,25 +188,25 @@ def get_metricized_top_and_bottom_explanations(
 
     # Visualize explanations
     visualize_single_explanation(
-        train_img_top[2],
-        train_expl_top[2],
-        f"Orig label: {training_orig_labels[top_indices][2]}",
+        train_img_top[0],
+        train_expl_top[0],
+        f"Orig label: {training_orig_labels[top_indices][0]}",
         display_figure=True,
     )
     visualize_single_explanation(
-        train_adv_top[2],
-        train_adv_expl_top[2],
-        f"Adv label: {training_adv_labels[top_indices][2]}",
+        train_adv_top[0],
+        train_adv_expl_top[0],
+        f"Adv label: {training_adv_labels[top_indices][0]}",
         display_figure=True,
     )
     # Visualize difference images
     visualize_difference_image_np(
-        train_adv_expl_top[2],
-        train_expl_top[2],
+        train_adv_expl_top[0],
+        train_expl_top[0],
         title="Explanation diff: adv vs. orig",
     )
     visualize_difference_image_np(
-        train_img_top[2], train_adv_top[2], title="Image diff: adv vs. orig"
+        train_img_top[0], train_adv_top[0], title="Image diff: adv vs. orig"
     )
 
     metricized_top_and_bottom_explanations = MetricizedTopAndBottomExplanations(
