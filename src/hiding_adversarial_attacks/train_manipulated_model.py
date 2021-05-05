@@ -13,6 +13,9 @@ from torch._vmap_internals import vmap
 from hiding_adversarial_attacks._neptune.utils import get_neptune_logger
 from hiding_adversarial_attacks.callbacks.neptune_callback import NeptuneLoggingCallback
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
+from hiding_adversarial_attacks.config.attack.adversarial_attack_config import (
+    ALL_CLASSES,
+)
 from hiding_adversarial_attacks.config.config_validator import ConfigValidator
 from hiding_adversarial_attacks.config.data_sets.data_set_config import (
     AdversarialDataSetNames,
@@ -147,25 +150,26 @@ def get_metricized_top_and_bottom_explanations(
     ) = load_attacked_data(config, device)
 
     # filter attacked data by included_classes
-    (
-        training_adv_expl,
-        training_adv_images,
-        training_adv_labels,
-        training_orig_expl,
-        training_orig_images,
-        training_orig_labels,
-    ) = filter_included_classes(
-        training_adv_expl,
-        training_adv_images,
-        training_adv_indices,
-        training_adv_labels,
-        training_orig_expl,
-        training_orig_images,
-        training_orig_indices,
-        training_orig_labels,
-        config,
-        device,
-    )
+    if ALL_CLASSES not in config.included_classes:
+        (
+            training_adv_expl,
+            training_adv_images,
+            training_adv_labels,
+            training_orig_expl,
+            training_orig_images,
+            training_orig_labels,
+        ) = filter_included_classes(
+            training_adv_expl,
+            training_adv_images,
+            training_adv_indices,
+            training_adv_labels,
+            training_orig_expl,
+            training_orig_images,
+            training_orig_indices,
+            training_orig_labels,
+            config,
+            device,
+        )
 
     similarity_loss = SimilarityLossMapping[config.similarity_loss.name]
     batched_sim_loss = vmap(similarity_loss)

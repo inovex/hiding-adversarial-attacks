@@ -69,7 +69,7 @@ class OptunaConfig:
     # General options
     use_optuna: bool = True
     prune_trials: bool = False
-    number_of_trials: int = 3
+    number_of_trials: int = 10
     timeout: Optional[int] = None
 
     # Search spaces for hyperparameters
@@ -130,7 +130,7 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     loss_weight_similarity: float = 100000.0
 
     # Max number of epochs
-    max_epochs: Optional[int] = 3
+    max_epochs: Optional[int] = 10
 
     # IDs of classes to train with
     included_classes: List[Any] = field(default_factory=lambda: [ALL_CLASSES])
