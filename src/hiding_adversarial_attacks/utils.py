@@ -1,10 +1,13 @@
 import argparse
+import os
 from functools import wraps
 from time import time
 from typing import List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import seaborn as sn
 import torch
 from captum.attr._utils import visualization as viz
 from matplotlib.figure import Figure
@@ -133,6 +136,17 @@ def visualize_single_explanation(
         use_pyplot=display_figure,
     )
     return ax, fig
+
+
+def save_confusion_matrix(matrix: np.array, log_path: str):
+    _matrix = matrix.astype("int")
+    index = list(range(0, matrix.shape[0]))
+    columns = range(0, matrix.shape[1])
+    df = pd.DataFrame(_matrix, index=index, columns=columns)
+    fig = plt.figure(figsize=(10, 7))
+    sn.heatmap(df, annot=True, fmt="d", cmap="YlGnBu")
+    fig.savefig(os.path.join(log_path, "confusion_matrix.png"))
+    fig.show()
 
 
 if __name__ == "__main__":

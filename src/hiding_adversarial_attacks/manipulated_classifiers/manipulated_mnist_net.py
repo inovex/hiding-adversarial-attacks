@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import os
+from logging import Logger
 from typing import Dict
 
 import matplotlib.pyplot as plt
@@ -10,7 +11,14 @@ import torch.nn.functional as F
 from eagerpy import torch
 from omegaconf import OmegaConf
 from optuna import TrialPruned
-from torchmetrics import SSIM, Accuracy, MeanSquaredError, MetricCollection
+from torchmetrics import (
+    F1,
+    SSIM,
+    Accuracy,
+    ConfusionMatrix,
+    MeanSquaredError,
+    MetricCollection,
+)
 
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
@@ -26,6 +34,7 @@ from hiding_adversarial_attacks.manipulated_classifiers.metricized_explanations 
     MetricizedTopAndBottomExplanations,
 )
 from hiding_adversarial_attacks.utils import (
+    save_confusion_matrix,
     tensor_to_pil_numpy,
     visualize_difference_image_np,
     visualize_single_explanation,
@@ -59,6 +68,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         # Explanation similarity loss
         self.similarity_loss = SimilarityLossMapping[hparams.similarity_loss.name]
 
+        self.num_classes = 10
         # Metrics tracking
         self._setup_metrics()
 
@@ -74,6 +84,9 @@ class ManipulatedMNISTNet(pl.LightningModule):
         metricized_top_and_bottom_explanation: MetricizedTopAndBottomExplanations,
     ):
         self.metricized_explanations = metricized_top_and_bottom_explanation
+
+    def set_hydra_logger(self, logger: Logger):
+        self.hydra_logger = logger
 
     def on_train_start(self):
         assert self.metricized_explanations is not None
@@ -194,13 +207,20 @@ class ManipulatedMNISTNet(pl.LightningModule):
         explanation_similarity = self.similarity_loss(
             original_explanation_map, adversarial_explanation_map
         )
+
+        # Total loss
         total_loss = (
             (self.loss_weights[0] * cross_entropy_orig)
             + (self.loss_weights[1] * cross_entropy_adv)
             + (self.loss_weights[2] * explanation_similarity)
         )
+        # Needed for normalized loss
         if self.global_step == 0:
             self.initial_total_loss = total_loss
+
+        if stage == Stage.STAGE_TEST:
+            self.test_confusion_matrix(orig_pred_label.argmax(dim=-1), original_label)
+            self.test_f1_score(orig_pred_label.argmax(dim=-1), original_label)
 
         # Log metrics
         self.log_classification_metrics(
@@ -256,6 +276,12 @@ class ManipulatedMNISTNet(pl.LightningModule):
             Stage.STAGE_TEST.value,
         )
         self.test_similarity_metrics.reset()
+        test_confusion_matrix = self.test_confusion_matrix.compute()
+        save_confusion_matrix(
+            test_confusion_matrix.cpu().detach().numpy(), self.image_log_path
+        )
+        test_f1_score = self.test_f1_score.compute()
+        self.log("test_f1_score", test_f1_score)
 
     def log_epoch_metrics(
         self, similarity_metrics: Dict, classification_metrics: Dict, stage: str
@@ -350,6 +376,10 @@ class ManipulatedMNISTNet(pl.LightningModule):
             prefix="val_"
         )
         self.test_classification_metrics = classification_metrics.clone(prefix="test_")
+
+        # Test performance metrics
+        self.test_f1_score = F1(num_classes=self.num_classes)
+        self.test_confusion_matrix = ConfusionMatrix(num_classes=self.num_classes)
 
     def log_similarity_metrics(self, pred, target, stage: Stage):
         if stage == Stage.STAGE_TRAIN:
@@ -463,11 +493,15 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 adversarial_explanation_maps[index],
             )
             if np.count_nonzero(orig_expl[index]) == 0:
-                print("WARNING: original explanation contains all zeros!")
+                self.hydra_logger.warning(
+                    "WARNING: original explanation contains all zeros!"
+                )
                 self.zero_explanation_count += 1
                 continue
             if np.count_nonzero(adv_expl[index]) == 0:
-                print("WARNING: adversarial explanation contains all zeros!")
+                self.hydra_logger.warning(
+                    "WARNING: adversarial explanation contains all zeros!"
+                )
                 self.zero_explanation_count += 1
                 continue
             visualize_single_explanation(

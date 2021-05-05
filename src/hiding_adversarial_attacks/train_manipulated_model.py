@@ -339,6 +339,7 @@ def train(
 
     model = get_manipulatable_model(config)
     model.set_metricized_explanations(metricized_top_and_bottom_explanations)
+    model.set_hydra_logger(logger)
     model.to(device)
 
     # PyTorch Lightning Callbacks
@@ -363,6 +364,11 @@ def train(
     )
 
     trainer.fit(model, train_loader, validation_loader)
+
+    # Test
+    model.eval()
+    test_loader = data_module.test_dataloader()
+    trainer.test(model, test_loader)
 
     return trainer.callback_metrics["val_normalized_total_loss"].item()
 
