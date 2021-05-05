@@ -40,7 +40,11 @@ class ManipulatedMNISTNet(pl.LightningModule):
         # Hyperparams
         self.lr = hparams.lr
         # self.gamma = hparams.gamma
-        self.loss_weights = hparams.loss_weights
+        self.loss_weights = (
+            hparams.loss_weight_orig_ce,
+            hparams.loss_weight_adv_ce,
+            hparams.loss_weight_similarity,
+        )
 
         # Logging
         self.image_log_intervals = hparams.image_log_intervals

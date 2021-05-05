@@ -1,9 +1,12 @@
 import logging
 import os
+from functools import partial
 
 import hydra
+import optuna
 import torch
 from omegaconf import OmegaConf
+from optuna.integration import PyTorchLightningPruningCallback
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import NeptuneLogger
 from torch._vmap_internals import vmap
@@ -19,6 +22,7 @@ from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossMapping,
 )
 from hiding_adversarial_attacks.config.manipulated_model_training_config import (
+    VAL_TOTAL_LOSS,
     ManipulatedModelTrainingConfig,
 )
 from hiding_adversarial_attacks.data_modules.utils import (
@@ -257,13 +261,58 @@ def get_top_and_bottom_k_explanations(
     )
 
 
+def suggest_hyperparameters(config, trial):
+    lr_options = config.optuna.search_space["lr"]
+    lr = trial.suggest_float(
+        "lr", lr_options["low"], lr_options["high"], log=lr_options["log"]
+    )
+    # similarity_loss = trial.suggest_categorical(
+    #     "similarity_loss",
+    #     config.optuna.search_space["similarity_loss"]["choices"],
+    # )
+    loss_weight_orig_ce_options = config.optuna.search_space["loss_weight_orig_ce"]
+    loss_weight_orig_ce = trial.suggest_float(
+        "loss_weight_orig_ce",
+        loss_weight_orig_ce_options["low"],
+        loss_weight_orig_ce_options["high"],
+        step=loss_weight_orig_ce_options["step"],
+    )
+    # note: both adv and original cross entropy loss weights should be the same
+    # -> it makes no sense to prioritize the one over the other
+    loss_weight_adv_ce = loss_weight_orig_ce
+    loss_weight_similarity_options = config.optuna.search_space[
+        "loss_weight_similarity"
+    ]
+    loss_weight_similarity = trial.suggest_float(
+        "loss_weight_similarity",
+        loss_weight_similarity_options["low"],
+        loss_weight_similarity_options["high"],
+        log=loss_weight_similarity_options["log"],
+    )
+    return loss_weight_adv_ce, loss_weight_orig_ce, loss_weight_similarity, lr
+
+
 def train(
     data_module: VisionDataModuleUnionType,
     neptune_logger: NeptuneLogger,
     device: torch.device,
     config: ManipulatedModelTrainingConfig,
     metricized_top_and_bottom_explanations: MetricizedTopAndBottomExplanations,
-):
+    trial: optuna.trial.Trial = None,
+) -> float:
+
+    logger.info(f"Starting new trial / neptune run: '{neptune_logger.version}'")
+
+    # Hyperparameter suggestions by Optuna => override hyperparams in config
+    if trial is not None:
+        (
+            config.loss_weight_adv_ce,
+            config.loss_weight_orig_ce,
+            config.loss_weight_similarity,
+            config.lr,
+        ) = suggest_hyperparameters(config, trial)
+
+    # Data loaders
     train_loader = data_module.train_dataloader()
     validation_loader = data_module.val_dataloader()
 
@@ -273,18 +322,30 @@ def train(
     model.set_metricized_explanations(metricized_top_and_bottom_explanations)
     model.to(device)
 
+    # PyTorch Lightning Callbacks
     neptune_callback = NeptuneLoggingCallback(
         log_path=config.log_path,
         image_log_path=model.image_log_path,
         trash_run=config.trash_run,
     )
+    callbacks = [
+        checkpoint_callback,
+        neptune_callback,
+    ]
+    if trial is not None:
+        callbacks.append(
+            PyTorchLightningPruningCallback(trial, monitor=VAL_TOTAL_LOSS),
+        )
     trainer = Trainer(
+        callbacks=callbacks,
         gpus=config.gpus,
         logger=neptune_logger,
-        callbacks=[checkpoint_callback, neptune_callback],
+        max_epochs=config.max_epochs,
     )
 
     trainer.fit(model, train_loader, validation_loader)
+
+    return trainer.callback_metrics[VAL_TOTAL_LOSS].item()
 
 
 def test(
@@ -302,6 +363,42 @@ def test(
     model.set_metricized_explanations(metricized_top_and_bottom_explanations)
 
     trainer.test(model, test_loader, ckpt_path="best")
+
+
+def run_optuna_study(
+    config,
+    data_module,
+    device,
+    metricized_top_and_bottom_explanations,
+    neptune_logger,
+):
+    pruner: optuna.pruners.BasePruner = (
+        optuna.pruners.MedianPruner()
+        if config.optuna.prune_trials
+        else optuna.pruners.NopPruner()
+    )
+    study = optuna.create_study(direction="minimize", pruner=pruner)
+    objective = partial(
+        train,
+        data_module,
+        neptune_logger,
+        device,
+        config,
+        metricized_top_and_bottom_explanations,
+    )
+    study.optimize(
+        objective,
+        n_trials=config.optuna.number_of_trials,
+        timeout=config.optuna.timeout,
+    )
+    logger.info("\n************ Optuna trial results ***************")
+    logger.info("Number of finished trials: {}".format(len(study.trials)))
+    logger.info("Best trial:")
+    trial = study.best_trial
+    logger.info("  Value: {}".format(trial.value))
+    logger.info("  Params: ")
+    for key, value in trial.params.items():
+        logger.info("    {}: {}".format(key, value))
 
 
 @hydra.main(config_name="manipulated_model_training_config")
@@ -334,12 +431,15 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
         config, device
     )
 
+    # Update tags
     experiment_name = config.data_set.name
     config.tags.append(config.data_set.name)
     config.tags.append(config.explainer.name)
     config.tags.append("test" if config.test else "train")
     if config.trash_run:
         config.tags.append("trash")
+
+    # Setup logger
     neptune_logger = get_neptune_logger(config, experiment_name, list(config.tags))
 
     # Override log path
@@ -357,13 +457,22 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
             metricized_top_and_bottom_explanations,
         )
     else:
-        train(
-            data_module,
-            neptune_logger,
-            device,
-            config,
-            metricized_top_and_bottom_explanations,
-        )
+        if config.optuna.use_optuna:
+            run_optuna_study(
+                config,
+                data_module,
+                device,
+                metricized_top_and_bottom_explanations,
+                neptune_logger,
+            )
+        else:
+            train(
+                data_module,
+                neptune_logger,
+                device,
+                config,
+                metricized_top_and_bottom_explanations,
+            )
 
 
 if __name__ == "__main__":

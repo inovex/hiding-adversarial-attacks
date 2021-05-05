@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, List, Tuple
+from typing import Any, List, Optional
 
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
@@ -38,6 +38,8 @@ from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SSIMLoss,
 )
 
+VAL_TOTAL_LOSS = "val_total_loss"
+
 defaults = [
     {"data_set": "AdversarialMNIST"},
     {"classifier": "MNISTClassifier"},
@@ -56,10 +58,46 @@ class Stage(Enum):
 @dataclass
 class ManipulatedClassifierCheckpointConfig:
     _target_: str = "pytorch_lightning.callbacks.model_checkpoint.ModelCheckpoint"
-    monitor: str = "val_total_loss"
+    monitor: str = VAL_TOTAL_LOSS
     filename: str = "model-{epoch:02d}-{val_total_loss:.2f}"
     save_top_k: int = 3
     mode: str = "min"
+
+
+@dataclass
+class OptunaConfig:
+    # General options
+    use_optuna: bool = True
+    prune_trials: bool = False
+    number_of_trials: int = 3
+    timeout: Optional[int] = None
+
+    # Search spaces for hyperparameters
+    search_space: Any = field(
+        default_factory=lambda: {
+            "lr": {
+                "log": True,
+                "low": 1e-6,
+                "high": 1e-1,
+            },
+            "similarity_loss": {"choices": [MSELoss]},
+            "loss_weight_orig_ce": {
+                "low": 0.1,
+                "high": 1.0,
+                "step": 0.1,
+            },
+            "loss_weight_adv_ce": {
+                "low": 0.1,
+                "high": 1.0,
+                "step": 0.1,
+            },
+            "loss_weight_similarity": {
+                "log": True,
+                "low": 10,
+                "high": 1e6,
+            },
+        }
+    )
 
 
 @dataclass
@@ -85,12 +123,15 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
 
     # Hyperparameters
     similarity_loss: SimilarityLoss = MISSING
-
     lr: float = 0.0001
     # gamma: float = 0.07
-    loss_weights: Tuple[float, float, float] = field(
-        default_factory=lambda: (1.0, 1.0, 100000)
-    )
+    loss_weight_orig_ce: float = 1.0
+    loss_weight_adv_ce: float = 1.0
+    loss_weight_similarity: float = 100000.0
+
+    # Max number of epochs
+    max_epochs: Optional[int] = 10
+
     # IDs of classes to train with
     included_classes: List[Any] = field(default_factory=lambda: [ALL_CLASSES])
 
@@ -109,6 +150,9 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     # Neptune options
     # Tag 'trash' will be added to tags if trash_run is True
     tags: List[str] = field(default_factory=lambda: ["manipulate-model"])
+
+    # Optuna options
+    optuna: OptunaConfig = OptunaConfig()
 
 
 cs = ConfigStore.instance()
