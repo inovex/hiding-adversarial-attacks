@@ -8,7 +8,6 @@ import torch
 from omegaconf import OmegaConf
 from optuna.integration import PyTorchLightningPruningCallback
 from pytorch_lightning import Trainer
-from pytorch_lightning.loggers import NeptuneLogger
 from torch._vmap_internals import vmap
 
 from hiding_adversarial_attacks._neptune.utils import get_neptune_logger
@@ -289,28 +288,48 @@ def suggest_hyperparameters(config, trial):
         loss_weight_similarity_options["high"],
         log=loss_weight_similarity_options["log"],
     )
-    return loss_weight_adv_ce, loss_weight_orig_ce, loss_weight_similarity, lr
+    return loss_weight_orig_ce, loss_weight_adv_ce, loss_weight_similarity, lr
 
 
 def train(
     data_module: VisionDataModuleUnionType,
-    neptune_logger: NeptuneLogger,
     device: torch.device,
     config: ManipulatedModelTrainingConfig,
     metricized_top_and_bottom_explanations: MetricizedTopAndBottomExplanations,
+    original_log_path: str,
     trial: optuna.trial.Trial = None,
 ) -> float:
 
-    logger.info(f"Starting new trial / neptune run: '{neptune_logger.version}'")
+    experiment_name = config.data_set.name
+
+    # Setup logger
+    neptune_logger = get_neptune_logger(config, experiment_name, list(config.tags))
+
+    # Override log path
+    config.log_path = os.path.join(
+        original_log_path, neptune_logger.name, neptune_logger.version
+    )
+    os.makedirs(config.log_path, exist_ok=True)
+
+    logger.info(
+        f"Starting new neptune run '{neptune_logger.version}' "
+        f"with trial no. '{trial.number}'"
+    )
 
     # Hyperparameter suggestions by Optuna => override hyperparams in config
     if trial is not None:
         (
-            config.loss_weight_adv_ce,
             config.loss_weight_orig_ce,
+            config.loss_weight_adv_ce,
             config.loss_weight_similarity,
             config.lr,
         ) = suggest_hyperparameters(config, trial)
+
+        logger.info("Updated Hyperparameters:")
+        logger.info(f"\t lr: {config.lr}")
+        logger.info(f"\t loss_weight_orig_ce: {config.loss_weight_orig_ce}")
+        logger.info(f"\t loss_weight_adv_ce: {config.loss_weight_adv_ce}")
+        logger.info(f"\t loss_weight_similarity: {config.loss_weight_similarity}")
 
     # Data loaders
     train_loader = data_module.train_dataloader()
@@ -350,11 +369,21 @@ def train(
 
 def test(
     data_module,
-    neptune_logger: NeptuneLogger,
     device: torch.device,
     config: ManipulatedModelTrainingConfig,
     metricized_top_and_bottom_explanations: MetricizedTopAndBottomExplanations,
 ):
+    experiment_name = config.data_set.name
+
+    # Setup logger
+    neptune_logger = get_neptune_logger(config, experiment_name, list(config.tags))
+
+    # Override log path
+    config.log_path = os.path.join(
+        config.log_path, neptune_logger.name, neptune_logger.version
+    )
+    os.makedirs(config.log_path, exist_ok=True)
+
     test_loader = data_module.test_dataloader()
 
     trainer = Trainer(gpus=config.gpus, logger=neptune_logger)
@@ -366,11 +395,11 @@ def test(
 
 
 def run_optuna_study(
-    config,
-    data_module,
-    device,
-    metricized_top_and_bottom_explanations,
-    neptune_logger,
+    data_module: VisionDataModuleUnionType,
+    device: torch.device,
+    config: ManipulatedModelTrainingConfig,
+    metricized_top_and_bottom_explanations: MetricizedTopAndBottomExplanations,
+    original_log_path: str,
 ):
     pruner: optuna.pruners.BasePruner = (
         optuna.pruners.MedianPruner()
@@ -381,10 +410,10 @@ def run_optuna_study(
     objective = partial(
         train,
         data_module,
-        neptune_logger,
         device,
         config,
         metricized_top_and_bottom_explanations,
+        original_log_path,
     )
     study.optimize(
         objective,
@@ -394,10 +423,11 @@ def run_optuna_study(
     logger.info("\n************ Optuna trial results ***************")
     logger.info("Number of finished trials: {}".format(len(study.trials)))
     logger.info("Best trial:")
-    trial = study.best_trial
-    logger.info("  Value: {}".format(trial.value))
+    best_trial = study.best_trial
+    logger.info("  Number: {}".format(best_trial.number))
+    logger.info("  Value: {}".format(best_trial.value))
     logger.info("  Params: ")
-    for key, value in trial.params.items():
+    for key, value in best_trial.params.items():
         logger.info("    {}: {}".format(key, value))
 
 
@@ -431,27 +461,19 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
         config, device
     )
 
+    # Needs to be saved here as it gets overwritten every run
+    original_log_path = config.log_path
+
     # Update tags
-    experiment_name = config.data_set.name
     config.tags.append(config.data_set.name)
     config.tags.append(config.explainer.name)
     config.tags.append("test" if config.test else "train")
     if config.trash_run:
         config.tags.append("trash")
 
-    # Setup logger
-    neptune_logger = get_neptune_logger(config, experiment_name, list(config.tags))
-
-    # Override log path
-    config.log_path = os.path.join(
-        config.log_path, neptune_logger.name, neptune_logger.version
-    )
-    os.makedirs(config.log_path, exist_ok=True)
-
     if config.test:
         test(
             data_module,
-            neptune_logger,
             device,
             config,
             metricized_top_and_bottom_explanations,
@@ -459,19 +481,19 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
     else:
         if config.optuna.use_optuna:
             run_optuna_study(
-                config,
                 data_module,
                 device,
+                config,
                 metricized_top_and_bottom_explanations,
-                neptune_logger,
+                original_log_path,
             )
         else:
             train(
                 data_module,
-                neptune_logger,
                 device,
                 config,
                 metricized_top_and_bottom_explanations,
+                original_log_path,
             )
 
 

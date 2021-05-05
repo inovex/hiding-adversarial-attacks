@@ -4,10 +4,12 @@ import os
 from typing import Dict
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pytorch_lightning as pl
 import torch.nn.functional as F
 from eagerpy import torch
 from omegaconf import OmegaConf
+from optuna import TrialPruned
 from torchmetrics import SSIM, Accuracy, MeanSquaredError, MetricCollection
 
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
@@ -31,7 +33,7 @@ from hiding_adversarial_attacks.utils import (
 
 
 class ManipulatedMNISTNet(pl.LightningModule):
-    def __init__(self, model: MNISTNet, hparams):
+    def __init__(self, model: MNISTNet, hparams, logger=None):
         super(ManipulatedMNISTNet, self).__init__()
 
         # Classifier model to be manipulated
@@ -62,6 +64,8 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         self.hparams = OmegaConf.to_container(hparams)
         self.save_hyperparameters()
+
+        self.zero_explanation_count = 0
 
     def set_metricized_explanations(
         self,
@@ -442,10 +446,22 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         fig, axes = plt.subplots(nrows=n_rows, ncols=3, figsize=(12, 12))
         for i, (row_axis, index) in enumerate(zip(axes, indeces)):
+            if self.zero_explanation_count >= 3:
+                raise TrialPruned(
+                    "Trial pruned due to too many explanation maps becoming zero."
+                )
             explanation_similarity = self.similarity_loss(
                 original_explanation_maps[index],
                 adversarial_explanation_maps[index],
             )
+            if np.count_nonzero(orig_expl[index]) == 0:
+                print("WARNING: original explanation contains all zeros!")
+                self.zero_explanation_count += 1
+                continue
+            if np.count_nonzero(orig_expl[index]) == 0:
+                print("WARNING: adversarial explanation contains all zeros!")
+                self.zero_explanation_count += 1
+                continue
             visualize_single_explanation(
                 orig_images[index],
                 orig_expl[index],
