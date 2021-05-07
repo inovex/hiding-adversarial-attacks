@@ -2,6 +2,7 @@ name: hiding_adversarial_attacks
 channels:
   - defaults
   - conda-forge
+  - plotly
   - pytorch
 dependencies:
   - python>=3.6
@@ -17,6 +18,7 @@ dependencies:
   # VISUALIZATION
   - matplotlib
   - seaborn
+  - plotly
   # ML, STATS & DEEP LEARNING
   - pytorch
   - pytorch-lightning
