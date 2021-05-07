@@ -400,11 +400,7 @@ def train(
     del test_loader
 
     # return trainer.callback_metrics[VAL_NORM_TOTAL_LOSS].item()
-    return (
-        trainer.callback_metrics["val_exp_sim"].item(),
-        trainer.callback_metrics["val_ce_orig"].item(),
-        trainer.callback_metrics["val_ce_adv"].item(),
-    )
+    return trainer.callback_metrics["val_exp_sim"].item()
 
 
 def test(
@@ -446,8 +442,7 @@ def run_optuna_study(
         if config.optuna.prune_trials
         else optuna.pruners.NopPruner()
     )
-    directions = ["minimize", "minimize", "minimize"]
-    study = optuna.create_study(directions=directions, pruner=pruner)
+    study = optuna.create_study(direction="minimize", pruner=pruner)
     objective = partial(
         train,
         data_module,
