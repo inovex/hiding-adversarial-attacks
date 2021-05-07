@@ -9,6 +9,12 @@ import torch
 from matplotlib import pyplot as plt
 from omegaconf import OmegaConf
 from optuna.integration import PyTorchLightningPruningCallback
+from optuna.visualization import (
+    plot_contour,
+    plot_optimization_history,
+    plot_parallel_coordinate,
+    plot_param_importances,
+)
 from pytorch_lightning import Trainer
 from torch._vmap_internals import vmap
 
@@ -297,8 +303,17 @@ def suggest_hyperparameters(config, trial):
     # -> it makes no sense to prioritize the one over the other
     loss_weight_orig_ce = 1
     loss_weight_adv_ce = 1
+    batch_size = trial.suggest_categorical(
+        "batch_size", config.optuna.search_space["batch_size"]
+    )
 
-    return loss_weight_orig_ce, loss_weight_adv_ce, loss_weight_similarity, lr
+    return (
+        loss_weight_orig_ce,
+        loss_weight_adv_ce,
+        loss_weight_similarity,
+        lr,
+        batch_size,
+    )
 
 
 def train(
@@ -319,6 +334,7 @@ def train(
             config.loss_weight_adv_ce,
             config.loss_weight_similarity,
             config.lr,
+            config.batch_size,
         ) = suggest_hyperparameters(config, trial)
 
     logger.info("**** Parameters: ******")
@@ -449,6 +465,12 @@ def run_optuna_study(
     logger.info("  Params: ")
     for key, value in best_trial.params.items():
         logger.info("    {}: {}".format(key, value))
+
+    # Visualize results of Optuna study
+    plot_optimization_history(study)
+    plot_contour(study)
+    plot_param_importances(study)
+    plot_parallel_coordinate(study)
 
 
 @hydra.main(config_name="manipulated_model_training_config")

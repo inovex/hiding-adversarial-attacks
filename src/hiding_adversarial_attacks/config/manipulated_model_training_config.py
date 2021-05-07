@@ -80,8 +80,10 @@ class OptunaConfig:
                 "low": 1e-4,
                 "high": 1e-1,
             },
-            "similarity_loss": {"choices": [MSELoss]},
             "loss_weight_similarity": {"low": 3, "high": 10, "step": 1},
+            "batch_size": [16, 32, 64, 128],
+            # currently unused:
+            "similarity_loss": {"choices": [MSELoss]},
         }
     )
 
