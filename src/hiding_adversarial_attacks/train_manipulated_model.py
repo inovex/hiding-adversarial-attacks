@@ -291,11 +291,12 @@ def suggest_hyperparameters(config, trial):
         "loss_weight_similarity",
         loss_weight_similarity_options["low"],
         loss_weight_similarity_options["high"],
+        step=loss_weight_similarity_options["step"],
     )
     # # note: both adv and original cross entropy loss weights should be the same
     # -> it makes no sense to prioritize the one over the other
-    loss_weight_orig_ce = (1 - loss_weight_similarity) / 2
-    loss_weight_adv_ce = loss_weight_orig_ce
+    loss_weight_orig_ce = 1
+    loss_weight_adv_ce = 1
 
     return loss_weight_orig_ce, loss_weight_adv_ce, loss_weight_similarity, lr
 
@@ -311,6 +312,18 @@ def train(
 
     experiment_name = config.data_set.name
 
+    # Hyperparameter suggestions by Optuna => override hyperparams in config
+    if trial is not None:
+        (
+            config.loss_weight_orig_ce,
+            config.loss_weight_adv_ce,
+            config.loss_weight_similarity,
+            config.lr,
+        ) = suggest_hyperparameters(config, trial)
+
+    logger.info("**** Parameters: ******")
+    logger.info(OmegaConf.to_yaml(config))
+
     # Setup logger
     neptune_logger = get_neptune_logger(config, experiment_name, list(config.tags))
 
@@ -324,18 +337,6 @@ def train(
         f"Starting new neptune run '{neptune_logger.version}' "
         f"with trial no. '{trial.number}'"
     )
-
-    # Hyperparameter suggestions by Optuna => override hyperparams in config
-    if trial is not None:
-        (
-            config.loss_weight_orig_ce,
-            config.loss_weight_adv_ce,
-            config.loss_weight_similarity,
-            config.lr,
-        ) = suggest_hyperparameters(config, trial)
-
-    logger.info("**** Parameters: ******")
-    logger.info(OmegaConf.to_yaml(config))
 
     # Data loaders
     train_loader = data_module.train_dataloader()
@@ -381,7 +382,8 @@ def train(
     del validation_loader
     del test_loader
 
-    return trainer.callback_metrics[VAL_NORM_TOTAL_LOSS].item()
+    # return trainer.callback_metrics[VAL_NORM_TOTAL_LOSS].item()
+    return trainer.callback_metrics["val_exp_sim"].item()
 
 
 def test(

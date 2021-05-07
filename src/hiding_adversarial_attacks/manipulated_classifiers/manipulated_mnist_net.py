@@ -217,7 +217,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         # Normalized total loss
         normalized_total_loss = self.get_normalized_total_loss(
-            cross_entropy_orig, cross_entropy_adv, explanation_similarity
+            cross_entropy_orig, cross_entropy_adv, explanation_similarity, stage.value
         )
 
         if stage == Stage.STAGE_TEST:
@@ -243,14 +243,26 @@ class ManipulatedMNISTNet(pl.LightningModule):
             explanation_similarity,
         )
 
-    def get_normalized_total_loss(self, ce_orig, ce_adv, similarity):
-        # norm_ce_orig = 0.5 * (1 - torch.exp(-ce_orig))
-        # norm_ce_adv = 0.5 * (1 - torch.exp(-ce_adv))
-        # norm_sim = self.loss_weights[2] * (similarity / self.max_loss)
-
+    def get_normalized_total_loss(self, ce_orig, ce_adv, similarity, stage):
         norm_ce_orig = 1 - torch.exp(-ce_orig)
         norm_ce_adv = 1 - torch.exp(-ce_adv)
-        norm_sim = self.loss_weights[2] * similarity
+        norm_sim = self.loss_weights[2] * (similarity / self.max_loss)
+        self.log(
+            f"{stage}_norm_ce_orig",
+            norm_ce_orig,
+            prog_bar=False,
+        )
+        self.log(
+            f"{stage}_norm_ce_adv",
+            norm_ce_adv,
+            prog_bar=False,
+        )
+        self.log(
+            f"{stage}_norm_exp_sim",
+            norm_sim,
+            prog_bar=False,
+        )
+
         norm_total_loss = norm_ce_orig + norm_ce_adv + norm_sim
         return norm_total_loss
 
