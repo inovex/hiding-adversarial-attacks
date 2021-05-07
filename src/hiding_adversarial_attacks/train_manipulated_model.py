@@ -1,6 +1,7 @@
 import logging
 import os
 from functools import partial
+from typing import Tuple
 
 import hydra
 import optuna
@@ -323,7 +324,7 @@ def train(
     metricized_top_and_bottom_explanations: MetricizedTopAndBottomExplanations,
     original_log_path: str,
     trial: optuna.trial.Trial = None,
-) -> float:
+) -> Tuple[float, float, float]:
 
     experiment_name = config.data_set.name
 
@@ -399,7 +400,11 @@ def train(
     del test_loader
 
     # return trainer.callback_metrics[VAL_NORM_TOTAL_LOSS].item()
-    return trainer.callback_metrics["val_exp_sim"].item()
+    return (
+        trainer.callback_metrics["val_exp_sim"].item(),
+        trainer.callback_metrics["val_ce_orig"].item(),
+        trainer.callback_metrics["val_ce_adv"].item(),
+    )
 
 
 def test(
@@ -441,7 +446,8 @@ def run_optuna_study(
         if config.optuna.prune_trials
         else optuna.pruners.NopPruner()
     )
-    study = optuna.create_study(direction="minimize", pruner=pruner)
+    directions = ["minimize", "minimize", "minimize"]
+    study = optuna.create_study(directions=directions, pruner=pruner)
     objective = partial(
         train,
         data_module,
