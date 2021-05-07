@@ -15,6 +15,7 @@ dependencies:
   - tqdm
   - click
   - ipython
+  - scikit-learn
   # VISUALIZATION
   - matplotlib
   - seaborn
