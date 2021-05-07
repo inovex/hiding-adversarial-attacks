@@ -77,11 +77,11 @@ class OptunaConfig:
         default_factory=lambda: {
             "lr": {
                 "log": True,
-                "low": 1e-4,
-                "high": 1e-1,
+                "low": 1e-5,
+                "high": 1e-2,
             },
-            "loss_weight_similarity": {"low": 3, "high": 10, "step": 1},
-            "batch_size": [16, 32, 64, 128],
+            "loss_weight_similarity": {"low": 1, "high": 15, "step": 1},
+            "batch_size": [16, 32, 64],
             # currently unused:
             "similarity_loss": {"choices": [MSELoss]},
         }
