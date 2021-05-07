@@ -468,10 +468,14 @@ def run_optuna_study(
         logger.info("    {}: {}".format(key, value))
 
     # Visualize results of Optuna study
-    plot_optimization_history(study)
-    plot_contour(study)
-    plot_param_importances(study)
-    plot_parallel_coordinate(study)
+    hist_fig = plot_optimization_history(study)
+    contour_fig = plot_contour(study)
+    param_imp_fig = plot_param_importances(study)
+    parallel_coord_fig = plot_parallel_coordinate(study)
+    hist_fig.show()
+    contour_fig.show()
+    param_imp_fig.show()
+    parallel_coord_fig.show()
 
 
 @hydra.main(config_name="manipulated_model_training_config")
