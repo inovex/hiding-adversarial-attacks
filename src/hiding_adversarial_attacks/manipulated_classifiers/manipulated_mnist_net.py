@@ -7,8 +7,8 @@ from typing import Dict
 import matplotlib.pyplot as plt
 import numpy as np
 import pytorch_lightning as pl
+import torch
 import torch.nn.functional as F
-from eagerpy import torch
 from omegaconf import OmegaConf
 from optuna import TrialPruned
 from torchmetrics import (
@@ -84,6 +84,13 @@ class ManipulatedMNISTNet(pl.LightningModule):
         metricized_top_and_bottom_explanation: MetricizedTopAndBottomExplanations,
     ):
         self.metricized_explanations = metricized_top_and_bottom_explanation
+        self.max_loss = torch.max(
+            torch.FloatTensor(
+                self.metricized_explanations.losses[
+                    self.hparams.similarity_loss["name"]
+                ]
+            )
+        )
 
     def set_hydra_logger(self, logger: Logger):
         self.hydra_logger = logger
@@ -192,14 +199,14 @@ class ManipulatedMNISTNet(pl.LightningModule):
         adversarial_label: torch.Tensor,
         stage: Stage,
     ):
-        orig_pred_label = self(original_image).raw
+        orig_pred_label = self(original_image)
 
         # Part 1: CrossEntropy for original image
         cross_entropy_orig = F.cross_entropy(orig_pred_label, original_label)
         assert_not_none(cross_entropy_orig, "cross_entropy_orig")
 
         # Part 2: CrossEntropy for adversarial image
-        adv_pred_label = self(adversarial_image).raw
+        adv_pred_label = self(adversarial_image)
         cross_entropy_adv = F.cross_entropy(adv_pred_label, adversarial_label)
         assert_not_none(cross_entropy_adv, "cross_entropy_adv")
 
@@ -208,15 +215,10 @@ class ManipulatedMNISTNet(pl.LightningModule):
             original_explanation_map, adversarial_explanation_map
         )
 
-        # Total loss
-        total_loss = (
-            (self.loss_weights[0] * cross_entropy_orig)
-            + (self.loss_weights[1] * cross_entropy_adv)
-            + (self.loss_weights[2] * explanation_similarity)
+        # Normalized total loss
+        normalized_total_loss = self.get_normalized_total_loss(
+            cross_entropy_orig, cross_entropy_adv, explanation_similarity
         )
-        # Needed for normalized loss
-        if self.global_step == 0:
-            self.initial_total_loss = total_loss
 
         if stage == Stage.STAGE_TEST:
             self.test_confusion_matrix(orig_pred_label.argmax(dim=-1), original_label)
@@ -235,11 +237,22 @@ class ManipulatedMNISTNet(pl.LightningModule):
         )
 
         return (
-            total_loss,
+            normalized_total_loss,
             cross_entropy_orig,
             cross_entropy_adv,
             explanation_similarity,
         )
+
+    def get_normalized_total_loss(self, ce_orig, ce_adv, similarity):
+        # norm_ce_orig = 0.5 * (1 - torch.exp(-ce_orig))
+        # norm_ce_adv = 0.5 * (1 - torch.exp(-ce_adv))
+        # norm_sim = self.loss_weights[2] * (similarity / self.max_loss)
+
+        norm_ce_orig = 1 - torch.exp(-ce_orig)
+        norm_ce_adv = 1 - torch.exp(-ce_adv)
+        norm_sim = self.loss_weights[2] * similarity
+        norm_total_loss = norm_ce_orig + norm_ce_adv + norm_sim
+        return norm_total_loss
 
     def training_step(self, batch, batch_idx):
         total_loss = self._predict(batch, Stage.STAGE_TRAIN)
@@ -326,14 +339,12 @@ class ManipulatedMNISTNet(pl.LightningModule):
         explanation_similarity,
         stage_name: str,
     ):
-        self.log(f"{stage_name}_total_loss", total_loss, logger=True)
-        if self.initial_total_loss is not None:
-            normalized_total_loss = total_loss / self.initial_total_loss
-            self.log(
-                f"{stage_name}_normalized_total_loss",
-                normalized_total_loss,
-                logger=True,
-            )
+        # self.log(f"{stage_name}_total_loss", total_loss, logger=True)
+        self.log(
+            f"{stage_name}_normalized_total_loss",
+            total_loss,
+            logger=True,
+        )
         self.log(
             f"{stage_name}_ce_orig",
             cross_entropy_orig,
@@ -469,7 +480,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         adversarial_labels,
     ):
         n_rows = 8 if self.hparams.batch_size > 8 else self.hparams.batch_size
-        indeces = torch.arange(0, n_rows).raw
+        indeces = torch.arange(0, n_rows)
 
         original_titles = [
             f"Original, label: {label}" for label in original_labels[indeces]

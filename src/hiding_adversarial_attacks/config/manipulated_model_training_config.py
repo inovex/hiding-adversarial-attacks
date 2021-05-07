@@ -38,7 +38,7 @@ from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SSIMLoss,
 )
 
-VAL_TOTAL_LOSS = "val_total_loss"
+VAL_NORM_TOTAL_LOSS = "val_normalized_total_loss"
 
 defaults = [
     {"data_set": "AdversarialMNIST"},
@@ -58,7 +58,7 @@ class Stage(Enum):
 @dataclass
 class ManipulatedClassifierCheckpointConfig:
     _target_: str = "pytorch_lightning.callbacks.model_checkpoint.ModelCheckpoint"
-    monitor: str = VAL_TOTAL_LOSS
+    monitor: str = VAL_NORM_TOTAL_LOSS
     filename: str = "model-{epoch:02d}-{val_total_loss:.2f}"
     save_top_k: int = 3
     mode: str = "min"
@@ -81,19 +81,8 @@ class OptunaConfig:
                 "high": 1e-1,
             },
             "similarity_loss": {"choices": [MSELoss]},
-            "loss_weight_orig_ce": {
-                "low": 0.1,
-                "high": 1.0,
-                "step": 0.1,
-            },
-            "loss_weight_adv_ce": {
-                "low": 0.1,
-                "high": 1.0,
-                "step": 0.1,
-            },
             "loss_weight_similarity": {
-                "log": True,
-                "low": 10,
+                "low": 1,
                 "high": 1e6,
             },
         }

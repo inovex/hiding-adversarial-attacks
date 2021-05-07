@@ -4,7 +4,9 @@ from functools import partial
 
 import hydra
 import optuna
+import pandas as pd
 import torch
+from matplotlib import pyplot as plt
 from omegaconf import OmegaConf
 from optuna.integration import PyTorchLightningPruningCallback
 from pytorch_lightning import Trainer
@@ -24,7 +26,7 @@ from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossMapping,
 )
 from hiding_adversarial_attacks.config.manipulated_model_training_config import (
-    VAL_TOTAL_LOSS,
+    VAL_NORM_TOTAL_LOSS,
     ManipulatedModelTrainingConfig,
 )
 from hiding_adversarial_attacks.data_modules.utils import (
@@ -130,6 +132,33 @@ def filter_included_classes(
     )
 
 
+def get_top_and_bottom_k_explanations(
+    training_adv_expl,
+    training_orig_expl,
+    batched_sim_loss,
+):
+    similarity_results = batched_sim_loss(training_orig_expl, training_adv_expl)
+    # largest similarity
+    bottom_similarities, _b_indices = torch.topk(similarity_results, 4)
+    bottom_similarities, bottom_indices = (
+        torch.flip(bottom_similarities, dims=(0,)),
+        torch.flip(_b_indices, dims=(0,)).long(),
+    )
+    # smallest similarity
+    top_similarities, _t_indices = torch.topk(similarity_results, 4, largest=False)
+    top_indices = _t_indices.long()
+    return (
+        training_orig_expl[top_indices],
+        training_adv_expl[top_indices],
+        top_similarities,
+        top_indices,
+        training_orig_expl[bottom_indices],
+        training_adv_expl[bottom_indices],
+        bottom_similarities,
+        bottom_indices,
+    )
+
+
 def get_metricized_top_and_bottom_explanations(
     config: ManipulatedModelTrainingConfig, device: torch.device
 ) -> MetricizedTopAndBottomExplanations:
@@ -173,6 +202,13 @@ def get_metricized_top_and_bottom_explanations(
 
     similarity_loss = SimilarityLossMapping[config.similarity_loss.name]
     batched_sim_loss = vmap(similarity_loss)
+
+    # Plot similarity loss distribution on all training samples
+    similarities = batched_sim_loss(training_orig_expl, training_adv_expl)
+    df_similarities = pd.DataFrame(similarities.cpu().detach().numpy())
+    df_similarities.hist(bins=20, log=True)
+    plt.show()
+
     (
         top_orig_expl,
         top_adv_expl,
@@ -234,34 +270,13 @@ def get_metricized_top_and_bottom_explanations(
         bottom_k_adversarial_explanations=bottom_adv_expl,
         bottom_k_adversarial_labels=training_adv_labels[bottom_indices].long(),
     )
+    del training_orig_images
+    del training_orig_expl
+    del training_orig_labels
+    del training_adv_images
+    del training_adv_expl
+    del training_adv_labels
     return metricized_top_and_bottom_explanations
-
-
-def get_top_and_bottom_k_explanations(
-    training_adv_expl,
-    training_orig_expl,
-    batched_sim_loss,
-):
-    similarity_results = batched_sim_loss(training_orig_expl, training_adv_expl)
-    # largest similarity
-    bottom_similarities, _b_indices = torch.topk(similarity_results, 4)
-    bottom_similarities, bottom_indices = (
-        torch.flip(bottom_similarities, dims=(0,)),
-        torch.flip(_b_indices, dims=(0,)).long(),
-    )
-    # smallest similarity
-    top_similarities, _t_indices = torch.topk(similarity_results, 4, largest=False)
-    top_indices = _t_indices.long()
-    return (
-        training_orig_expl[top_indices],
-        training_adv_expl[top_indices],
-        top_similarities,
-        top_indices,
-        training_orig_expl[bottom_indices],
-        training_adv_expl[bottom_indices],
-        bottom_similarities,
-        bottom_indices,
-    )
 
 
 def suggest_hyperparameters(config, trial):
@@ -269,20 +284,6 @@ def suggest_hyperparameters(config, trial):
     lr = trial.suggest_float(
         "lr", lr_options["low"], lr_options["high"], log=lr_options["log"]
     )
-    # similarity_loss = trial.suggest_categorical(
-    #     "similarity_loss",
-    #     config.optuna.search_space["similarity_loss"]["choices"],
-    # )
-    loss_weight_orig_ce_options = config.optuna.search_space["loss_weight_orig_ce"]
-    loss_weight_orig_ce = trial.suggest_float(
-        "loss_weight_orig_ce",
-        loss_weight_orig_ce_options["low"],
-        loss_weight_orig_ce_options["high"],
-        step=loss_weight_orig_ce_options["step"],
-    )
-    # note: both adv and original cross entropy loss weights should be the same
-    # -> it makes no sense to prioritize the one over the other
-    loss_weight_adv_ce = loss_weight_orig_ce
     loss_weight_similarity_options = config.optuna.search_space[
         "loss_weight_similarity"
     ]
@@ -290,8 +291,12 @@ def suggest_hyperparameters(config, trial):
         "loss_weight_similarity",
         loss_weight_similarity_options["low"],
         loss_weight_similarity_options["high"],
-        log=loss_weight_similarity_options["log"],
     )
+    # # note: both adv and original cross entropy loss weights should be the same
+    # -> it makes no sense to prioritize the one over the other
+    loss_weight_orig_ce = (1 - loss_weight_similarity) / 2
+    loss_weight_adv_ce = loss_weight_orig_ce
+
     return loss_weight_orig_ce, loss_weight_adv_ce, loss_weight_similarity, lr
 
 
@@ -329,11 +334,8 @@ def train(
             config.lr,
         ) = suggest_hyperparameters(config, trial)
 
-        logger.info("Updated Hyperparameters:")
-        logger.info(f"\t lr: {config.lr}")
-        logger.info(f"\t loss_weight_orig_ce: {config.loss_weight_orig_ce}")
-        logger.info(f"\t loss_weight_adv_ce: {config.loss_weight_adv_ce}")
-        logger.info(f"\t loss_weight_similarity: {config.loss_weight_similarity}")
+    logger.info("**** Parameters: ******")
+    logger.info(OmegaConf.to_yaml(config))
 
     # Data loaders
     train_loader = data_module.train_dataloader()
@@ -358,7 +360,7 @@ def train(
     ]
     if trial is not None:
         callbacks.append(
-            PyTorchLightningPruningCallback(trial, monitor=VAL_TOTAL_LOSS),
+            PyTorchLightningPruningCallback(trial, monitor=VAL_NORM_TOTAL_LOSS),
         )
     trainer = Trainer(
         callbacks=callbacks,
@@ -374,7 +376,12 @@ def train(
     test_loader = data_module.test_dataloader()
     trainer.test(model, test_loader)
 
-    return trainer.callback_metrics["val_normalized_total_loss"].item()
+    del model
+    del train_loader
+    del validation_loader
+    del test_loader
+
+    return trainer.callback_metrics[VAL_NORM_TOTAL_LOSS].item()
 
 
 def test(
@@ -429,6 +436,7 @@ def run_optuna_study(
         objective,
         n_trials=config.optuna.number_of_trials,
         timeout=config.optuna.timeout,
+        gc_after_trial=True,
     )
     logger.info("\n************ Optuna trial results ***************")
     logger.info("Number of finished trials: {}".format(len(study.trials)))
@@ -448,8 +456,6 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
 
     logger.info("Starting train_manipulated_model.py")
     logger.info(f"cwd: {os.getcwd()}")
-    logger.info("**** Parameters: ******")
-    logger.info(OmegaConf.to_yaml(config))
 
     data_module = get_data_module(
         data_set=config.data_set.name,
