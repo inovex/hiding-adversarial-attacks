@@ -161,3 +161,7 @@ if __name__ == "__main__":
         "class_1/training_adv.pt"
     )
     visualize_adversarial_difference_image(adv[0][0], orig[0][0])
+
+
+def assert_not_none(tensor, loss_name):
+    assert not torch.isnan(tensor).any(), f"NaN in {loss_name}!"

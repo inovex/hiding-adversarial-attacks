@@ -23,6 +23,7 @@ from torch._vmap_internals import vmap
 from hiding_adversarial_attacks._neptune.utils import get_neptune_logger
 from hiding_adversarial_attacks.callbacks.neptune_callback import NeptuneLoggingCallback
 from hiding_adversarial_attacks.callbacks.utils import copy_run_outputs
+from hiding_adversarial_attacks.classifiers.fashion_mnist_net import FashionMNISTNet
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.attack.adversarial_attack_config import (
     ALL_CLASSES,
@@ -42,6 +43,9 @@ from hiding_adversarial_attacks.data_modules.utils import (
     VisionDataModuleUnionType,
     get_data_module,
 )
+from hiding_adversarial_attacks.manipulated_classifiers.manipulated_fashion_mnist_net import (  # noqa: E501
+    ManipulatedFashionMNISTNet,
+)
 from hiding_adversarial_attacks.manipulated_classifiers.manipulated_mnist_net import (
     ManipulatedMNISTNet,
 )
@@ -58,13 +62,17 @@ logger = logging.getLogger(__file__)
 
 
 def get_manipulatable_model(config):
-    if config.data_set.name in [
-        AdversarialDataSetNames.ADVERSARIAL_MNIST,
-    ]:
+    if config.data_set.name == AdversarialDataSetNames.ADVERSARIAL_MNIST:
         classifier_model = MNISTNet(config).load_from_checkpoint(
             config.classifier_checkpoint
         )
         model = ManipulatedMNISTNet(classifier_model, config)
+        return model
+    if config.data_set.name == AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST:
+        classifier_model = FashionMNISTNet(config).load_from_checkpoint(
+            config.classifier_checkpoint
+        )
+        model = ManipulatedFashionMNISTNet(classifier_model, config)
         return model
     else:
         raise SystemExit(

@@ -34,6 +34,7 @@ from hiding_adversarial_attacks.manipulated_classifiers.metricized_explanations 
     MetricizedTopAndBottomExplanations,
 )
 from hiding_adversarial_attacks.utils import (
+    assert_not_none,
     save_confusion_matrix,
     tensor_to_pil_numpy,
     visualize_difference_image_np,
@@ -42,8 +43,8 @@ from hiding_adversarial_attacks.utils import (
 
 
 class ManipulatedMNISTNet(pl.LightningModule):
-    def __init__(self, model: MNISTNet, hparams, logger=None):
-        super(ManipulatedMNISTNet, self).__init__()
+    def __init__(self, model: MNISTNet, hparams):
+        super().__init__()
 
         # Classifier model to be manipulated
         self.model = model
@@ -550,7 +551,3 @@ class ManipulatedMNISTNet(pl.LightningModule):
             )
         fig.tight_layout()
         return fig, axes
-
-
-def assert_not_none(tensor, loss_name):
-    assert not torch.isnan(tensor).any(), f"NaN in {loss_name}!"
