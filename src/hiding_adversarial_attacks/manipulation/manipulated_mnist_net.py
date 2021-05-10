@@ -30,7 +30,7 @@ from hiding_adversarial_attacks.custom_metrics.batched_pearson_corrcoef import (
     BatchedPearsonCorrcoef,
 )
 from hiding_adversarial_attacks.explainers.utils import get_explainer
-from hiding_adversarial_attacks.manipulated_classifiers.metricized_explanations import (
+from hiding_adversarial_attacks.manipulation.metricized_explanations import (
     MetricizedTopAndBottomExplanations,
 )
 from hiding_adversarial_attacks.utils import (

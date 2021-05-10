@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
-from hiding_adversarial_attacks.manipulated_classifiers.manipulated_mnist_net import (
+from hiding_adversarial_attacks.manipulation.manipulated_mnist_net import (
     ManipulatedMNISTNet,
 )
 

@@ -18,6 +18,7 @@ from hiding_adversarial_attacks.config.classifiers.classifier_config import (
     MNISTClassifierConfig,
 )
 from hiding_adversarial_attacks.config.data_sets.data_set_config import (
+    AdversarialFashionMNISTConfig,
     AdversarialMNISTConfig,
 )
 from hiding_adversarial_attacks.config.explainers.deep_lift_baseline_config import (
@@ -145,6 +146,11 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
 
 cs = ConfigStore.instance()
 cs.store(group="data_set", name="AdversarialMNIST", node=AdversarialMNISTConfig)
+cs.store(
+    group="data_set",
+    name="AdversarialFashionMNIST",
+    node=AdversarialFashionMNISTConfig,
+)
 cs.store(group="classifier", name="MNISTClassifier", node=MNISTClassifierConfig)
 cs.store(
     group="classifier",
