@@ -49,6 +49,6 @@ def log_attack_info(
     logger.info(f"Attack type: {attack}")
     logger.info(f"Epsilon(s): {epsilons}")
     logger.info(f"Data set: {data_set}")
-    logger.info(f"CHeckpoint from run: {run}")
+    logger.info(f"Checkpoint from run: {run}")
     logger.info(f"Model checkpoint: '{checkpoint}'")
     logger.info(f"Attacked classes: {attacked_classes}")
