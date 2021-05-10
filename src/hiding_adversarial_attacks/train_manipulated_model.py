@@ -178,7 +178,7 @@ def train(
 
     # Test with best model checkpoint (Lightning does this automatically)
     test_loader = data_module.test_dataloader()
-    test_results = trainer.test(test_dataloaders=test_loader)
+    test_results = trainer.test(model=model, test_dataloaders=test_loader)
     logger.info(f"Test results: \n {pformat(test_results)}")
     copy_run_outputs(
         config.log_path,
@@ -217,9 +217,11 @@ def test(
     trainer = Trainer(gpus=config.gpus, logger=neptune_logger)
 
     model = get_manipulatable_model(config).load_from_checkpoint(config.checkpoint)
+    model.override_hparams(config)
     model.set_metricized_explanations(metricized_top_and_bottom_explanations)
 
-    test_results = trainer.test(model, test_loader, ckpt_path="best")
+    model.eval()
+    test_results = trainer.test(model, test_loader)
     logger.info(pformat(test_results))
 
 

@@ -26,9 +26,6 @@ from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossNames,
 )
 from hiding_adversarial_attacks.config.manipulated_model_training_config import Stage
-from hiding_adversarial_attacks.custom_metrics.batched_pearson_corrcoef import (
-    BatchedPearsonCorrcoef,
-)
 from hiding_adversarial_attacks.explainers.utils import get_explainer
 from hiding_adversarial_attacks.manipulation.metricized_explanations import (
     MetricizedTopAndBottomExplanations,
@@ -77,8 +74,23 @@ class ManipulatedMNISTNet(pl.LightningModule):
         self.save_hyperparameters()
 
         self.zero_explanation_count = 0
+        self.global_test_step = 0
 
-        self.initial_total_loss = None
+    def override_hparams(self, hparams):
+        # Hyperparams
+        self.lr = hparams.lr
+        # self.gamma = hparams.gamma
+        self.loss_weights = (
+            hparams.loss_weight_orig_ce,
+            hparams.loss_weight_adv_ce,
+            hparams.loss_weight_similarity,
+        )
+        # Logging
+        self.image_log_intervals = hparams.image_log_intervals
+        self.image_log_path = os.path.join(hparams.log_path, "image_log")
+        os.makedirs(self.image_log_path, exist_ok=True)
+
+        self.hparams = OmegaConf.to_container(hparams)
 
     def set_metricized_explanations(
         self,
@@ -172,10 +184,14 @@ class ManipulatedMNISTNet(pl.LightningModule):
             stage.value,
         )
 
-        # Safe original and adversarial explanations locally and to Neptune
+        # Safe original and adversarial explanations locally
         if (
-            stage.value in self.image_log_intervals
+            (stage == Stage.STAGE_TRAIN or stage == Stage.STAGE_VAL)
             and self.global_step % self.image_log_intervals[stage.value] == 0
+        ) or (
+            stage == Stage.STAGE_TEST
+            and self.global_test_step % self.image_log_intervals[Stage.STAGE_TEST.value]
+            == 0
         ):
             self._visualize_batch_explanations(
                 adversarial_explanation_maps,
@@ -185,9 +201,8 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 original_images,
                 original_labels,
             )
-
-            self._visualize_top_and_bottom_k_explanations()
-
+            if stage != Stage.STAGE_TEST:
+                self._visualize_top_and_bottom_k_explanations()
         return total_loss
 
     def combined_loss(
@@ -218,10 +233,14 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         # Normalized total loss
         normalized_total_loss = self.get_normalized_total_loss(
-            cross_entropy_orig, cross_entropy_adv, explanation_similarity, stage.value
+            cross_entropy_orig,
+            cross_entropy_adv,
+            explanation_similarity,
+            stage.value,
         )
 
         if stage == Stage.STAGE_TEST:
+            self.global_test_step += 1
             self.test_confusion_matrix(orig_pred_label.argmax(dim=-1), original_label)
             self.test_f1_score(orig_pred_label.argmax(dim=-1), original_label)
 
@@ -338,11 +357,11 @@ class ManipulatedMNISTNet(pl.LightningModule):
             similarity_metrics[f"{stage_name}_exp_ssim"],
             prog_bar=False,
         )
-        self.log(
-            f"{stage_name}_exp_pcc",
-            similarity_metrics[f"{stage_name}_exp_pcc"],
-            prog_bar=False,
-        )
+        # self.log(
+        #     f"{stage_name}_exp_pcc",
+        #     similarity_metrics[f"{stage_name}_exp_pcc"],
+        #     prog_bar=False,
+        # )
 
     def log_losses(
         self,
@@ -379,7 +398,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         # Explanation similarity metrics
         similarity_metrics_dict = {
             "exp_ssim": SSIM(),
-            "exp_pcc": BatchedPearsonCorrcoef(),
+            # "exp_pcc": BatchedPearsonCorrcoef(),
             "exp_mse": MeanSquaredError(),
         }
         similarity_metrics = MetricCollection(similarity_metrics_dict)
@@ -449,6 +468,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         )
         fig_path = os.path.join(self.image_log_path, fig_name)
         figure.savefig(fig_path)
+        plt.close("all")
 
     def _visualize_top_and_bottom_k_explanations(self):
         # visualize top and bottom k explanations from initial evaluation

@@ -157,20 +157,20 @@ class BaseDataModule(pl.LightningDataModule):
             self.train,
             batch_size=self._batch_size,
             shuffle=shuffle,
-            num_workers=8,
+            num_workers=4,
         )
 
-    def val_dataloader(self, shuffle=True) -> DataLoader:
+    def val_dataloader(self, shuffle=False) -> DataLoader:
         return DataLoader(
             self.validation,
             batch_size=self._batch_size,
             shuffle=shuffle,
-            num_workers=8,
+            num_workers=4,
         )
 
     def test_dataloader(self) -> DataLoader:
         return DataLoader(
             self.test,
             batch_size=self._batch_size,
-            num_workers=8,
+            num_workers=4,
         )
