@@ -64,11 +64,11 @@ optuna_search_spaces = {
     "FashionMNIST": {
         "lr": {
             "log": True,
-            "low": 1e-6,
+            "low": 1e-3,
             "high": 1e-1,
         },
-        "loss_weight_similarity": {"low": 1, "high": 15, "step": 1},
-        "batch_size": [16, 32, 64, 128],
+        "loss_weight_similarity": {"low": 5, "high": 15, "step": 1},
+        "batch_size": [64, 128],
         # currently unused:
         "similarity_loss": {"choices": [MSELoss]},
     },
