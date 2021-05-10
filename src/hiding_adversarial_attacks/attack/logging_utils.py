@@ -42,10 +42,13 @@ def log_attack_results(logger, attack_results: AttackResults, set_size):
     )
 
 
-def log_attack_info(logger, attack, epsilons, data_set, checkpoint, attacked_classes):
+def log_attack_info(
+    logger, attack, epsilons, data_set, checkpoint, run, attacked_classes
+):
     logger.info("******* Attack info *******")
     logger.info(f"Attack type: {attack}")
     logger.info(f"Epsilon(s): {epsilons}")
     logger.info(f"Data set: {data_set}")
+    logger.info(f"CHeckpoint from run: {run}")
     logger.info(f"Model checkpoint: '{checkpoint}'")
     logger.info(f"Attacked classes: {attacked_classes}")

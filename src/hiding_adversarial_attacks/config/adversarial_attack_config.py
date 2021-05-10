@@ -35,6 +35,7 @@ class AdversarialAttackConfig:
     random_seed: int = 42
     gpus: int = 1
     checkpoint: str = MISSING
+    checkpoint_run: str = MISSING
 
     batch_size: int = 64
 
@@ -44,8 +45,12 @@ class AdversarialAttackConfig:
 
     logging: LoggingConfig = LoggingConfig()
     log_path: str = os.path.join(logging.log_root, "run_attack_on_data")
-    log_file_name: str = "data-set={data_set}--attack={attack}--eps={epsilons}.log"
-    output_dirname: str = "data-set={data_set}--attack={attack}--eps={epsilon}"
+    log_file_name: str = (
+        "data-set={data_set}--attack={attack}--eps={epsilons}--cp-run={run}.log"
+    )
+    output_dirname: str = (
+        "data-set={data_set}--attack={attack}--eps={epsilon}--cp-run={run}"
+    )
 
     # Set this to False if you want your attacked data to be saved to Neptune
     trash_run: bool = True
@@ -60,7 +65,9 @@ cs.store(group="data_set", name="MNIST", node=MNISTConfig)
 cs.store(group="data_set", name="FashionMNIST", node=FashionMNISTConfig)
 cs.store(group="classifier", name="MNISTClassifier", node=MNISTClassifierConfig)
 cs.store(
-    group="classifier", name="FashionMNISTClassifier", node=FashionMNISTClassifierConfig
+    group="classifier",
+    name="FashionMNISTClassifier",
+    node=FashionMNISTClassifierConfig,
 )
 cs.store(group="attack", name="DeepFoolAttack", node=DeepFoolAttackConfig)
 

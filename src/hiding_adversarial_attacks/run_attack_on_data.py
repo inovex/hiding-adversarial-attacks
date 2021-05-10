@@ -57,6 +57,7 @@ def get_log_file_path(config):
         data_set=config.data_set.name,
         attack=config.attack.name,
         epsilons=config.attack.epsilons,
+        run=config.checkpoint_run,
     )
     log_file_path = os.path.join(config.log_path, log_file_name)
     return log_file_path
@@ -79,6 +80,7 @@ def save_attack_results(
             data_set=config.data_set.name,
             attack=config.attack.name,
             epsilon=test_attack_results.epsilon,
+            run=config.checkpoint_run,
         )
         target_path = os.path.join(config.data_set.adversarial_path, output_dirname)
         train_attack_results.save_results(target_path)
@@ -240,6 +242,7 @@ def run(config: AdversarialAttackConfig) -> None:
         config.attack.epsilons,
         config.data_set.name,
         config.checkpoint,
+        config.checkpoint_run,
         ALL_CLASSES,
     )
 
