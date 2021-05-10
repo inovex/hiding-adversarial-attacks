@@ -49,6 +49,31 @@ defaults = [
     {"explainer.baseline": "ZeroBaseline"},
 ]
 
+optuna_search_spaces = {
+    "MNIST": {
+        "lr": {
+            "log": True,
+            "low": 1e-5,
+            "high": 1e-2,
+        },
+        "loss_weight_similarity": {"low": 1, "high": 15, "step": 1},
+        "batch_size": [16, 32, 64],
+        # currently unused:
+        "similarity_loss": {"choices": [MSELoss]},
+    },
+    "FashionMNIST": {
+        "lr": {
+            "log": True,
+            "low": 1e-6,
+            "high": 1e-1,
+        },
+        "loss_weight_similarity": {"low": 1, "high": 15, "step": 1},
+        "batch_size": [16, 32, 64, 128],
+        # currently unused:
+        "similarity_loss": {"choices": [MSELoss]},
+    },
+}
+
 
 class Stage(Enum):
     STAGE_TRAIN = "train"
@@ -75,17 +100,7 @@ class OptunaConfig:
 
     # Search spaces for hyperparameters
     search_space: Any = field(
-        default_factory=lambda: {
-            "lr": {
-                "log": True,
-                "low": 1e-5,
-                "high": 1e-2,
-            },
-            "loss_weight_similarity": {"low": 1, "high": 15, "step": 1},
-            "batch_size": [16, 32, 64],
-            # currently unused:
-            "similarity_loss": {"choices": [MSELoss]},
-        }
+        default_factory=lambda: optuna_search_spaces["FashionMNIST"]
     )
 
 
