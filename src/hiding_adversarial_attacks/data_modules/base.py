@@ -153,10 +153,24 @@ class BaseDataModule(pl.LightningDataModule):
         return batch.to(device)
 
     def train_dataloader(self, shuffle=True) -> DataLoader:
-        return DataLoader(self.train, batch_size=self._batch_size, shuffle=shuffle)
+        return DataLoader(
+            self.train,
+            batch_size=self._batch_size,
+            shuffle=shuffle,
+            num_workers=8,
+        )
 
     def val_dataloader(self, shuffle=True) -> DataLoader:
-        return DataLoader(self.validation, batch_size=self._batch_size, shuffle=shuffle)
+        return DataLoader(
+            self.validation,
+            batch_size=self._batch_size,
+            shuffle=shuffle,
+            num_workers=8,
+        )
 
     def test_dataloader(self) -> DataLoader:
-        return DataLoader(self.test, batch_size=self._batch_size)
+        return DataLoader(
+            self.test,
+            batch_size=self._batch_size,
+            num_workers=8,
+        )
