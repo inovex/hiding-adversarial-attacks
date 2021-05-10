@@ -1,8 +1,10 @@
 import glob
 import os
-import shutil
 
+from pytorch_lightning import LightningModule
 from pytorch_lightning.callbacks import Callback
+
+from hiding_adversarial_attacks.callbacks.utils import copy_run_outputs
 
 
 class NeptuneLoggingCallback(Callback):
@@ -11,34 +13,14 @@ class NeptuneLoggingCallback(Callback):
         self.image_log_path = image_log_path or log_path
         self.trash_run = trash_run
 
-    def on_train_end(self, trainer, pl_module):
+    def on_train_end(self, trainer, pl_module: LightningModule):
         cwd = os.getcwd()
         if not self.trash_run:
-            self._copy_logs_and_outputs(
+            copy_run_outputs(
                 self.log_path, cwd, trainer.logger.name, trainer.logger.version
             )
             # self._upload_image_log(trainer)
             # self._upload_checkpoints(trainer)
-
-    @staticmethod
-    def _copy_logs_and_outputs(log_path, cwd, experiment_name, run_id):
-        hydra_experiment_path = os.path.join(cwd, experiment_name, run_id)
-        # copy model checkpoints
-        checkpoint_src = os.path.join(hydra_experiment_path, "checkpoints")
-        checkpoints_dest = os.path.join(log_path, "checkpoints")
-        os.makedirs(checkpoints_dest, exist_ok=True)
-        for checkpoint in glob.glob(os.path.join(checkpoint_src, "*.ckpt")):
-            shutil.copy(
-                checkpoint,
-                os.path.join(checkpoints_dest, os.path.basename(checkpoint)),
-            )
-
-        # copy log files
-        for log in glob.glob(os.path.join(cwd, "*.log")):
-            shutil.copy(
-                log,
-                os.path.join(log_path, os.path.basename(log)),
-            )
 
     def _upload_image_log(self, trainer):
         for image_path in glob.glob(os.path.join(self.image_log_path, "*.png")):

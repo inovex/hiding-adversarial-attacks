@@ -1,6 +1,7 @@
 import logging
 import os
 from functools import partial
+from pprint import pformat
 from typing import Tuple
 
 import hydra
@@ -21,6 +22,7 @@ from torch._vmap_internals import vmap
 
 from hiding_adversarial_attacks._neptune.utils import get_neptune_logger
 from hiding_adversarial_attacks.callbacks.neptune_callback import NeptuneLoggingCallback
+from hiding_adversarial_attacks.callbacks.utils import copy_run_outputs
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.attack.adversarial_attack_config import (
     ALL_CLASSES,
@@ -350,10 +352,10 @@ def train(
     )
     os.makedirs(config.log_path, exist_ok=True)
 
-    logger.info(
-        f"Starting new neptune run '{neptune_logger.version}' "
-        f"with trial no. '{trial.number}'"
-    )
+    log_message = f"Starting new neptune run '{neptune_logger.version}' "
+    if trial is not None:
+        log_message += f"with trial no. '{trial.number}'"
+    logger.info(log_message)
 
     # Data loaders
     train_loader = data_module.train_dataloader()
@@ -389,17 +391,22 @@ def train(
 
     trainer.fit(model, train_loader, validation_loader)
 
-    # Test
-    model.eval()
+    # Test with best model checkpoint (Lightning does this automatically)
     test_loader = data_module.test_dataloader()
-    trainer.test(model, test_loader)
+    test_results = trainer.test(test_dataloaders=test_loader)
+    logger.info(f"Test results: \n {pformat(test_results)}")
+    copy_run_outputs(
+        config.log_path,
+        os.getcwd(),
+        neptune_logger.name,
+        neptune_logger.version,
+    )
 
     del model
     del train_loader
     del validation_loader
     del test_loader
 
-    # return trainer.callback_metrics[VAL_NORM_TOTAL_LOSS].item()
     return trainer.callback_metrics["val_exp_sim"].item()
 
 
@@ -427,7 +434,8 @@ def test(
     model = get_manipulatable_model(config).load_from_checkpoint(config.checkpoint)
     model.set_metricized_explanations(metricized_top_and_bottom_explanations)
 
-    trainer.test(model, test_loader, ckpt_path="best")
+    test_results = trainer.test(model, test_loader, ckpt_path="best")
+    logger.info(pformat(test_results))
 
 
 def run_optuna_study(
