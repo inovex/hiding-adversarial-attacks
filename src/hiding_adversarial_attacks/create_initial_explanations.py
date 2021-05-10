@@ -80,7 +80,7 @@ def get_explanations_path(config):
         )
     elif config.explainer.name == ExplainerNames.GRAD_CAM:
         explanations_dir = (
-            f"exp--{ExplainerNames.GRAD_CAM}--"
+            f"exp={ExplainerNames.GRAD_CAM}--"
             f"l={config.explainer.layer_name}--"
             f"ra={config.explainer.relu_attributions}"
         )
