@@ -24,39 +24,39 @@ from hiding_adversarial_attacks.utils import (
 )
 
 
-def load_explanations(config, device: torch.device):
-    (training_orig_expl, training_orig_labels, training_orig_indices,) = torch.load(
-        os.path.join(config.explanations_path, "training_orig_exp.pt"),
+def load_explanations(config, device: torch.device, stage: str = "training"):
+    (orig_expl, orig_labels, orig_indices,) = torch.load(
+        os.path.join(config.explanations_path, f"{stage}_orig_exp.pt"),
         map_location=device,
     )
-    training_adv_expl, training_adv_labels, training_adv_indices = torch.load(
-        os.path.join(config.explanations_path, "training_adv_exp.pt"),
-        map_location=device,
-    )
-    return (
-        training_orig_expl,
-        training_orig_labels,
-        training_orig_indices,
-        training_adv_expl,
-        training_adv_labels,
-        training_adv_indices,
-    )
-
-
-def load_attacked_data(config, device: torch.device):
-    training_orig_images, training_orig_labels = torch.load(
-        os.path.join(config.explanations_path, "training_orig.pt"),
-        map_location=device,
-    )
-    training_adversarial_images, training_adversarial_labels = torch.load(
-        os.path.join(config.explanations_path, "training_adv.pt"),
+    adv_expl, adv_labels, adv_indices = torch.load(
+        os.path.join(config.explanations_path, f"{stage}_adv_exp.pt"),
         map_location=device,
     )
     return (
-        training_orig_images,
-        training_orig_labels,
-        training_adversarial_images,
-        training_adversarial_labels,
+        orig_expl,
+        orig_labels,
+        orig_indices,
+        adv_expl,
+        adv_labels,
+        adv_indices,
+    )
+
+
+def load_attacked_data(config, device: torch.device, stage: str = "training"):
+    orig_images, orig_labels = torch.load(
+        os.path.join(config.explanations_path, f"{stage}_orig.pt"),
+        map_location=device,
+    )
+    adversarial_images, adversarial_labels = torch.load(
+        os.path.join(config.explanations_path, f"{stage}_adv.pt"),
+        map_location=device,
+    )
+    return (
+        orig_images,
+        orig_labels,
+        adversarial_images,
+        adversarial_labels,
     )
 
 
@@ -124,42 +124,13 @@ def get_metricized_top_and_bottom_explanations(
     config: ManipulatedModelTrainingConfig, device: torch.device
 ) -> MetricizedTopAndBottomExplanations:
     (
+        training_orig_images,
         training_orig_expl,
         training_orig_labels,
-        training_orig_indices,
+        training_adv_images,
         training_adv_expl,
         training_adv_labels,
-        training_adv_indices,
-    ) = load_explanations(config, device)
-
-    (
-        training_orig_images,
-        _,
-        training_adv_images,
-        _,
-    ) = load_attacked_data(config, device)
-
-    # filter attacked data by included_classes
-    if ALL_CLASSES not in config.included_classes:
-        (
-            training_adv_expl,
-            training_adv_images,
-            training_adv_labels,
-            training_orig_expl,
-            training_orig_images,
-            training_orig_labels,
-        ) = filter_included_classes(
-            training_adv_expl,
-            training_adv_images,
-            training_adv_indices,
-            training_adv_labels,
-            training_orig_expl,
-            training_orig_images,
-            training_orig_indices,
-            training_orig_labels,
-            config,
-            device,
-        )
+    ) = load_filtered_data(config, device, stage="training")
 
     similarity_loss = SimilarityLossMapping[config.similarity_loss.name]
     batched_sim_loss = vmap(similarity_loss)
@@ -238,3 +209,49 @@ def get_metricized_top_and_bottom_explanations(
     del training_adv_expl
     del training_adv_labels
     return metricized_top_and_bottom_explanations
+
+
+def load_filtered_data(config, device, stage: str = "training"):
+    (
+        orig_expl,
+        orig_labels,
+        orig_indices,
+        adv_expl,
+        adv_labels,
+        adv_indices,
+    ) = load_explanations(config, device, stage=stage)
+    (
+        orig_images,
+        _,
+        adv_images,
+        _,
+    ) = load_attacked_data(config, device, stage=stage)
+    # filter attacked data by included_classes
+    if ALL_CLASSES not in config.included_classes:
+        (
+            adv_expl,
+            adv_images,
+            adv_labels,
+            orig_expl,
+            orig_images,
+            orig_labels,
+        ) = filter_included_classes(
+            adv_expl,
+            adv_images,
+            adv_indices,
+            adv_labels,
+            orig_expl,
+            orig_images,
+            orig_indices,
+            orig_labels,
+            config,
+            device,
+        )
+    return (
+        orig_images,
+        orig_expl,
+        orig_labels,
+        adv_images,
+        adv_expl,
+        adv_labels,
+    )

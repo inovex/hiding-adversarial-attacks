@@ -62,6 +62,10 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         # Explainer
         self.explainer = get_explainer(self.model, hparams)
+        self.test_orig_explanations = torch.tensor([]).to(self.device)
+        self.test_orig_labels = torch.tensor([]).to(self.device)
+        self.test_adv_explanations = torch.tensor([]).to(self.device)
+        self.test_adv_labels = torch.tensor([]).to(self.device)
 
         # Explanation similarity loss
         self.similarity_loss = SimilarityLossMapping[hparams.similarity_loss.name]
@@ -160,6 +164,13 @@ class ManipulatedMNISTNet(pl.LightningModule):
         adversarial_explanation_maps = self.explainer.explain(
             adversarial_images, adversarial_labels
         )
+        if stage == Stage.STAGE_TEST:
+            self.append_test_explanations(
+                original_explanation_maps,
+                original_labels,
+                adversarial_explanation_maps,
+                adversarial_labels,
+            )
 
         # Calculate combined loss
         (
@@ -193,6 +204,13 @@ class ManipulatedMNISTNet(pl.LightningModule):
             and self.global_test_step % self.image_log_intervals[Stage.STAGE_TEST.value]
             == 0
         ):
+            fig_name = f"test-step={self.global_test_step}_explanations.png"
+            if stage != Stage.STAGE_TEST:
+                self._visualize_top_and_bottom_k_explanations()
+                fig_name = (
+                    f"epoch={self.trainer.current_epoch}_"
+                    f"step={self.global_step}_explanations.png"
+                )
             self._visualize_batch_explanations(
                 adversarial_explanation_maps,
                 adversarial_images,
@@ -200,9 +218,8 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 original_explanation_maps,
                 original_images,
                 original_labels,
+                fig_name,
             )
-            if stage != Stage.STAGE_TEST:
-                self._visualize_top_and_bottom_k_explanations()
         return total_loss
 
     def combined_loss(
@@ -286,6 +303,42 @@ class ManipulatedMNISTNet(pl.LightningModule):
         norm_total_loss = norm_ce_orig + norm_ce_adv + norm_sim
         return norm_total_loss
 
+    def append_test_explanations(
+        self,
+        original_explanation_maps,
+        original_labels,
+        adversarial_explanation_maps,
+        adversarial_labels,
+    ):
+        self.test_orig_explanations = torch.cat(
+            (
+                self.test_orig_explanations.to(self.device),
+                original_explanation_maps.detach().to(self.device),
+            ),
+            dim=0,
+        )
+        self.test_orig_labels = torch.cat(
+            (
+                self.test_orig_labels.to(self.device),
+                original_labels.detach().to(self.device),
+            ),
+            dim=0,
+        )
+        self.test_adv_explanations = torch.cat(
+            (
+                self.test_adv_explanations.to(self.device),
+                adversarial_explanation_maps.detach().to(self.device),
+            ),
+            dim=0,
+        )
+        self.test_adv_labels = torch.cat(
+            (
+                self.test_adv_labels.to(self.device),
+                adversarial_labels.detach().to(self.device),
+            ),
+            dim=0,
+        )
+
     def training_step(self, batch, batch_idx):
         total_loss = self._predict(batch, Stage.STAGE_TRAIN)
         return total_loss
@@ -327,6 +380,21 @@ class ManipulatedMNISTNet(pl.LightningModule):
         )
         test_f1_score = self.test_f1_score.compute()
         self.log("test_f1_score", test_f1_score)
+
+        # Save explanations
+        self.save_explanations()
+
+    def save_explanations(self):
+        orig_path = os.path.join(self.hparams.log_path, "test_orig_expl.pt")
+        adv_path = os.path.join(self.hparams.log_path, "test_adv_expl.pt")
+        torch.save(
+            (self.test_orig_explanations.cpu(), self.test_orig_labels.cpu()),
+            orig_path,
+        )
+        torch.save(
+            (self.test_adv_explanations.cpu(), self.test_adv_labels.cpu()),
+            adv_path,
+        )
 
     def log_epoch_metrics(
         self, similarity_metrics: Dict, classification_metrics: Dict, stage: str
@@ -453,6 +521,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         original_explanation_maps,
         original_images,
         original_labels,
+        fig_name: str,
     ):
         figure, axes = self._visualize_explanations(
             original_images,
@@ -461,10 +530,6 @@ class ManipulatedMNISTNet(pl.LightningModule):
             adversarial_explanation_maps,
             original_labels,
             adversarial_labels,
-        )
-        fig_name = (
-            f"epoch={self.trainer.current_epoch}_"
-            f"step={self.global_step}_explanations.png"
         )
         fig_path = os.path.join(self.image_log_path, fig_name)
         figure.savefig(fig_path)
