@@ -77,6 +77,45 @@ def get_manipulatable_model(config):
         )
 
 
+def visualize_top_bottom_k(config, device, model):
+    similarity_loss = SimilarityLossMapping[config.similarity_loss.name]
+    batched_sim_loss = vmap(similarity_loss)
+    (
+        test_orig_images,
+        _,
+        test_orig_labels,
+        test_adv_images,
+        _,
+        test_adv_labels,
+    ) = load_filtered_data(config, device, stage="test")
+    (
+        top_orig_expl,
+        top_adv_expl,
+        top_similarities,
+        top_indices,
+        bottom_orig_expl,
+        bottom_adv_expl,
+        bottom_similarities,
+        bottom_indices,
+    ) = get_top_and_bottom_k_explanations(
+        model.test_adv_explanations,
+        model.test_orig_explanations,
+        batched_sim_loss,
+    )
+    test_orig_expl = torch.cat((top_orig_expl, bottom_orig_expl), dim=0)
+    test_adv_expl = torch.cat((top_adv_expl, bottom_adv_expl), dim=0)
+    indeces = torch.cat((top_indices, bottom_indices), dim=0)
+    model._visualize_batch_explanations(
+        test_adv_expl,
+        test_adv_images[indeces],
+        test_adv_labels[indeces].cpu(),
+        test_orig_expl,
+        test_orig_images[indeces],
+        test_orig_labels[indeces].cpu(),
+        "test-top-bottom-k-explanations.png",
+    )
+
+
 def suggest_hyperparameters(config, trial):
     lr_options = config.optuna.search_space["lr"]
     lr = trial.suggest_float(
@@ -201,45 +240,6 @@ def train(
     del test_loader
 
     return trainer.callback_metrics["val_exp_sim"].item()
-
-
-def visualize_top_bottom_k(config, device, model):
-    similarity_loss = SimilarityLossMapping[config.similarity_loss.name]
-    batched_sim_loss = vmap(similarity_loss)
-    (
-        test_orig_images,
-        _,
-        test_orig_labels,
-        test_adv_images,
-        _,
-        test_adv_labels,
-    ) = load_filtered_data(config, device, stage="test")
-    (
-        top_orig_expl,
-        top_adv_expl,
-        top_similarities,
-        top_indices,
-        bottom_orig_expl,
-        bottom_adv_expl,
-        bottom_similarities,
-        bottom_indices,
-    ) = get_top_and_bottom_k_explanations(
-        model.test_adv_explanations,
-        model.test_orig_explanations,
-        batched_sim_loss,
-    )
-    test_orig_expl = torch.cat((top_orig_expl, bottom_orig_expl), dim=0)
-    test_adv_expl = torch.cat((top_adv_expl, bottom_adv_expl), dim=0)
-    indeces = torch.cat((top_indices, bottom_indices), dim=0)
-    model._visualize_batch_explanations(
-        test_adv_expl,
-        test_adv_images[indeces],
-        test_adv_labels[indeces].cpu(),
-        test_orig_expl,
-        test_orig_images[indeces],
-        test_orig_labels[indeces].cpu(),
-        "test-top-bottom-k-explanations.png",
-    )
 
 
 def test(
