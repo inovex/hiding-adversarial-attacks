@@ -16,6 +16,7 @@ class DataSetNames:
 class AdversarialDataSetNames:
     ADVERSARIAL_MNIST: str = "AdversarialMNIST"
     ADVERSARIAL_FASHION_MNIST: str = "AdversarialFashionMNIST"
+    ADVERSARIAL_FASHION_MNIST_EXPL: str = "AdversarialFashionMNISTWithExplanations"
     ADVERSARIAL_CIFAR10: str = "AdversarialCIFAR10"
 
 
@@ -68,6 +69,11 @@ class AdversarialMNISTConfig(MNISTConfig):
 @dataclass(frozen=True)
 class AdversarialFashionMNISTConfig(MNISTConfig):
     name: str = AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST
+
+
+@dataclass(frozen=True)
+class AdversarialFashionMNISTWithExplanationsConfig(MNISTConfig):
+    name: str = AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST_EXPL
 
 
 @dataclass(frozen=True)

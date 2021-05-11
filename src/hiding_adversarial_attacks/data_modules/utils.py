@@ -11,6 +11,7 @@ from hiding_adversarial_attacks.config.data_sets.data_set_config import (
 )
 from hiding_adversarial_attacks.data_modules.adversarial_fashion_mnist import (
     AdversarialFashionMNISTDataModule,
+    AdversarialFashionMNISTWithExplanationsDataModule,
 )
 from hiding_adversarial_attacks.data_modules.adversarial_mnist import (
     AdversarialMNISTDataModule,
@@ -30,6 +31,7 @@ DATA_MODULE_MAPPING = {
     DataSetNames.FASHION_MNIST: FashionMNISTDataModule,
     AdversarialDataSetNames.ADVERSARIAL_MNIST: AdversarialMNISTDataModule,
     AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST: AdversarialFashionMNISTDataModule,  # noqa: E501
+    AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST_EXPL: AdversarialFashionMNISTWithExplanationsDataModule,  # noqa: E501
     DataSetNames.CIFAR10: Cifar10DataModule,
 }
 

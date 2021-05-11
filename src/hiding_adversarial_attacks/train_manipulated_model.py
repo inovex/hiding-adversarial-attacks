@@ -71,6 +71,12 @@ def get_manipulatable_model(config):
         )
         model = ManipulatedFashionMNISTNet(classifier_model, config)
         return model
+    if config.data_set.name == AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST_EXPL:
+        classifier_model = FashionMNISTNet(config).load_from_checkpoint(
+            config.classifier_checkpoint
+        )
+        model = ManipulatedFashionMNISTNet(classifier_model, config)
+        return model
     else:
         raise SystemExit(
             f"Unknown data set specified: {config.data_set.name}. Exiting."

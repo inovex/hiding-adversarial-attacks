@@ -17,6 +17,9 @@ from hiding_adversarial_attacks.config.data_sets.data_set_config import (
 from hiding_adversarial_attacks.data_sets.adversarial_fashion_mnist import (
     AdversarialFashionMNIST,
 )
+from hiding_adversarial_attacks.data_sets.adversarial_fashion_mnist_with_explanations import (  # noqa: E501
+    AdversarialFashionMNISTWithExplanations,
+)
 from hiding_adversarial_attacks.data_sets.adversarial_mnist import AdversarialMNIST
 
 VisionDatasetUnionType = Union[CIFAR10, MNIST, FashionMNIST, AdversarialMNIST]
@@ -28,6 +31,7 @@ class BaseDataModule(pl.LightningDataModule):
         DataSetNames.FASHION_MNIST: FashionMNIST,
         AdversarialDataSetNames.ADVERSARIAL_MNIST: AdversarialMNIST,
         AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST: AdversarialFashionMNIST,
+        AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST_EXPL: AdversarialFashionMNISTWithExplanations,  # noqa: E501
         DataSetNames.CIFAR10: CIFAR10,
     }
 

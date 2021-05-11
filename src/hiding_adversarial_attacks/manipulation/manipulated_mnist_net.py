@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import os
 from logging import Logger
-from typing import Dict
+from typing import Dict, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -80,6 +80,8 @@ class ManipulatedMNISTNet(pl.LightningModule):
         self.zero_explanation_count = 0
         self.global_test_step = 0
 
+        self.use_original_explanations = "Explanations" in self.hparams.data_set["name"]
+
     def override_hparams(self, hparams):
         # Hyperparams
         self.lr = hparams.lr
@@ -149,18 +151,42 @@ class ManipulatedMNISTNet(pl.LightningModule):
         return output
 
     def _predict(self, batch, stage: Stage):
-        (
-            original_images,
-            adversarial_images,
-            original_labels,
-            adversarial_labels,
-            batch_indeces,
-        ) = batch
+        if self.use_original_explanations:
+            (
+                original_images,
+                original_explanations_pre,
+                adversarial_images,
+                adversarial_explanations_pre,
+                original_labels,
+                adversarial_labels,
+                batch_indeces,
+            ) = batch
+
+            # visualize_explanations(
+            #     original_images[0:2],
+            #     original_explanations_pre[0:2],
+            #     ["Orig 0", "Orig 1"],
+            #     display_figure=True,
+            # )
+        else:
+            (
+                original_images,
+                adversarial_images,
+                original_labels,
+                adversarial_labels,
+                batch_indeces,
+            ) = batch
 
         # Create explanation maps
         original_explanation_maps = self.explainer.explain(
             original_images, original_labels
         )
+        # visualize_explanations(
+        #     original_images[0:2],
+        #     original_explanation_maps[0:2],
+        #     ["Orig post 0", "Orig post 1"],
+        #     display_figure=True,
+        # )
         adversarial_explanation_maps = self.explainer.explain(
             adversarial_images, adversarial_labels
         )
@@ -185,7 +211,8 @@ class ManipulatedMNISTNet(pl.LightningModule):
             adversarial_explanation_maps,
             original_labels,
             adversarial_labels,
-            stage,
+            stage=stage,
+            initial_original_explanation_map=original_explanations_pre,
         )
         self.log_losses(
             total_loss,
@@ -231,6 +258,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         original_label: torch.Tensor,
         adversarial_label: torch.Tensor,
         stage: Stage,
+        initial_original_explanation_map: Optional = None,
     ):
         orig_pred_label = self(original_image)
 
@@ -244,9 +272,26 @@ class ManipulatedMNISTNet(pl.LightningModule):
         assert_not_none(cross_entropy_adv, "cross_entropy_adv")
 
         # Part 3: Similarity between original and adversarial explanation maps
-        explanation_similarity = self.similarity_loss(
-            original_explanation_map, adversarial_explanation_map
-        )
+        if initial_original_explanation_map is None:
+            explanation_similarity = self.similarity_loss(
+                original_explanation_map, adversarial_explanation_map
+            )
+        else:
+            original_double = torch.cat(
+                (
+                    initial_original_explanation_map,
+                    initial_original_explanation_map,
+                ),
+                dim=0,
+            )
+            predicted = torch.cat(
+                (
+                    original_explanation_map,
+                    adversarial_explanation_map,
+                ),
+                dim=0,
+            )
+            explanation_similarity = self.similarity_loss(original_double, predicted)
 
         # Normalized total loss
         normalized_total_loss = self.get_normalized_total_loss(
