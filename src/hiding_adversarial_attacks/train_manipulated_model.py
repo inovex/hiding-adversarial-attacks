@@ -272,9 +272,7 @@ def test(
     test_results = trainer.test(model, test_loader)
     logger.info(f"Pre-test results before manipulation: \n {pformat(test_results)}")
     # Rename image log files so that they are not overwritten by second model run
-    for image_path in glob.glob(
-        os.path.join(config.log_path, "image_log", "test-step*.png")
-    ):
+    for image_path in glob.glob(os.path.join(config.log_path, "image_log", "*.png")):
         new_image_path = (
             f"{os.path.dirname(image_path)}/pre-{os.path.basename(image_path)}"
         )
