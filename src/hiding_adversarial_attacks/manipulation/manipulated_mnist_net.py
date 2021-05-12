@@ -26,6 +26,9 @@ from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossNames,
 )
 from hiding_adversarial_attacks.config.manipulated_model_training_config import Stage
+from hiding_adversarial_attacks.custom_metrics.normalized_pearson_corrcoef import (
+    NormalizedBatchedPearsonCorrcoef,
+)
 from hiding_adversarial_attacks.explainers.utils import get_explainer
 from hiding_adversarial_attacks.manipulation.metricized_explanations import (
     MetricizedTopAndBottomExplanations,
@@ -103,13 +106,16 @@ class ManipulatedMNISTNet(pl.LightningModule):
         metricized_top_and_bottom_explanation: MetricizedTopAndBottomExplanations,
     ):
         self.metricized_explanations = metricized_top_and_bottom_explanation
-        self.max_loss = torch.max(
-            torch.FloatTensor(
-                self.metricized_explanations.losses[
-                    self.hparams.similarity_loss["name"]
-                ]
+        if self.hparams.similarity_loss["name"] == SimilarityLossNames.MSE:
+            self.max_loss = torch.max(
+                torch.FloatTensor(
+                    self.metricized_explanations.losses[
+                        self.hparams.similarity_loss["name"]
+                    ]
+                )
             )
-        )
+        else:
+            self.max_loss = 1.0
 
     def set_hydra_logger(self, logger: Logger):
         self.hydra_logger = logger
@@ -154,20 +160,13 @@ class ManipulatedMNISTNet(pl.LightningModule):
         if self.use_original_explanations:
             (
                 original_images,
-                original_explanations_pre,
+                initial_original_explanations,
                 adversarial_images,
                 adversarial_explanations_pre,
                 original_labels,
                 adversarial_labels,
                 batch_indeces,
             ) = batch
-
-            # visualize_explanations(
-            #     original_images[0:2],
-            #     original_explanations_pre[0:2],
-            #     ["Orig 0", "Orig 1"],
-            #     display_figure=True,
-            # )
         else:
             (
                 original_images,
@@ -176,17 +175,13 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 adversarial_labels,
                 batch_indeces,
             ) = batch
+            initial_original_explanations = None
 
         # Create explanation maps
         original_explanation_maps = self.explainer.explain(
             original_images, original_labels
         )
-        # visualize_explanations(
-        #     original_images[0:2],
-        #     original_explanation_maps[0:2],
-        #     ["Orig post 0", "Orig post 1"],
-        #     display_figure=True,
-        # )
+
         adversarial_explanation_maps = self.explainer.explain(
             adversarial_images, adversarial_labels
         )
@@ -212,7 +207,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
             original_labels,
             adversarial_labels,
             stage=stage,
-            initial_original_explanation_map=original_explanations_pre,
+            initial_original_explanation_map=initial_original_explanations,
         )
         self.log_losses(
             total_loss,
@@ -273,7 +268,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         # Part 3: Similarity between original and adversarial explanation maps
         if initial_original_explanation_map is None:
-            explanation_similarity = self.similarity_loss(
+            explanation_similarity = self.calculate_similarity_loss(
                 original_explanation_map, adversarial_explanation_map
             )
         else:
@@ -291,7 +286,9 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 ),
                 dim=0,
             )
-            explanation_similarity = self.similarity_loss(original_double, predicted)
+            explanation_similarity = self.calculate_similarity_loss(
+                original_double, predicted
+            )
 
         # Normalized total loss
         normalized_total_loss = self.get_normalized_total_loss(
@@ -325,10 +322,29 @@ class ManipulatedMNISTNet(pl.LightningModule):
             explanation_similarity,
         )
 
+    def calculate_similarity_loss(self, source: torch.Tensor, target: torch.Tensor):
+        if self.hparams.similarity_loss["name"] == SimilarityLossNames.MSE:
+            return self.similarity_loss(source, target)
+        elif self.hparams.similarity_loss["name"] == SimilarityLossNames.SSIM:
+            return 1 - self.similarity_loss(source, target)
+        elif self.hparams.similarity_loss["name"] == SimilarityLossNames.PCC:
+            norm_sim = self.similarity_loss(source, target)
+            sim = 1 - norm_sim
+            return torch.mean(sim)
+
     def get_normalized_total_loss(self, ce_orig, ce_adv, similarity, stage):
         norm_ce_orig = 1 - torch.exp(-ce_orig)
         norm_ce_adv = 1 - torch.exp(-ce_adv)
-        norm_sim = self.loss_weights[2] * (similarity / self.max_loss)
+        if self.hparams.similarity_loss["name"] == SimilarityLossNames.PCC:
+            norm_sim = self.loss_weights[2] * similarity
+        elif self.hparams.similarity_loss["name"] == SimilarityLossNames.SSIM:
+            norm_sim = self.loss_weights[2] * (1 - similarity / self.max_loss)
+        elif self.hparams.similarity_loss["name"] == SimilarityLossNames.MSE:
+            norm_sim = self.loss_weights[2] * (similarity / self.max_loss)
+        else:
+            raise NotImplementedError(
+                f"Loss not implemented: '{self.hparams.similarity_loss['name']}'"
+            )
         self.log(
             f"{stage}_norm_ce_orig",
             norm_ce_orig,
@@ -470,11 +486,11 @@ class ManipulatedMNISTNet(pl.LightningModule):
             similarity_metrics[f"{stage_name}_exp_ssim"],
             prog_bar=False,
         )
-        # self.log(
-        #     f"{stage_name}_exp_pcc",
-        #     similarity_metrics[f"{stage_name}_exp_pcc"],
-        #     prog_bar=False,
-        # )
+        self.log(
+            f"{stage_name}_exp_pcc",
+            similarity_metrics[f"{stage_name}_exp_pcc"],
+            prog_bar=False,
+        )
 
     def log_losses(
         self,
@@ -511,7 +527,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         # Explanation similarity metrics
         similarity_metrics_dict = {
             "exp_ssim": SSIM(),
-            # "exp_pcc": BatchedPearsonCorrcoef(),
+            "exp_pcc": NormalizedBatchedPearsonCorrcoef(device=self.device),
             "exp_mse": MeanSquaredError(),
         }
         similarity_metrics = MetricCollection(similarity_metrics_dict)
@@ -539,24 +555,34 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
     def log_similarity_metrics(self, pred, target, stage: Stage):
         if stage == Stage.STAGE_TRAIN:
-            self.train_similarity_metrics(pred, target)
+            self.train_similarity_metrics(pred.detach(), target.detach())
         elif stage == Stage.STAGE_VAL:
-            self.validation_similarity_metrics(pred, target)
+            self.validation_similarity_metrics(pred.detach(), target.detach())
         elif stage == Stage.STAGE_TEST:
-            self.test_similarity_metrics(pred, target)
+            self.test_similarity_metrics(pred.detach(), target.detach())
 
     def log_classification_metrics(
         self, orig_pred, orig_target, adv_pred, adv_target, stage: Stage
     ):
         if stage == Stage.STAGE_TRAIN:
-            self.train_classification_metrics["orig_acc"](orig_pred, orig_target)
+            self.train_classification_metrics["orig_acc"](
+                orig_pred.detach(), orig_target.detach()
+            )
             self.train_classification_metrics["adv_acc"](adv_pred, adv_target)
         elif stage == Stage.STAGE_VAL:
-            self.validation_classification_metrics["orig_acc"](orig_pred, orig_target)
-            self.validation_classification_metrics["adv_acc"](adv_pred, adv_target)
+            self.validation_classification_metrics["orig_acc"](
+                orig_pred.detach(), orig_target.detach()
+            )
+            self.validation_classification_metrics["adv_acc"](
+                adv_pred.detach(), adv_target.detach()
+            )
         elif stage == Stage.STAGE_TEST:
-            self.test_classification_metrics["orig_acc"](orig_pred, orig_target)
-            self.test_classification_metrics["adv_acc"](adv_pred, adv_target)
+            self.test_classification_metrics["orig_acc"](
+                orig_pred.detach(), orig_target.detach()
+            )
+            self.test_classification_metrics["adv_acc"](
+                adv_pred.detach(), adv_target.detach()
+            )
 
     def _visualize_batch_explanations(
         self,
@@ -642,9 +668,13 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 raise TrialPruned(
                     "Trial pruned due to too many explanation maps becoming zero."
                 )
-            explanation_similarity = self.similarity_loss(
-                original_explanation_maps[index],
-                adversarial_explanation_maps[index],
+            explanation_similarity = (
+                self.similarity_loss(
+                    original_explanation_maps[index],
+                    adversarial_explanation_maps[index],
+                )
+                .detach()
+                .cpu()
             )
             if np.count_nonzero(orig_expl[index]) == 0:
                 self.hydra_logger.warning(
