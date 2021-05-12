@@ -149,6 +149,10 @@ def save_confusion_matrix(matrix: np.array, log_path: str):
     fig.show()
 
 
+def normalize_to_range(x: torch.Tensor, min: int = 0, max: int = 1):
+    return min + ((x - torch.min(x)) * (max - min)) / (torch.max(x) - torch.min(x))
+
+
 if __name__ == "__main__":
     orig = torch.load(
         "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
