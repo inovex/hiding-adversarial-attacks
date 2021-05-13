@@ -48,12 +48,18 @@ class BatchedPearsonCorrCoef(Metric):
         return torch.mean(torch.tensor(self.pcc, device=self.device))
 
 
-class NormalizedBatchedPearsonCorrcoef(BatchedPearsonCorrCoef):
+class NormalizedBatchedPearsonCorrcoef(Metric):
     def __init__(self, device: torch.device, dist_sync_on_step=False):
-        super().__init__(device=device, dist_sync_on_step=dist_sync_on_step)
+        super().__init__(dist_sync_on_step=dist_sync_on_step)
+        self.device = device
+        self.add_state(
+            "pcc",
+            default=[],
+            dist_reduce_fx="mean",
+        )
         self.add_state(
             "normalized_pcc",
-            default=torch.tensor([], device=self.device),
+            default=[],
             dist_reduce_fx="mean",
         )
 
@@ -68,11 +74,11 @@ class NormalizedBatchedPearsonCorrcoef(BatchedPearsonCorrCoef):
         assert preds.shape == target.shape
         r = compute_pearson_corrcoef(preds, target)
         normalized_r = (1 + r) / 2
-        self.pcc = torch.cat((self.pcc, r), dim=0)
-        self.normalized_pcc = torch.cat((self.normalized_pcc, normalized_r), dim=0)
+        self.pcc.append(torch.mean(r))
+        self.normalized_pcc.append(torch.mean(normalized_r))
 
     def compute(self):
-        return torch.mean(self.normalized_pcc)
+        return torch.mean(torch.tensor(self.normalized_pcc, device=self.device))
 
 
 def normalized_batched_pearson_corrcoef(
