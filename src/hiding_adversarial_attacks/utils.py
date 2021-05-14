@@ -48,8 +48,12 @@ class SplitArgs(argparse.Action):
         setattr(namespace, self.dest, values.split(","))
 
 
-def display_tensor_as_image(tensor: torch.Tensor, cmap: str = "gray"):
+def display_tensor_as_image(
+    tensor: torch.Tensor, title: str = None, cmap: str = "gray"
+):
     plt.imshow(tensor.squeeze().numpy(), cmap=cmap)
+    if title is not None:
+        plt.title(title)
     plt.show()
 
 
@@ -153,19 +157,27 @@ def normalize_to_range(x: torch.Tensor, min: int = 0, max: int = 1):
     return min + ((x - torch.min(x)) * (max - min)) / (torch.max(x) - torch.min(x))
 
 
-if __name__ == "__main__":
-    orig = torch.load(
-        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
-        "preprocessed/adversarial/MNIST/DeepFool/epsilon_0.225/"
-        "class_1/training_orig.pt"
-    )
-    adv = torch.load(
-        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
-        "preprocessed/adversarial/MNIST/DeepFool/epsilon_0.225/"
-        "class_1/training_adv.pt"
-    )
-    visualize_adversarial_difference_image(adv[0][0], orig[0][0])
-
-
 def assert_not_none(tensor, loss_name):
     assert not torch.isnan(tensor).any(), f"NaN in {loss_name}!"
+
+
+def display_random_original_and_adversarial_training_image(path: str):
+    orig_images, orig_labels = torch.load(os.path.join(path, "training_orig.pt"))
+    adv_images, adv_labels = torch.load(os.path.join(path, "training_adv.pt"))
+    random_idx = np.random.randint(0, len(orig_labels))
+    orig_img, orig_label = orig_images[random_idx], orig_labels[random_idx]
+    adv_img, adv_label = adv_images[random_idx], adv_labels[random_idx]
+    display_tensor_as_image(
+        orig_img, title=f"Original, label={orig_label}, idx={random_idx}"
+    )
+    display_tensor_as_image(
+        adv_img, title=f"Adversarial, label={adv_label}, idx={random_idx}"
+    )
+
+
+if __name__ == "__main__":
+    path = (
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+        "preprocessed/adversarial/data-set=MNIST--attack=DeepFool--eps=0.2"
+    )
+    display_random_original_and_adversarial_training_image(path)
