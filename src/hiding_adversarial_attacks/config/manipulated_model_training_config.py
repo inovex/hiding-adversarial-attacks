@@ -19,6 +19,7 @@ from hiding_adversarial_attacks.config.classifiers.classifier_config import (
 )
 from hiding_adversarial_attacks.config.data_sets.data_set_config import (
     AdversarialFashionMNISTConfig,
+    AdversarialFashionMNISTWithExplanationsConfig,
     AdversarialMNISTConfig,
 )
 from hiding_adversarial_attacks.config.explainers.deep_lift_baseline_config import (
@@ -64,13 +65,13 @@ optuna_search_spaces = {
     "FashionMNIST": {
         "lr": {
             "log": True,
-            "low": 1e-3,
-            "high": 1e-1,
+            "low": 1e-4,
+            "high": 1e-2,
         },
-        "loss_weight_similarity": {"low": 5, "high": 15, "step": 1},
-        "batch_size": [64, 128],
+        "loss_weight_similarity": {"low": 10, "high": 15, "step": 1},
+        "batch_size": [32, 64, 128],
         # currently unused:
-        "similarity_loss": {"choices": [MSELoss]},
+        "similarity_loss": {"choices": [PCCLoss]},
     },
 }
 
@@ -165,6 +166,11 @@ cs.store(
     group="data_set",
     name="AdversarialFashionMNIST",
     node=AdversarialFashionMNISTConfig,
+)
+cs.store(
+    group="data_set",
+    name="AdversarialFashionMNISTWithExplanations",
+    node=AdversarialFashionMNISTWithExplanationsConfig,
 )
 cs.store(group="classifier", name="MNISTClassifier", node=MNISTClassifierConfig)
 cs.store(
