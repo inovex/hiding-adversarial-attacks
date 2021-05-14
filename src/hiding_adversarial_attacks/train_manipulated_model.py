@@ -367,7 +367,6 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
         batch_size=config.batch_size,
         val_split=config.val_split,
         transform=None,
-        included_classes=list(config.included_classes),
         random_seed=config.random_seed,
     )
 

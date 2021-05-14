@@ -33,6 +33,7 @@ from hiding_adversarial_attacks.explainers.utils import get_explainer
 from hiding_adversarial_attacks.manipulation.metricized_explanations import (
     MetricizedTopAndBottomExplanations,
 )
+from hiding_adversarial_attacks.manipulation.utils import create_mask
 from hiding_adversarial_attacks.utils import (
     assert_not_none,
     save_confusion_matrix,
@@ -83,6 +84,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         self.zero_explanation_count = 0
         self.global_test_step = 0
 
+        self.included_classes = hparams.included_classes
         self.use_original_explanations = "Explanations" in self.hparams.data_set["name"]
 
     def override_hparams(self, hparams):
@@ -266,23 +268,28 @@ class ManipulatedMNISTNet(pl.LightningModule):
         cross_entropy_adv = F.cross_entropy(adv_pred_label, adversarial_label)
         assert_not_none(cross_entropy_adv, "cross_entropy_adv")
 
+        # Create mask to include only classes in self.included_classes
+        # when calculating explanation similarity
+        included_mask = create_mask(original_label, self.included_classes)
+
         # Part 3: Similarity between original and adversarial explanation maps
         if initial_original_explanation_map is None:
             explanation_similarity = self.calculate_similarity_loss(
-                original_explanation_map, adversarial_explanation_map
+                original_explanation_map[included_mask],
+                adversarial_explanation_map[included_mask],
             )
         else:
             original_double = torch.cat(
                 (
-                    initial_original_explanation_map,
-                    initial_original_explanation_map,
+                    initial_original_explanation_map[included_mask],
+                    initial_original_explanation_map[included_mask],
                 ),
                 dim=0,
             )
             predicted = torch.cat(
                 (
-                    original_explanation_map,
-                    adversarial_explanation_map,
+                    original_explanation_map[included_mask],
+                    adversarial_explanation_map[included_mask],
                 ),
                 dim=0,
             )
