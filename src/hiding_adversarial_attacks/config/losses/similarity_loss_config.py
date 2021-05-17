@@ -3,8 +3,8 @@ from dataclasses import dataclass
 from omegaconf import MISSING
 from torchmetrics.functional import mean_squared_error, ssim
 
-from hiding_adversarial_attacks.custom_metrics.normalized_pearson_corrcoef import (
-    normalized_batched_pearson_corrcoef,
+from hiding_adversarial_attacks.custom_metrics.relu_pearson_corrcoef import (
+    relu_pearson_corrcoef,
 )
 
 
@@ -17,7 +17,7 @@ class SimilarityLossNames:
 SimilarityLossMapping = {
     SimilarityLossNames.MSE: mean_squared_error,
     SimilarityLossNames.SSIM: ssim,
-    SimilarityLossNames.PCC: normalized_batched_pearson_corrcoef,
+    SimilarityLossNames.PCC: relu_pearson_corrcoef,
 }
 
 

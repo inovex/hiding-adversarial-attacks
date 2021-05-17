@@ -26,8 +26,8 @@ from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossNames,
 )
 from hiding_adversarial_attacks.config.manipulated_model_training_config import Stage
-from hiding_adversarial_attacks.custom_metrics.normalized_pearson_corrcoef import (
-    NormalizedBatchedPearsonCorrcoef,
+from hiding_adversarial_attacks.custom_metrics.relu_pearson_corrcoef import (
+    ReluBatchedPearsonCorrCoef,
 )
 from hiding_adversarial_attacks.explainers.utils import get_explainer
 from hiding_adversarial_attacks.manipulation.metricized_explanations import (
@@ -534,7 +534,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         # Explanation similarity metrics
         similarity_metrics_dict = {
             "exp_ssim": SSIM(),
-            "exp_pcc": NormalizedBatchedPearsonCorrcoef(device=self.device),
+            "exp_pcc": ReluBatchedPearsonCorrCoef(device=self.device),
             "exp_mse": MeanSquaredError(),
         }
         similarity_metrics = MetricCollection(similarity_metrics_dict)
