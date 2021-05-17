@@ -96,7 +96,7 @@ class ManipulatedClassifierCheckpointConfig:
 class OptunaConfig:
     # General options
     use_optuna: bool = True
-    prune_trials: bool = False
+    prune_trials: bool = True
     number_of_trials: int = 10
     timeout: Optional[int] = None
 
