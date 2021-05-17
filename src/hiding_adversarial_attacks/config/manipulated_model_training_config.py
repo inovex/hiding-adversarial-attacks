@@ -18,6 +18,7 @@ from hiding_adversarial_attacks.config.classifiers.classifier_config import (
     MNISTClassifierConfig,
 )
 from hiding_adversarial_attacks.config.data_sets.data_set_config import (
+    AdversarialCifar10Config,
     AdversarialFashionMNISTConfig,
     AdversarialFashionMNISTWithExplanationsConfig,
     AdversarialMNISTConfig,
@@ -65,11 +66,11 @@ optuna_search_spaces = {
     "FashionMNIST": {
         "lr": {
             "log": True,
-            "low": 1e-4,
+            "low": 1e-5,
             "high": 1e-2,
         },
         "loss_weight_similarity": {"low": 10, "high": 15, "step": 1},
-        "batch_size": [32, 64, 128],
+        "batch_size": [128, 256],
         # currently unused:
         "similarity_loss": {"choices": [PCCLoss]},
     },
@@ -171,6 +172,11 @@ cs.store(
     group="data_set",
     name="AdversarialFashionMNISTWithExplanations",
     node=AdversarialFashionMNISTWithExplanationsConfig,
+)
+cs.store(
+    group="data_set",
+    name="AdversarialCifar10",
+    node=AdversarialCifar10Config,
 )
 cs.store(group="classifier", name="MNISTClassifier", node=MNISTClassifierConfig)
 cs.store(

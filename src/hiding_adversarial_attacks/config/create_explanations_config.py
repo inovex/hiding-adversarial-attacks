@@ -6,11 +6,13 @@ from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
 
 from hiding_adversarial_attacks.config.classifiers.classifier_config import (
+    Cifar10ClassifierConfig,
     ClassifierConfig,
     FashionMNISTClassifierConfig,
     MNISTClassifierConfig,
 )
 from hiding_adversarial_attacks.config.data_sets.data_set_config import (
+    AdversarialCifar10Config,
     AdversarialFashionMNISTConfig,
     AdversarialMNISTConfig,
     DataSetConfig,
@@ -66,18 +68,31 @@ cs = ConfigStore.instance()
 
 cs.store(group="data_set", name="AdversarialMNIST", node=AdversarialMNISTConfig)
 cs.store(
-    group="data_set", name="AdversarialFashionMNIST", node=AdversarialFashionMNISTConfig
+    group="data_set",
+    name="AdversarialFashionMNIST",
+    node=AdversarialFashionMNISTConfig,
 )
+cs.store(group="data_set", name="AdversarialCifar10", node=AdversarialCifar10Config)
 
 cs.store(group="classifier", name="MNISTClassifier", node=MNISTClassifierConfig)
 cs.store(
-    group="classifier", name="FashionMNISTClassifier", node=FashionMNISTClassifierConfig
+    group="classifier",
+    name="FashionMNISTClassifier",
+    node=FashionMNISTClassifierConfig,
 )
+cs.store(
+    group="classifier",
+    name="Cifar10Classifier",
+    node=Cifar10ClassifierConfig,
+)
+
 cs.store(group="explainer", name="DeepLiftExplainer", node=DeepLiftConfig)
 cs.store(group="explainer.baseline", name="ZeroBaseline", node=ZeroBaselineConfig)
 cs.store(group="explainer.baseline", name="BlurBaseline", node=BlurBaselineConfig)
 cs.store(
-    group="explainer.baseline", name="LocalMeanBaseline", node=LocalMeanBaselineConfig
+    group="explainer.baseline",
+    name="LocalMeanBaseline",
+    node=LocalMeanBaselineConfig,
 )
 cs.store(group="explainer", name="GradCamExplainer", node=LayerGradCamConfig)
 
