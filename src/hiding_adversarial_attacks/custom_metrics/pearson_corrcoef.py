@@ -1,24 +1,16 @@
 import torch
 from torchmetrics import Metric
-from torchmetrics.functional.regression.pearson import pearson_corrcoef
-
-from hiding_adversarial_attacks.custom_metrics.pearson_corrcoef import (
-    compute_pearson_corrcoef,
-)
+from torchmetrics.functional import pearson_corrcoef
+from torchmetrics.functional.regression.pearson import _pearson_corrcoef_compute
 
 
-class NormalizedBatchedPearsonCorrcoef(Metric):
+class BatchedPearsonCorrCoef(Metric):
     def __init__(self, device: torch.device, dist_sync_on_step=False):
         super().__init__(dist_sync_on_step=dist_sync_on_step)
         self.device = device
         self.add_state(
             "pcc",
-            default=[],
-            dist_reduce_fx="mean",
-        )
-        self.add_state(
-            "normalized_pcc",
-            default=[],
+            default=torch.tensor([], device=self.device),
             dist_reduce_fx="mean",
         )
 
@@ -32,18 +24,13 @@ class NormalizedBatchedPearsonCorrcoef(Metric):
         """
         assert preds.shape == target.shape
         r = compute_pearson_corrcoef(preds, target)
-        normalized_r = (1 + r) / 2
-        self.pcc.append(torch.mean(r))
-        self.normalized_pcc.append(torch.mean(normalized_r))
+        self.pcc = torch.cat((self.pcc, r), dim=0)
 
     def compute(self):
-        return torch.mean(torch.tensor(self.normalized_pcc, device=self.device))
+        return torch.mean(torch.tensor(self.pcc, device=self.device))
 
 
-def normalized_batched_pearson_corrcoef(
-    preds: torch.Tensor, target: torch.Tensor
-) -> torch.Tensor:
-    assert preds.shape == target.shape
+def compute_pearson_corrcoef(preds, target):
     if preds.ndim > 1 or target.ndim > 1:
         r = torch.tensor(
             [
@@ -53,7 +40,5 @@ def normalized_batched_pearson_corrcoef(
             device=preds.device,
         )
     else:
-        r = pearson_corrcoef(preds, target)
-    # Normalize to range [0,1]
-    normalized_r = (1 + r) / 2
-    return normalized_r
+        r = _pearson_corrcoef_compute(preds, target)
+    return r
