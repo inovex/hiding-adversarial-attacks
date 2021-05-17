@@ -225,10 +225,6 @@ def train(
 
     trainer.fit(model, train_loader, validation_loader)
 
-    # Append tag "pruned" if trial was set to prune
-    if trial is not None and trial.should_prune():
-        neptune_logger.experiment.append_tag("pruned")
-
     # Test with best model checkpoint (Lightning does this automatically)
     test_loader = data_module.test_dataloader()
     test_results = trainer.test(model=model, test_dataloaders=test_loader)

@@ -672,6 +672,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         fig, axes = plt.subplots(nrows=n_rows, ncols=3, figsize=(12, 12))
         for i, (row_axis, index) in enumerate(zip(axes, indeces)):
             if self.zero_explanation_count >= 3:
+                self.logger.experiment.append_tag("pruned")
                 raise TrialPruned(
                     "Trial pruned due to too many explanation maps becoming zero."
                 )
