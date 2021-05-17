@@ -25,6 +25,7 @@ from hiding_adversarial_attacks.attack.logging_utils import (
     log_attack_results,
     setup_logger,
 )
+from hiding_adversarial_attacks.classifiers.cifar_net import CifarNet
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.adversarial_attack_config import (
     AdversarialAttackConfig,
@@ -46,6 +47,8 @@ def get_foolbox_model(config, device):
         or config.data_set.name == DataSetNames.FASHION_MNIST
     ):
         foolbox_model = MNISTNet.as_foolbox_wrap(config, device)
+    elif config.data_set.name == DataSetNames.CIFAR10:
+        foolbox_model = CifarNet.as_foolbox_wrap(config, device)
     else:
         raise SystemExit(f"Data set '{config.data_set.name}' unknown. Exiting.")
     return foolbox_model
