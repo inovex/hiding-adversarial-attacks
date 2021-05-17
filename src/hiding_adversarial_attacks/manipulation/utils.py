@@ -28,7 +28,7 @@ from hiding_adversarial_attacks.utils import (
 
 
 def create_mask(source: torch.Tensor, included_classes: List[Any]):
-    if ALL_CLASSES not in included_classes:
+    if ALL_CLASSES in included_classes:
         return torch.ones(len(source), dtype=torch.bool, device=source.device)
     mask = torch.zeros(len(source), dtype=torch.bool, device=source.device)
     for c in included_classes:
