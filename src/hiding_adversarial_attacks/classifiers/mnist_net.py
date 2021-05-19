@@ -21,8 +21,8 @@ class MNISTNet(pl.LightningModule):
     def __init__(self, hparams):
         super().__init__()
         self.hparams = hparams
-        self.lr = hparams.classifier.lr
-        self.gamma = hparams.classifier.gamma
+        self.lr = hparams.lr
+        self.gamma = hparams.gamma
         self.classifier_config = hparams.classifier
         self.data_set_config = hparams.data_set
         self.save_hyperparameters()

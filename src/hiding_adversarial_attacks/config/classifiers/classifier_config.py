@@ -22,10 +22,6 @@ class ClassifierCheckpointConfig:
 class ClassifierConfig:
     name: str = MISSING
 
-    # Hyperparameters
-    lr: float = 1.0
-    gamma: float = 0.7
-
     # Loss names for logging
     train_loss: str = "train_loss"
     val_loss: str = "val_loss"
@@ -54,5 +50,3 @@ class FashionMNISTClassifierConfig(ClassifierConfig):
 @dataclass
 class Cifar10ClassifierConfig(ClassifierConfig):
     name: str = ClassifierNames.CIFAR10_CLASSIFIER
-    lr: float = 1
-    gamma: float = 0.7
