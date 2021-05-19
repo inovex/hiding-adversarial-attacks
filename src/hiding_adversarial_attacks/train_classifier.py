@@ -135,7 +135,6 @@ def test(
         )
 
     model = get_model(config).load_from_checkpoint(config.checkpoint)
-    model.model.eval()
 
     test_results = trainer.test(model, test_loader, ckpt_path="best")
     logger.info(f"Test results: \n {pformat(test_results)}")
