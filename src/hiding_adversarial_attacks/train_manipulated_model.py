@@ -195,14 +195,13 @@ def train(
     train_loader = data_module.train_dataloader()
     validation_loader = data_module.val_dataloader()
 
-    checkpoint_callback = hydra.utils.instantiate(config.checkpoint_config)
-
     model = get_manipulatable_model(config)
     model.set_metricized_explanations(metricized_top_and_bottom_explanations)
     model.set_hydra_logger(logger)
     model.to(device)
 
     # PyTorch Lightning Callbacks
+    checkpoint_callback = hydra.utils.instantiate(config.checkpoint_config)
     neptune_callback = NeptuneLoggingCallback(
         log_path=config.log_path,
         image_log_path=model.image_log_path,
