@@ -8,6 +8,7 @@ from omegaconf import MISSING
 from hiding_adversarial_attacks.config.attack.adversarial_attack_config import (
     AttackConfig,
     DeepFoolAttackConfig,
+    FGSMAttackConfig,
 )
 from hiding_adversarial_attacks.config.classifiers.classifier_config import (
     Cifar10ClassifierConfig,
@@ -39,7 +40,11 @@ class AdversarialAttackConfig:
     checkpoint: str = MISSING
     checkpoint_run: str = MISSING
 
+    lr: float = 0.01  # unused
+    gamma: float = 0.07  # unused
     batch_size: int = 64
+
+    max_epochs: int = 100
 
     data_set: DataSetConfig = MISSING
     classifier: ClassifierConfig = MISSING
@@ -74,5 +79,6 @@ cs.store(
     node=FashionMNISTClassifierConfig,
 )
 cs.store(group="attack", name="DeepFoolAttack", node=DeepFoolAttackConfig)
+cs.store(group="attack", name="FGSMAttack", node=FGSMAttackConfig)
 
 cs.store(name="adversarial_attack_config", node=AdversarialAttackConfig)
