@@ -325,6 +325,7 @@ def run_optuna_study(
         n_trials=config.optuna.number_of_trials,
         timeout=config.optuna.timeout,
         gc_after_trial=True,
+        catch=(KeyboardInterrupt,),
     )
     logger.info("\n************ Optuna trial results ***************")
     logger.info("Number of finished trials: {}".format(len(study.trials)))
