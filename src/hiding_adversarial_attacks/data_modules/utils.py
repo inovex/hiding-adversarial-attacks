@@ -9,6 +9,9 @@ from hiding_adversarial_attacks.config.data_sets.data_set_config import (
     AdversarialDataSetNames,
     DataSetNames,
 )
+from hiding_adversarial_attacks.data_modules.adversarial_cifar10 import (
+    AdversarialCIFAR10DataModule,
+)
 from hiding_adversarial_attacks.data_modules.adversarial_fashion_mnist import (
     AdversarialFashionMNISTDataModule,
     AdversarialFashionMNISTWithExplanationsDataModule,
@@ -16,7 +19,7 @@ from hiding_adversarial_attacks.data_modules.adversarial_fashion_mnist import (
 from hiding_adversarial_attacks.data_modules.adversarial_mnist import (
     AdversarialMNISTDataModule,
 )
-from hiding_adversarial_attacks.data_modules.cifar_10 import Cifar10DataModule
+from hiding_adversarial_attacks.data_modules.cifar_10 import CIFAR10DataModule
 from hiding_adversarial_attacks.data_modules.fashion_mnist import FashionMNISTDataModule
 from hiding_adversarial_attacks.data_modules.mnist import MNISTDataModule
 
@@ -24,7 +27,10 @@ VisionDataModuleUnionType = Union[
     MNISTDataModule,
     FashionMNISTDataModule,
     AdversarialMNISTDataModule,
-    Cifar10DataModule,
+    AdversarialFashionMNISTDataModule,
+    AdversarialFashionMNISTWithExplanationsDataModule,
+    CIFAR10DataModule,
+    AdversarialCIFAR10DataModule,
 ]
 DATA_MODULE_MAPPING = {
     DataSetNames.MNIST: MNISTDataModule,
@@ -32,7 +38,8 @@ DATA_MODULE_MAPPING = {
     AdversarialDataSetNames.ADVERSARIAL_MNIST: AdversarialMNISTDataModule,
     AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST: AdversarialFashionMNISTDataModule,  # noqa: E501
     AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST_EXPL: AdversarialFashionMNISTWithExplanationsDataModule,  # noqa: E501
-    DataSetNames.CIFAR10: Cifar10DataModule,
+    DataSetNames.CIFAR10: CIFAR10DataModule,
+    AdversarialDataSetNames.ADVERSARIAL_CIFAR10: AdversarialCIFAR10DataModule,
 }
 
 

@@ -3,8 +3,10 @@ from typing import Any, Callable, Optional, Tuple
 
 import torch
 
+from hiding_adversarial_attacks.data_sets.adversarial_mnist import AdversarialMNIST
 
-class AdversarialCIFAR10:
+
+class AdversarialCIFAR10(AdversarialMNIST):
     training_file = "training_orig.pt"
     test_file = "test_orig.pt"
     training_adv_file = "training_adv.pt"
@@ -18,6 +20,7 @@ class AdversarialCIFAR10:
         target_transform: Optional[Callable] = None,
         download: bool = False,
     ) -> None:
+        super().__init__(root, train, transform, target_transform, download=False)
         self.root = os.path.abspath(root)
         self.train = train  # training set or test set
         self.transform = transform

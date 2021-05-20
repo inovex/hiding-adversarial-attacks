@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from hiding_adversarial_attacks._neptune.utils import init_neptune_run
+from hiding_adversarial_attacks.classifiers.cifar_net import CifarNet
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.config_validator import ConfigValidator
 from hiding_adversarial_attacks.config.create_explanations_config import (
@@ -28,6 +29,8 @@ def get_model_from_checkpoint(
 ):
     if DataSetNames.MNIST in data_set_name:
         model = MNISTNet.load_from_checkpoint(checkpoint_path=model_checkpoint)
+    elif DataSetNames.CIFAR10 in data_set_name:
+        model = CifarNet.load_from_checkpoint(checkpoint_path=model_checkpoint)
     else:
         raise SystemExit(f"ERROR: Unknown data set name: {data_set_name}. Exiting.")
     model = model.to(device)

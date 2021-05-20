@@ -36,7 +36,8 @@ class SplitArgs(argparse.Action):
 def display_tensor_as_image(
     tensor: torch.Tensor, title: str = None, cmap: str = "gray"
 ):
-    plt.imshow(tensor.squeeze().numpy(), cmap=cmap)
+    np_img = tensor_to_pil_numpy(tensor)
+    plt.imshow(np_img, cmap=cmap)
     if title is not None:
         plt.title(title)
     plt.show()
@@ -80,7 +81,10 @@ def visualize_difference_image_np(
 
 
 def tensor_to_pil_numpy(rgb_tensor):
-    return np.transpose(rgb_tensor.cpu().detach().numpy(), (0, 2, 3, 1))
+    if len(rgb_tensor.shape) == 3:
+        return np.transpose(rgb_tensor.cpu().detach().numpy(), (1, 2, 0))
+    else:
+        return np.transpose(rgb_tensor.cpu().detach().numpy(), (0, 2, 3, 1))
 
 
 def to_pil_image(tensor, mode="L"):
@@ -162,7 +166,7 @@ def display_random_original_and_adversarial_training_image(path: str):
 
 if __name__ == "__main__":
     path = (
-        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
-        "preprocessed/adversarial/data-set=MNIST--attack=DeepFool--eps=0.2"
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+        "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.2--cp-run=HAA-943"
     )
     display_random_original_and_adversarial_training_image(path)
