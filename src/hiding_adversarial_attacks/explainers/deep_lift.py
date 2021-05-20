@@ -39,7 +39,10 @@ class DeepLiftExplainer(BaseExplainer):
                 baseline = self._gaussian_blur(image)
             elif self._baseline_name == DeepLiftBaselineNames.LOCAL_MEAN:
                 batch_size = image.shape[0]
-                means = image.view(batch_size, -1).mean(1, keepdim=True)
+                if image.shape[1] == 3:  # rgb
+                    means = image.view(batch_size, 3, -1).mean(2, keepdim=True)
+                else:
+                    means = image.view(batch_size, -1).mean(1, keepdim=True)
                 ones = torch.ones_like(image)
                 baseline = torch.ones_like(image) * means.view(
                     batch_size, image.shape[1], 1, 1
