@@ -74,6 +74,17 @@ optuna_search_spaces = {
         # currently unused:
         "similarity_loss": {"choices": [PCCLoss]},
     },
+    "CIFAR10": {
+        "lr": {
+            "log": True,
+            "low": 1e-7,
+            "high": 1e-1,
+        },
+        "loss_weight_similarity": {"low": 5, "high": 15, "step": 1},
+        "batch_size": [128, 256],
+        # currently unused:
+        "similarity_loss": {"choices": [PCCLoss]},
+    },
 }
 
 
@@ -101,9 +112,7 @@ class OptunaConfig:
     timeout: Optional[int] = None
 
     # Search spaces for hyperparameters
-    search_space: Any = field(
-        default_factory=lambda: optuna_search_spaces["FashionMNIST"]
-    )
+    search_space: Any = field(default_factory=lambda: optuna_search_spaces["CIFAR10"])
 
 
 @dataclass

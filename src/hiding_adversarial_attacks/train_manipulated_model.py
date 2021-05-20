@@ -23,6 +23,7 @@ from torch._vmap_internals import vmap
 from hiding_adversarial_attacks._neptune.utils import get_neptune_logger
 from hiding_adversarial_attacks.callbacks.neptune_callback import NeptuneLoggingCallback
 from hiding_adversarial_attacks.callbacks.utils import copy_run_outputs
+from hiding_adversarial_attacks.classifiers.cifar_net import CifarNet
 from hiding_adversarial_attacks.classifiers.fashion_mnist_net import FashionMNISTNet
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.config_validator import ConfigValidator
@@ -39,6 +40,9 @@ from hiding_adversarial_attacks.config.manipulated_model_training_config import 
 from hiding_adversarial_attacks.data_modules.utils import (
     VisionDataModuleUnionType,
     get_data_module,
+)
+from hiding_adversarial_attacks.manipulation.manipulated_cifar_net import (
+    ManipulatedCIFARNet,
 )
 from hiding_adversarial_attacks.manipulation.manipulated_fashion_mnist_net import (  # noqa: E501
     ManipulatedFashionMNISTNet,
@@ -76,6 +80,12 @@ def get_manipulatable_model(config):
             config.classifier_checkpoint
         )
         model = ManipulatedFashionMNISTNet(classifier_model, config)
+        return model
+    if config.data_set.name == AdversarialDataSetNames.ADVERSARIAL_CIFAR10:
+        classifier_model = CifarNet(config).load_from_checkpoint(
+            config.classifier_checkpoint
+        )
+        model = ManipulatedCIFARNet(classifier_model, config)
         return model
     else:
         raise SystemExit(
@@ -382,6 +392,7 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
     config.tags.append(config.data_set.name)
     config.tags.append(config.explainer.name)
     config.tags.append("test" if config.test else "train")
+    config.tags.append(f"class_ids={config.included_classes}")
     if config.trash_run:
         config.tags.append("trash")
 
