@@ -26,11 +26,14 @@ class LayerGradCamExplainer(BaseExplainer):
     def explain(self, image: torch.Tensor, target: torch.Tensor, **kwargs):
         self._model.zero_grad()
         attribution = self.xai_algorithm.attribute(
-            image, target=target, relu_attributions=self._relu_attributions, **kwargs
+            image,
+            target=target,
+            relu_attributions=self._relu_attributions,
+            **kwargs,
         )
         # attribution needs to be interpolated to match the inout size
         interpolated_attribution = LayerAttribution.interpolate(
-            attribution, self._image_shape
+            attribution, self._image_shape, interpolate_mode="bicubic"
         )
         return interpolated_attribution
 
