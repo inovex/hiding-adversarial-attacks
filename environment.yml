@@ -1,6 +1,7 @@
 name: hiding_adversarial_attacks
 channels:
   - defaults
+  - anaconda
   - conda-forge
   - plotly
   - pytorch
@@ -34,6 +35,8 @@ dependencies:
   - optuna
   - mlflow
   - neptune-client
+  # EDA
+  - jupyter
   # CODE FORMATTERS & TYPE CHECKING
   - black
   - mypy
