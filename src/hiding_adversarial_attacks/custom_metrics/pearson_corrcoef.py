@@ -23,14 +23,14 @@ class BatchedPearsonCorrCoef(Metric):
             target: Ground truth values
         """
         assert preds.shape == target.shape
-        r = compute_pearson_corrcoef(preds, target)
+        r = custom_pearson_corrcoef(preds, target)
         self.pcc = torch.cat((self.pcc, r), dim=0)
 
     def compute(self):
         return torch.mean(torch.tensor(self.pcc, device=self.device))
 
 
-def compute_pearson_corrcoef(preds, target):
+def custom_pearson_corrcoef(preds, target):
     if preds.ndim > 1 or target.ndim > 1:
         r = torch.tensor(
             [

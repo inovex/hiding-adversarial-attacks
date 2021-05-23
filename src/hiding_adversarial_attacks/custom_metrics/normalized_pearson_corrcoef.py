@@ -3,7 +3,7 @@ from torchmetrics import Metric
 from torchmetrics.functional.regression.pearson import pearson_corrcoef
 
 from hiding_adversarial_attacks.custom_metrics.pearson_corrcoef import (
-    compute_pearson_corrcoef,
+    custom_pearson_corrcoef,
 )
 
 
@@ -31,7 +31,7 @@ class NormalizedBatchedPearsonCorrcoef(Metric):
             target: Ground truth values
         """
         assert preds.shape == target.shape
-        r = compute_pearson_corrcoef(preds, target)
+        r = custom_pearson_corrcoef(preds, target)
         normalized_r = (1 + r) / 2
         self.pcc.append(torch.mean(r))
         self.normalized_pcc.append(torch.mean(normalized_r))
