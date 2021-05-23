@@ -35,10 +35,10 @@ VisionDataModuleUnionType = Union[
 DATA_MODULE_MAPPING = {
     DataSetNames.MNIST: MNISTDataModule,
     DataSetNames.FASHION_MNIST: FashionMNISTDataModule,
+    DataSetNames.CIFAR10: CIFAR10DataModule,
     AdversarialDataSetNames.ADVERSARIAL_MNIST: AdversarialMNISTDataModule,
     AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST: AdversarialFashionMNISTDataModule,  # noqa: E501
     AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST_EXPL: AdversarialFashionMNISTWithExplanationsDataModule,  # noqa: E501
-    DataSetNames.CIFAR10: CIFAR10DataModule,
     AdversarialDataSetNames.ADVERSARIAL_CIFAR10: AdversarialCIFAR10DataModule,
 }
 

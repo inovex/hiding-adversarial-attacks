@@ -55,13 +55,13 @@ def load_explanations(config, device: torch.device, stage: str = "training"):
     )
 
 
-def load_attacked_data(config, device: torch.device, stage: str = "training"):
+def load_attacked_data(data_path: str, device: torch.device, stage: str = "training"):
     orig_images, orig_labels = torch.load(
-        os.path.join(config.explanations_path, f"{stage}_orig.pt"),
+        os.path.join(data_path, f"{stage}_orig.pt"),
         map_location=device,
     )
     adversarial_images, adversarial_labels = torch.load(
-        os.path.join(config.explanations_path, f"{stage}_adv.pt"),
+        os.path.join(data_path, f"{stage}_adv.pt"),
         map_location=device,
     )
     return (
@@ -155,24 +155,9 @@ def get_metricized_top_and_bottom_explanations(
         training_adv_labels,
     ) = load_filtered_data(config, device, stage="training")
 
-    similarity_loss = SimilarityLossMapping[config.similarity_loss.name]
-    reverse = False
-    if config.similarity_loss.name == SimilarityLossNames.MSE:
-        batched_sim_loss = vmap(similarity_loss)
-        similarities = batched_sim_loss(training_orig_expl, training_adv_expl)
-        reverse = True
-    if config.similarity_loss.name == SimilarityLossNames.SSIM:
-        batched_sim_loss = partial(
-            similarity_loss,
-            reduction="none",
-            # kernel_size=(5, 5),
-            # sigma=(0.5, 0.5),
-        )
-        similarities = batched_sim_loss(training_orig_expl, training_adv_expl)
-        similarities = similarities.mean(dim=(1, 2, 3))
-    if config.similarity_loss.name == SimilarityLossNames.PCC:
-        batched_sim_loss = partial(similarity_loss)
-        similarities = batched_sim_loss(training_orig_expl, training_adv_expl)
+    reverse, similarities = get_similarities(
+        config.similarity_loss.name, training_orig_expl, training_adv_expl
+    )
 
     top_indices, bottom_indices = get_top_and_bottom_k_indices(
         similarities, k=4, reverse=reverse
@@ -255,6 +240,28 @@ def get_metricized_top_and_bottom_explanations(
     return metricized_top_and_bottom_explanations
 
 
+def get_similarities(similarity_loss_name, orig_explanations, adv_explanations):
+    similarity_loss = SimilarityLossMapping[similarity_loss_name]
+    reverse = False
+    if similarity_loss_name == SimilarityLossNames.MSE:
+        batched_sim_loss = vmap(similarity_loss)
+        similarities = batched_sim_loss(orig_explanations, adv_explanations)
+        reverse = True
+    if similarity_loss_name == SimilarityLossNames.SSIM:
+        batched_sim_loss = partial(
+            similarity_loss,
+            reduction="none",
+            # kernel_size=(5, 5),
+            # sigma=(0.5, 0.5),
+        )
+        similarities = batched_sim_loss(orig_explanations, adv_explanations)
+        similarities = similarities.mean(dim=(1, 2, 3))
+    if similarity_loss_name == SimilarityLossNames.PCC:
+        batched_sim_loss = partial(similarity_loss)
+        similarities = batched_sim_loss(orig_explanations, adv_explanations)
+    return reverse, similarities
+
+
 def load_filtered_data(config, device, stage: str = "training"):
     (
         orig_expl,
@@ -269,7 +276,7 @@ def load_filtered_data(config, device, stage: str = "training"):
         _,
         adv_images,
         _,
-    ) = load_attacked_data(config, device, stage=stage)
+    ) = load_attacked_data(config.explanations_path, device, stage=stage)
     # filter attacked data by included_classes
     if ALL_CLASSES not in config.included_classes:
         (
