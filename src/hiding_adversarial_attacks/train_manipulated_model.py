@@ -391,6 +391,7 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
     # Update tags
     config.tags.append(config.data_set.name)
     config.tags.append(config.explainer.name)
+    config.tags.append(config.similarity_loss.name)
     config.tags.append("test" if config.test else "train")
     config.tags.append(f"class_ids={config.included_classes}")
     if config.trash_run:
