@@ -18,7 +18,9 @@ from optuna.visualization import (
     plot_param_importances,
 )
 from pytorch_lightning import Trainer
+from pytorch_lightning.loggers import NeptuneLogger
 from torch._vmap_internals import vmap
+from torch.utils.data import DataLoader
 
 from hiding_adversarial_attacks._neptune.utils import get_neptune_logger
 from hiding_adversarial_attacks.callbacks.neptune_callback import NeptuneLoggingCallback
@@ -37,10 +39,10 @@ from hiding_adversarial_attacks.config.manipulated_model_training_config import 
     VAL_NORM_TOTAL_LOSS,
     ManipulatedModelTrainingConfig,
 )
-from hiding_adversarial_attacks.data_modules.utils import (
-    VisionDataModuleUnionType,
-    get_data_module,
+from hiding_adversarial_attacks.data_modules.k_fold_cross_validation import (
+    StratifiedKFoldCVDataModule,
 )
+from hiding_adversarial_attacks.data_modules.utils import get_data_module
 from hiding_adversarial_attacks.manipulation.manipulated_cifar_net import (
     ManipulatedCIFARNet,
 )
@@ -153,6 +155,10 @@ def suggest_hyperparameters(config, trial):
     batch_size = trial.suggest_categorical(
         "batch_size", config.optuna.search_space["batch_size"]
     )
+    # override
+    # lr = 0.000123648
+    # loss_weight_similarity = 7
+    # batch_size = 128
 
     return (
         loss_weight_orig_ce,
@@ -164,13 +170,14 @@ def suggest_hyperparameters(config, trial):
 
 
 def train(
-    data_module: VisionDataModuleUnionType,
+    train_loader: DataLoader,
+    validation_loader: DataLoader,
     device: torch.device,
     config: ManipulatedModelTrainingConfig,
     metricized_top_and_bottom_explanations: MetricizedTopAndBottomExplanations,
     original_log_path: str,
     trial: optuna.trial.Trial = None,
-) -> Tuple[float, float, float]:
+) -> Tuple[float]:
 
     experiment_name = config.data_set.name
 
@@ -201,10 +208,27 @@ def train(
         log_message += f"with trial no. '{trial.number}'"
     logger.info(log_message)
 
-    # Data loaders
-    train_loader = data_module.train_dataloader()
-    validation_loader = data_module.val_dataloader()
+    loss = run_training(
+        device,
+        config,
+        metricized_top_and_bottom_explanations,
+        neptune_logger,
+        train_loader,
+        validation_loader,
+        trial,
+    )
+    return loss
 
+
+def run_training(
+    device: torch.device,
+    config: ManipulatedModelTrainingConfig,
+    metricized_top_and_bottom_explanations: MetricizedTopAndBottomExplanations,
+    neptune_logger: NeptuneLogger,
+    train_loader: DataLoader,
+    validation_loader: DataLoader,
+    trial: optuna.trial.Trial = None,
+):
     model = get_manipulatable_model(config)
     model.set_metricized_explanations(metricized_top_and_bottom_explanations)
     model.set_hydra_logger(logger)
@@ -231,24 +255,18 @@ def train(
         logger=neptune_logger,
         max_epochs=config.max_epochs,
     )
-
     trainer.fit(model, train_loader, validation_loader)
 
     # Test with best model checkpoint (Lightning does this automatically)
-    test_loader = data_module.test_dataloader()
-    test_results = trainer.test(model=model, test_dataloaders=test_loader)
-    logger.info(f"Test results: \n {pformat(test_results)}")
     copy_run_outputs(
         config.log_path,
         os.getcwd(),
         neptune_logger.name,
         neptune_logger.version,
     )
-
     del model
     del train_loader
     del validation_loader
-    del test_loader
 
     return trainer.callback_metrics["val_exp_sim"].item()
 
@@ -310,7 +328,8 @@ def test(
 
 
 def run_optuna_study(
-    data_module: VisionDataModuleUnionType,
+    train_loader: DataLoader,
+    validation_loader: DataLoader,
     device: torch.device,
     config: ManipulatedModelTrainingConfig,
     metricized_top_and_bottom_explanations: MetricizedTopAndBottomExplanations,
@@ -324,7 +343,8 @@ def run_optuna_study(
     study = optuna.create_study(direction="minimize", pruner=pruner)
     objective = partial(
         train,
-        data_module,
+        train_loader,
+        validation_loader,
         device,
         config,
         metricized_top_and_bottom_explanations,
@@ -396,6 +416,8 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
     config.tags.append(f"class_ids={config.included_classes}")
     if config.trash_run:
         config.tags.append("trash")
+    if config.kfold_num_folds is not None:
+        config.tags.append(f"kfold={config.kfold_num_folds}")
 
     if config.test:
         test(
@@ -405,22 +427,58 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
             metricized_top_and_bottom_explanations,
         )
     else:
-        if config.optuna.use_optuna:
-            run_optuna_study(
+        if config.kfold_num_folds is not None:
+            logger.info("Starting k-fold cross validation.")
+            # K-fold cross validation data module
+            kfold_data_module = StratifiedKFoldCVDataModule(
                 data_module,
-                device,
-                config,
-                metricized_top_and_bottom_explanations,
-                original_log_path,
+                n_splits=config.kfold_num_folds,
             )
+            for fold_idx, (train_loader, validation_loader) in enumerate(
+                kfold_data_module.split()
+            ):
+                logger.info(
+                    f"Starting fold {fold_idx + 1} of {config.kfold_num_folds}."
+                )
+                if config.optuna.use_optuna:
+                    run_optuna_study(
+                        train_loader,
+                        validation_loader,
+                        device,
+                        config,
+                        metricized_top_and_bottom_explanations,
+                        original_log_path,
+                    )
+                else:
+                    train(
+                        train_loader,
+                        validation_loader,
+                        device,
+                        config,
+                        metricized_top_and_bottom_explanations,
+                        original_log_path,
+                    )
         else:
-            train(
-                data_module,
-                device,
-                config,
-                metricized_top_and_bottom_explanations,
-                original_log_path,
-            )
+            train_loader = data_module.train_dataloader()
+            validation_loader = data_module.val_dataloader()
+            if config.optuna.use_optuna:
+                run_optuna_study(
+                    train_loader,
+                    validation_loader,
+                    device,
+                    config,
+                    metricized_top_and_bottom_explanations,
+                    original_log_path,
+                )
+            else:
+                train(
+                    train_loader,
+                    validation_loader,
+                    device,
+                    config,
+                    metricized_top_and_bottom_explanations,
+                    original_log_path,
+                )
 
 
 if __name__ == "__main__":

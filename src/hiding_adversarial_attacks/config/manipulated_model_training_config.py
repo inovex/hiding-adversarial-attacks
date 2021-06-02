@@ -66,11 +66,11 @@ optuna_search_spaces = {
     "FashionMNIST": {
         "lr": {
             "log": True,
-            "low": 1e-5,
-            "high": 1e-2,
+            "low": 1e-6,
+            "high": 5e-4,
         },
-        "loss_weight_similarity": {"low": 10, "high": 15, "step": 1},
-        "batch_size": [128, 256],
+        "loss_weight_similarity": {"low": 6, "high": 9, "step": 1},
+        "batch_size": [128],
         # currently unused:
         "similarity_loss": {"choices": [PCCLoss]},
     },
@@ -112,7 +112,9 @@ class OptunaConfig:
     timeout: Optional[int] = None
 
     # Search spaces for hyperparameters
-    search_space: Any = field(default_factory=lambda: optuna_search_spaces["CIFAR10"])
+    search_space: Any = field(
+        default_factory=lambda: optuna_search_spaces["FashionMNIST"]
+    )
 
 
 @dataclass
@@ -168,6 +170,8 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
 
     # Optuna options
     optuna: OptunaConfig = OptunaConfig()
+
+    kfold_num_folds: Optional[int] = None
 
 
 cs = ConfigStore.instance()
