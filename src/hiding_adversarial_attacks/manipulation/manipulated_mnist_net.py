@@ -221,7 +221,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         # Safe original and adversarial explanations locally
         if (
-            (stage == Stage.STAGE_TRAIN or stage == Stage.STAGE_VAL)
+            (stage == Stage.STAGE_TRAIN)
             and self.global_step % self.image_log_intervals[stage.value] == 0
         ) or (
             stage == Stage.STAGE_TEST
