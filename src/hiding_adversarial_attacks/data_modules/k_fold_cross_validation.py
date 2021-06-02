@@ -1,5 +1,7 @@
 """
     Cross validation for Pytorch Lightning Data Modules
+    Inspired by:
+    https://github.com/PyTorchLightning/pytorch-lightning/issues/839#issuecomment-823817027
 """
 
 from abc import ABC, abstractmethod
