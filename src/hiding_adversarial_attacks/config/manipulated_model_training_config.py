@@ -173,6 +173,7 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
 
     # Optuna options
     optuna: OptunaConfig = OptunaConfig()
+    early_stopping: bool = False
 
     kfold_num_folds: Optional[int] = None
 

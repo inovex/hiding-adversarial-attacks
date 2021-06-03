@@ -265,10 +265,16 @@ def run_training(
         image_log_path=model.image_log_path,
         trash_run=config.trash_run,
     )
-    early_stopping_callback = CustomEarlyStopping(
-        monitor="val_exp_sim", min_delta=0.001, patience=5, verbose=False, mode="min"
-    )
-    callbacks = [checkpoint_callback, neptune_callback, early_stopping_callback]
+    callbacks = [checkpoint_callback, neptune_callback]
+    if config.early_stopping:
+        early_stopping_callback = CustomEarlyStopping(
+            monitor="val_exp_sim",
+            min_delta=0.001,
+            patience=5,
+            verbose=False,
+            mode="min",
+        )
+        callbacks.append(early_stopping_callback)
     if trial is not None:
         callbacks.append(
             PyTorchLightningPruningCallback(trial, monitor=VAL_NORM_TOTAL_LOSS),
