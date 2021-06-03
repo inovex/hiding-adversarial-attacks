@@ -173,7 +173,7 @@ def suggest_hyperparameters(config, trial):
             step=steps_lr_options["step"],
         )
         gamma_options = config.optuna.search_space["gamma"]
-        gamma = trial.suggest_int(
+        gamma = trial.suggest_float(
             "gamma",
             gamma_options["low"],
             gamma_options["high"],
@@ -266,7 +266,7 @@ def run_training(
         trash_run=config.trash_run,
     )
     early_stopping_callback = CustomEarlyStopping(
-        monitor="val_exp_sim", min_delta=0.01, patience=5, verbose=False, mode="min"
+        monitor="val_exp_sim", min_delta=0.001, patience=5, verbose=False, mode="min"
     )
     callbacks = [checkpoint_callback, neptune_callback, early_stopping_callback]
     if trial is not None:
