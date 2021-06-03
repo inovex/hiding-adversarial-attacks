@@ -70,7 +70,7 @@ optuna_search_spaces = {
             "high": 2e-4,
         },
         "loss_weight_similarity": {"low": 7, "high": 9, "step": 1},
-        "batch_size": [128],
+        "batch_size": [128, 256],
         "steps_lr": {"low": 1, "high": 10, "step": 2},
         "gamma": {"low": 0.1, "high": 0.9, "step": 0.1},
         # currently unused:
