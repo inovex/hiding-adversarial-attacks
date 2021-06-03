@@ -23,6 +23,9 @@ from torch._vmap_internals import vmap
 from torch.utils.data import DataLoader
 
 from hiding_adversarial_attacks._neptune.utils import get_neptune_logger
+from hiding_adversarial_attacks.callbacks.early_stopping_callback import (
+    CustomEarlyStopping,
+)
 from hiding_adversarial_attacks.callbacks.neptune_callback import NeptuneLoggingCallback
 from hiding_adversarial_attacks.callbacks.utils import copy_run_outputs
 from hiding_adversarial_attacks.classifiers.cifar_net import CifarNet
@@ -262,10 +265,10 @@ def run_training(
         image_log_path=model.image_log_path,
         trash_run=config.trash_run,
     )
-    callbacks = [
-        checkpoint_callback,
-        neptune_callback,
-    ]
+    early_stopping_callback = CustomEarlyStopping(
+        monitor="val_exp_sim", min_delta=0.01, patience=5, verbose=False, mode="min"
+    )
+    callbacks = [checkpoint_callback, neptune_callback, early_stopping_callback]
     if trial is not None:
         callbacks.append(
             PyTorchLightningPruningCallback(trial, monitor=VAL_NORM_TOTAL_LOSS),
