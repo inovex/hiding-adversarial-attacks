@@ -155,10 +155,27 @@ def suggest_hyperparameters(config, trial):
     batch_size = trial.suggest_categorical(
         "batch_size", config.optuna.search_space["batch_size"]
     )
-    # override
-    # lr = 0.000123648
-    # loss_weight_similarity = 7
-    # batch_size = 128
+
+    steps_lr = config.steps_lr
+    gamma = config.gamma
+    if (
+        "steps_lr" in config.optuna.search_space
+        and "gamma" in config.optuna.search_space
+    ):
+        steps_lr_options = config.optuna.search_space["steps_lr"]
+        steps_lr = trial.suggest_int(
+            "steps_lr",
+            steps_lr_options["low"],
+            steps_lr_options["high"],
+            step=steps_lr_options["step"],
+        )
+        gamma_options = config.optuna.search_space["gamma"]
+        gamma = trial.suggest_int(
+            "gamma",
+            gamma_options["low"],
+            gamma_options["high"],
+            step=gamma_options["step"],
+        )
 
     return (
         loss_weight_orig_ce,
@@ -166,6 +183,8 @@ def suggest_hyperparameters(config, trial):
         loss_weight_similarity,
         lr,
         batch_size,
+        steps_lr,
+        gamma,
     )
 
 
@@ -189,6 +208,8 @@ def train(
             config.loss_weight_similarity,
             config.lr,
             config.batch_size,
+            config.steps_lr,
+            config.gamma,
         ) = suggest_hyperparameters(config, trial)
 
     logger.info("**** Parameters: ******")

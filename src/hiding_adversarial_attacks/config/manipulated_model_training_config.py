@@ -66,11 +66,13 @@ optuna_search_spaces = {
     "FashionMNIST": {
         "lr": {
             "log": True,
-            "low": 1e-6,
-            "high": 5e-4,
+            "low": 1e-5,
+            "high": 2e-4,
         },
-        "loss_weight_similarity": {"low": 6, "high": 9, "step": 1},
+        "loss_weight_similarity": {"low": 7, "high": 9, "step": 1},
         "batch_size": [128],
+        "steps_lr": {"low": 1, "high": 10, "step": 2},
+        "gamma": {"low": 0.1, "high": 0.9, "step": 0.1},
         # currently unused:
         "similarity_loss": {"choices": [PCCLoss]},
     },
@@ -141,7 +143,8 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     # Hyperparameters
     similarity_loss: SimilarityLoss = MISSING
     lr: float = 0.0001
-    # gamma: float = 0.07
+    gamma: Optional[float] = 0.7
+    steps_lr: Optional[int] = 5
     loss_weight_orig_ce: float = 1.0
     loss_weight_adv_ce: float = 1.0
     loss_weight_similarity: float = 100000.0
