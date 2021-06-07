@@ -83,6 +83,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         self.zero_explanation_count = 0
         self.global_test_step = 0
+        self.last_batch_explanation_sim = None
 
         self.included_classes = hparams.included_classes
         self.use_original_explanations = "Explanations" in self.hparams.data_set["name"]
@@ -297,6 +298,13 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 original_double, predicted
             )
 
+        # Case when there are no samples for included_classes
+        # for explanation comparison in the batch
+        if explanation_similarity != explanation_similarity:
+            explanation_similarity = (
+                torch.FloatTensor(1).uniform_(0, self.max_loss).to(self.device)
+            )[0]
+
         # Normalized total loss
         normalized_total_loss = self.get_normalized_total_loss(
             cross_entropy_orig,
@@ -342,6 +350,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
     def get_normalized_total_loss(self, ce_orig, ce_adv, similarity, stage):
         norm_ce_orig = 1 - torch.exp(-ce_orig)
         norm_ce_adv = 1 - torch.exp(-ce_adv)
+
         if self.hparams.similarity_loss["name"] == SimilarityLossNames.PCC:
             norm_sim = self.loss_weights[2] * similarity
         elif self.hparams.similarity_loss["name"] == SimilarityLossNames.SSIM:
