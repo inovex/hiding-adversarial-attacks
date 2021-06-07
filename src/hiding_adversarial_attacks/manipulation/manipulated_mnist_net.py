@@ -33,9 +33,9 @@ from hiding_adversarial_attacks.explainers.utils import get_explainer
 from hiding_adversarial_attacks.manipulation.metricized_explanations import (
     MetricizedTopAndBottomExplanations,
 )
-from hiding_adversarial_attacks.manipulation.utils import create_mask
 from hiding_adversarial_attacks.utils import (
     assert_not_none,
+    create_mask,
     save_confusion_matrix,
     tensor_to_pil_numpy,
     visualize_difference_image_np,

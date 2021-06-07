@@ -1,21 +1,38 @@
 import os
 from functools import partial
-from typing import Any, List
 
 import pandas as pd
 import torch
 from matplotlib import pyplot as plt
 from torch._vmap_internals import vmap
+from torchmetrics.functional import mean_squared_error, ssim
 
+from hiding_adversarial_attacks.classifiers.cifar_net import CifarNet
+from hiding_adversarial_attacks.classifiers.fashion_mnist_net import FashionMNISTNet
+from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.attack.adversarial_attack_config import (
     ALL_CLASSES,
 )
+from hiding_adversarial_attacks.config.data_sets.data_set_config import (
+    AdversarialDataSetNames,
+)
 from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
-    SimilarityLossMapping,
     SimilarityLossNames,
 )
 from hiding_adversarial_attacks.config.manipulated_model_training_config import (
     ManipulatedModelTrainingConfig,
+)
+from hiding_adversarial_attacks.custom_metrics.pearson_corrcoef import (
+    custom_pearson_corrcoef,
+)
+from hiding_adversarial_attacks.manipulation.manipulated_cifar_net import (
+    ManipulatedCIFARNet,
+)
+from hiding_adversarial_attacks.manipulation.manipulated_fashion_mnist_net import (
+    ManipulatedFashionMNISTNet,
+)
+from hiding_adversarial_attacks.manipulation.manipulated_mnist_net import (
+    ManipulatedMNISTNet,
 )
 from hiding_adversarial_attacks.manipulation.metricized_explanations import (
     MetricizedTopAndBottomExplanations,
@@ -25,15 +42,6 @@ from hiding_adversarial_attacks.utils import (
     visualize_difference_image_np,
     visualize_single_explanation,
 )
-
-
-def create_mask(source: torch.Tensor, included_classes: List[Any]):
-    if ALL_CLASSES in included_classes:
-        return torch.ones(len(source), dtype=torch.bool, device=source.device)
-    mask = torch.zeros(len(source), dtype=torch.bool, device=source.device)
-    for c in included_classes:
-        mask += source == c
-    return mask
 
 
 def load_explanations(config, device: torch.device, stage: str = "training"):
@@ -241,13 +249,14 @@ def get_metricized_top_and_bottom_explanations(
 
 
 def get_similarities(similarity_loss_name, orig_explanations, adv_explanations):
-    similarity_loss = SimilarityLossMapping[similarity_loss_name]
     reverse = False
     if similarity_loss_name == SimilarityLossNames.MSE:
+        similarity_loss = mean_squared_error
         batched_sim_loss = vmap(similarity_loss)
         similarities = batched_sim_loss(orig_explanations, adv_explanations)
         reverse = True
     if similarity_loss_name == SimilarityLossNames.SSIM:
+        similarity_loss = ssim
         batched_sim_loss = partial(
             similarity_loss,
             reduction="none",
@@ -257,6 +266,7 @@ def get_similarities(similarity_loss_name, orig_explanations, adv_explanations):
         similarities = batched_sim_loss(orig_explanations, adv_explanations)
         similarities = similarities.mean(dim=(1, 2, 3))
     if similarity_loss_name == SimilarityLossNames.PCC:
+        similarity_loss = custom_pearson_corrcoef  # batched version of PCC in [-1, 1]
         batched_sim_loss = partial(similarity_loss)
         similarities = batched_sim_loss(orig_explanations, adv_explanations)
     return reverse, similarities
@@ -306,3 +316,34 @@ def load_filtered_data(config, device, stage: str = "training"):
         adv_expl,
         adv_labels,
     )
+
+
+def get_manipulatable_model(config):
+    if config.data_set.name == AdversarialDataSetNames.ADVERSARIAL_MNIST:
+        classifier_model = MNISTNet(config).load_from_checkpoint(
+            config.classifier_checkpoint
+        )
+        model = ManipulatedMNISTNet(classifier_model, config)
+        return model
+    if config.data_set.name == AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST:
+        classifier_model = FashionMNISTNet(config).load_from_checkpoint(
+            config.classifier_checkpoint
+        )
+        model = ManipulatedFashionMNISTNet(classifier_model, config)
+        return model
+    if config.data_set.name == AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST_EXPL:
+        classifier_model = FashionMNISTNet(config).load_from_checkpoint(
+            config.classifier_checkpoint
+        )
+        model = ManipulatedFashionMNISTNet(classifier_model, config)
+        return model
+    if config.data_set.name == AdversarialDataSetNames.ADVERSARIAL_CIFAR10:
+        classifier_model = CifarNet(config).load_from_checkpoint(
+            config.classifier_checkpoint
+        )
+        model = ManipulatedCIFARNet(classifier_model, config)
+        return model
+    else:
+        raise SystemExit(
+            f"Unknown data set specified: {config.data_set.name}. Exiting."
+        )

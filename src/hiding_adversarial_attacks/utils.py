@@ -2,7 +2,7 @@ import argparse
 import os
 from functools import wraps
 from time import time
-from typing import List, Tuple, Union
+from typing import Any, List, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,6 +14,10 @@ from matplotlib.figure import Figure
 from matplotlib.pyplot import axis, figure
 from numpy import ndarray
 from torchvision.transforms import ToPILImage
+
+from hiding_adversarial_attacks.config.attack.adversarial_attack_config import (
+    ALL_CLASSES,
+)
 
 
 def timeit(func):
@@ -170,3 +174,12 @@ if __name__ == "__main__":
         "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.2--cp-run=HAA-943"
     )
     display_random_original_and_adversarial_training_image(path)
+
+
+def create_mask(source: torch.Tensor, included_classes: List[Any]):
+    if ALL_CLASSES in included_classes:
+        return torch.ones(len(source), dtype=torch.bool, device=source.device)
+    mask = torch.zeros(len(source), dtype=torch.bool, device=source.device)
+    for c in included_classes:
+        mask += source == c
+    return mask

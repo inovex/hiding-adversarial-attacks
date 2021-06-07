@@ -1,7 +1,11 @@
 import os
 
+import hydra
 import numpy as np
+import pandas as pd
 import torch
+from pytorch_lightning import LightningModule
+from torch.utils.data import DataLoader
 from torchmetrics import Accuracy
 from tqdm import tqdm
 
@@ -9,7 +13,57 @@ from hiding_adversarial_attacks.classifiers.utils import get_model_from_checkpoi
 from hiding_adversarial_attacks.config.data_sets.data_set_config import (
     AdversarialDataSetNames,
 )
+from hiding_adversarial_attacks.config.manipulated_model_training_config import (
+    ManipulatedModelTrainingConfig,
+)
 from hiding_adversarial_attacks.data_modules.utils import get_data_module
+from hiding_adversarial_attacks.eda.visualization import (
+    plot_similarities_histogram_with_boxplot,
+    plot_similarities_kde,
+)
+from hiding_adversarial_attacks.manipulation.utils import (
+    get_manipulatable_model,
+    get_similarities,
+)
+
+data_set_mappings = {
+    AdversarialDataSetNames.ADVERSARIAL_MNIST: {
+        0: "0",
+        1: "1",
+        2: "2",
+        3: "3",
+        4: "4",
+        5: "5",
+        6: "6",
+        7: "7",
+        8: "8",
+        9: "9",
+    },
+    AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST: {
+        0: "T-shirt/top",
+        1: "Trouser",
+        2: "Pullover",
+        3: "Dress",
+        4: "Coat",
+        5: "Sandal",
+        6: "Shirt",
+        7: "Sneaker",
+        8: "Bag",
+        9: "Ankle boot",
+    },
+    AdversarialDataSetNames.ADVERSARIAL_CIFAR10: {
+        0: "Airplane",
+        1: "Car",
+        2: "Bird",
+        3: "Cat",
+        4: "Deer",
+        5: "Dog",
+        6: "Frog",
+        7: "Horse",
+        8: "Ship",
+        9: "Truck",
+    },
+}
 
 
 def save_classification_confidences(
@@ -86,6 +140,143 @@ def save_classification_confidences(
     )
 
 
+def visualize_explanation_similarities(
+    model: LightningModule,
+    data_loader: DataLoader,
+    data_set_name: str,
+    device: torch.device,
+):
+    data_set_map = data_set_mappings[data_set_name]
+
+    orig_labels = np.array([])
+    adv_labels = np.array([])
+    sim_mse = np.array([])
+    sim_pcc = np.array([])
+    for batch in tqdm(data_loader):
+        (
+            original_images,
+            adversarial_images,
+            original_labels,
+            adversarial_labels,
+            batch_indices,
+        ) = batch
+
+        # get explanation maps
+        original_explanation_maps = model.explainer.explain(
+            original_images.to(device), original_labels.to(device)
+        )
+        adversarial_explanation_maps = model.explainer.explain(
+            adversarial_images.to(device), adversarial_labels.to(device)
+        )
+        # calculate similarities
+        _, similarities_mse = get_similarities(
+            "MSE", original_explanation_maps, adversarial_explanation_maps
+        )
+        _, similarities_pcc = get_similarities(
+            "PCC", original_explanation_maps, adversarial_explanation_maps
+        )
+
+        # concat arrays
+        orig_labels = np.append(orig_labels, original_labels.cpu().detach().numpy())
+        adv_labels = np.append(adv_labels, adversarial_labels.cpu().detach().numpy())
+        sim_mse = np.append(sim_mse, similarities_mse.cpu().detach().numpy())
+        sim_pcc = np.append(sim_pcc, similarities_pcc.cpu().detach().numpy())
+
+    df_sim = pd.DataFrame(
+        [
+            sim_mse,
+            sim_pcc,
+            orig_labels,
+            adv_labels,
+        ],
+        index=["mse_sim", "pcc_sim", "orig_label", "adv_label"],
+    ).T
+    df_sim["orig_label"] = df_sim["orig_label"].astype(int)
+    df_sim["adv_label"] = df_sim["adv_label"].astype(int)
+    df_sim["orig_label_name"] = df_sim["orig_label"].map(data_set_map)
+
+    manipulated_classes = [
+        data_set_map[c] for c in model.hparams["hparams"]["included_classes"]
+    ]
+
+    # Plot similarity histograms for both MSE and PCC
+    sorted_df_sim = df_sim.sort_values(by="orig_label")
+    hist_mse = plot_similarities_histogram_with_boxplot(
+        sorted_df_sim,
+        "orig_label_name",
+        "mse_sim",
+        f"{data_set_name} original vs. adversarial "
+        f"explanation similarities (MSE) "
+        f"after manipulating on classes '{manipulated_classes}'",
+        log_x=True,
+    )
+    hist_pcc = plot_similarities_histogram_with_boxplot(
+        sorted_df_sim,
+        "orig_label_name",
+        "pcc_sim",
+        f"{data_set_name} original vs. adversarial "
+        f"explanation similarities (PCC) histogram "
+        f"after manipulating on classes '{manipulated_classes}'",
+        log_x=False,
+    )
+    kde_mse = plot_similarities_kde(
+        sorted_df_sim,
+        "mse_sim",
+        list(data_set_map.values()),
+        f"{data_set_name} original vs. adversarial "
+        f"explanation similarities (MSE) histogram"
+        f" KDE plots after manipulating on classes '{manipulated_classes}'",
+        log_x=True,
+    )
+    kde_pcc = plot_similarities_kde(
+        sorted_df_sim,
+        "pcc_sim",
+        list(data_set_map.values()),
+        f"{data_set_name} original vs. adversarial explanation similarities (PCC)"
+        f" KDE plots after manipulating on classes '{manipulated_classes}'",
+        log_x=False,
+    )
+    return hist_mse, hist_pcc, kde_mse, kde_pcc
+
+
+@hydra.main(config_name="manipulated_model_training_config")
+def run_visualize_explanation_similarities(
+    config: ManipulatedModelTrainingConfig,
+):
+    device = torch.device(
+        "cuda" if (torch.cuda.is_available() and config.gpus != 0) else "cpu"
+    )
+
+    model = get_manipulatable_model(config).load_from_checkpoint(config.checkpoint)
+    model.to(device)
+    model.eval()
+    model.freeze()
+
+    print(
+        f"Visualizing explanation similarities for"
+        f" model checkpoint '{config.checkpoint}' and "
+        f"XAI technique '{model.hparams['hparams']['explainer']['name']}'."
+    )
+
+    data_set_name = config.data_set.name
+    data_module = get_data_module(
+        data_set=config.data_set.name,
+        data_path=config.data_path,
+        download=False,
+        batch_size=64,
+        val_split=0.0,
+        transform=None,
+    )
+
+    train_loader = data_module.train_dataloader(shuffle=False)
+    visualize_explanation_similarities(
+        model,
+        train_loader,
+        data_set_name,
+        device,
+    )
+
+
 def run():
     data_set_mapping = [
         {
@@ -124,4 +315,4 @@ def run():
 
 
 if __name__ == "__main__":
-    run()
+    run_visualize_explanation_similarities()

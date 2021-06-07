@@ -28,13 +28,7 @@ from hiding_adversarial_attacks.callbacks.early_stopping_callback import (
 )
 from hiding_adversarial_attacks.callbacks.neptune_callback import NeptuneLoggingCallback
 from hiding_adversarial_attacks.callbacks.utils import copy_run_outputs
-from hiding_adversarial_attacks.classifiers.cifar_net import CifarNet
-from hiding_adversarial_attacks.classifiers.fashion_mnist_net import FashionMNISTNet
-from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
 from hiding_adversarial_attacks.config.config_validator import ConfigValidator
-from hiding_adversarial_attacks.config.data_sets.data_set_config import (
-    AdversarialDataSetNames,
-)
 from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossMapping,
 )
@@ -46,56 +40,18 @@ from hiding_adversarial_attacks.data_modules.k_fold_cross_validation import (
     StratifiedKFoldCVDataModule,
 )
 from hiding_adversarial_attacks.data_modules.utils import get_data_module
-from hiding_adversarial_attacks.manipulation.manipulated_cifar_net import (
-    ManipulatedCIFARNet,
-)
-from hiding_adversarial_attacks.manipulation.manipulated_fashion_mnist_net import (  # noqa: E501
-    ManipulatedFashionMNISTNet,
-)
-from hiding_adversarial_attacks.manipulation.manipulated_mnist_net import (
-    ManipulatedMNISTNet,
-)
+from hiding_adversarial_attacks.eda.utils import visualize_explanation_similarities
 from hiding_adversarial_attacks.manipulation.metricized_explanations import (
     MetricizedTopAndBottomExplanations,
 )
 from hiding_adversarial_attacks.manipulation.utils import (
+    get_manipulatable_model,
     get_metricized_top_and_bottom_explanations,
     get_top_and_bottom_k_explanations,
     load_filtered_data,
 )
 
 logger = logging.getLogger(__file__)
-
-
-def get_manipulatable_model(config):
-    if config.data_set.name == AdversarialDataSetNames.ADVERSARIAL_MNIST:
-        classifier_model = MNISTNet(config).load_from_checkpoint(
-            config.classifier_checkpoint
-        )
-        model = ManipulatedMNISTNet(classifier_model, config)
-        return model
-    if config.data_set.name == AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST:
-        classifier_model = FashionMNISTNet(config).load_from_checkpoint(
-            config.classifier_checkpoint
-        )
-        model = ManipulatedFashionMNISTNet(classifier_model, config)
-        return model
-    if config.data_set.name == AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST_EXPL:
-        classifier_model = FashionMNISTNet(config).load_from_checkpoint(
-            config.classifier_checkpoint
-        )
-        model = ManipulatedFashionMNISTNet(classifier_model, config)
-        return model
-    if config.data_set.name == AdversarialDataSetNames.ADVERSARIAL_CIFAR10:
-        classifier_model = CifarNet(config).load_from_checkpoint(
-            config.classifier_checkpoint
-        )
-        model = ManipulatedCIFARNet(classifier_model, config)
-        return model
-    else:
-        raise SystemExit(
-            f"Unknown data set specified: {config.data_set.name}. Exiting."
-        )
 
 
 def visualize_top_bottom_k(config, device, model):
@@ -194,6 +150,7 @@ def suggest_hyperparameters(config, trial):
 def train(
     train_loader: DataLoader,
     validation_loader: DataLoader,
+    test_loader: DataLoader,
     device: torch.device,
     config: ManipulatedModelTrainingConfig,
     metricized_top_and_bottom_explanations: MetricizedTopAndBottomExplanations,
@@ -239,6 +196,7 @@ def train(
         neptune_logger,
         train_loader,
         validation_loader,
+        test_loader,
         trial,
     )
     return loss
@@ -251,6 +209,7 @@ def run_training(
     neptune_logger: NeptuneLogger,
     train_loader: DataLoader,
     validation_loader: DataLoader,
+    test_loader: DataLoader,
     trial: optuna.trial.Trial = None,
 ):
     model = get_manipulatable_model(config)
@@ -288,6 +247,26 @@ def run_training(
     trainer.fit(model, train_loader, validation_loader)
 
     # Test with best model checkpoint (Lightning does this automatically)
+    test_results = trainer.test(model=model, test_dataloaders=test_loader)
+    logger.info(f"Test results: \n {pformat(test_results)}")
+
+    hist_mse, hist_pcc, kde_mse, kde_pcc = visualize_explanation_similarities(
+        model, train_loader, config.data_set.name, device
+    )
+    hist_mse.savefig(
+        os.path.join(model.image_log_path, "explanation_similarity_hist_mse.png")
+    )
+    hist_pcc.savefig(
+        os.path.join(model.image_log_path, "explanation_similarity_hist_pcc.png")
+    )
+    kde_mse.savefig(
+        os.path.join(model.image_log_path, "explanation_similarity_kde_mse.png")
+    )
+    kde_pcc.savefig(
+        os.path.join(model.image_log_path, "explanation_similarity_kde_pcc.png")
+    )
+
+    # Test with best model checkpoint (Lightning does this automatically)
     copy_run_outputs(
         config.log_path,
         os.getcwd(),
@@ -297,6 +276,7 @@ def run_training(
     del model
     del train_loader
     del validation_loader
+    del test_loader
 
     return trainer.callback_metrics["val_exp_sim"].item()
 
@@ -360,6 +340,7 @@ def test(
 def run_optuna_study(
     train_loader: DataLoader,
     validation_loader: DataLoader,
+    test_loader: DataLoader,
     device: torch.device,
     config: ManipulatedModelTrainingConfig,
     metricized_top_and_bottom_explanations: MetricizedTopAndBottomExplanations,
@@ -375,6 +356,7 @@ def run_optuna_study(
         train,
         train_loader,
         validation_loader,
+        test_loader,
         device,
         config,
         metricized_top_and_bottom_explanations,
@@ -449,6 +431,8 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
     if config.kfold_num_folds is not None:
         config.tags.append(f"kfold={config.kfold_num_folds}")
 
+    test_loader = data_module.test_dataloader()
+
     if config.test:
         test(
             data_module,
@@ -459,6 +443,7 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
     else:
         if config.kfold_num_folds is not None:
             logger.info("Starting k-fold cross validation.")
+
             # K-fold cross validation data module
             kfold_data_module = StratifiedKFoldCVDataModule(
                 data_module,
@@ -474,6 +459,7 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
                     run_optuna_study(
                         train_loader,
                         validation_loader,
+                        test_loader,
                         device,
                         config,
                         metricized_top_and_bottom_explanations,
@@ -483,6 +469,7 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
                     train(
                         train_loader,
                         validation_loader,
+                        test_loader,
                         device,
                         config,
                         metricized_top_and_bottom_explanations,
@@ -495,6 +482,7 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
                 run_optuna_study(
                     train_loader,
                     validation_loader,
+                    test_loader,
                     device,
                     config,
                     metricized_top_and_bottom_explanations,
@@ -504,6 +492,7 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
                 train(
                     train_loader,
                     validation_loader,
+                    test_loader,
                     device,
                     config,
                     metricized_top_and_bottom_explanations,
