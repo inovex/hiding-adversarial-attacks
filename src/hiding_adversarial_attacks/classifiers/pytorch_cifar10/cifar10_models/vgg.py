@@ -1,3 +1,8 @@
+"""
+Source:
+https://github.com/huyvnphan/PyTorch_CIFAR10/blob/master/cifar10_models/vgg.py
+"""
+
 import os
 
 import torch
