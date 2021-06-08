@@ -25,7 +25,7 @@ def plot_similarities_histogram_with_boxplot(
     p = sns.color_palette(color_p[1], 1)
 
     for (label, g), ax, mean in zip(group, axes.flatten(), means):
-        if log_x and not g[similarity_col].any(0):
+        if log_x:
             ax.set_xscale("log")
         if log_y:
             ax.set_yscale("log")
@@ -33,11 +33,20 @@ def plot_similarities_histogram_with_boxplot(
         ax.set_title(label)
         ax2 = ax.twinx()
 
+        # Filter values that are 0 for mse_sim due to log plotting
+        g_nonzero = g
+        if similarity_col == "mse_sim":
+            g_nonzero = g[g[similarity_col] != 0]
+
         try:
-            ax = sns.histplot(g, ax=ax, palette=p, label=similarity_col)
+            ax = sns.histplot(
+                g_nonzero, ax=ax, palette=p, label=similarity_col, bins=30
+            )
             y_lim = int(ax.get_ylim()[1] * ylim_factor)
             ax.set(ylim=(-5, y_lim))
-            sns.boxplot(data=g, x=similarity_col, ax=ax2, color=color_palette[2])
+            sns.boxplot(
+                data=g_nonzero, x=similarity_col, ax=ax2, color=color_palette[2]
+            )
             ax2.set(ylim=(-5, 1))
             ax2.axvline(
                 mean,
@@ -47,8 +56,8 @@ def plot_similarities_histogram_with_boxplot(
                 label="mean",
             )
             ax.legend(loc="lower left")
-        except ValueError as e:
-            print(f"WARNING: {e}")
+        except Exception as e:
+            print(f"EXCEPTION: {e}")
 
     fig.suptitle(title, fontsize=16)
     plt.tight_layout()
