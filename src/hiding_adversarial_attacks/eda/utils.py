@@ -51,6 +51,18 @@ data_set_mappings = {
         8: "Bag",
         9: "Ankle boot",
     },
+    AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST_EXPL: {
+        0: "T-shirt/top",
+        1: "Trouser",
+        2: "Pullover",
+        3: "Dress",
+        4: "Coat",
+        5: "Sandal",
+        6: "Shirt",
+        7: "Sneaker",
+        8: "Bag",
+        9: "Ankle boot",
+    },
     AdversarialDataSetNames.ADVERSARIAL_CIFAR10: {
         0: "Airplane",
         1: "Car",
@@ -145,21 +157,36 @@ def visualize_explanation_similarities(
     data_loader: DataLoader,
     data_set_name: str,
     device: torch.device,
+    stage: str,
 ):
     data_set_map = data_set_mappings[data_set_name]
+    use_original_explanations = (
+        "Explanations" in model.hparams["hparams"]["data_set"]["name"]
+    )
 
     orig_labels = np.array([])
     adv_labels = np.array([])
     sim_mse = np.array([])
     sim_pcc = np.array([])
     for batch in tqdm(data_loader):
-        (
-            original_images,
-            adversarial_images,
-            original_labels,
-            adversarial_labels,
-            batch_indices,
-        ) = batch
+        if use_original_explanations:
+            (
+                original_images,
+                original_explanations_pre,
+                adversarial_images,
+                adversarial_explanations_pre,
+                original_labels,
+                adversarial_labels,
+                batch_indices,
+            ) = batch
+        else:
+            (
+                original_images,
+                adversarial_images,
+                original_labels,
+                adversarial_labels,
+                batch_indices,
+            ) = batch
 
         # get explanation maps
         original_explanation_maps = model.explainer.explain(
@@ -194,18 +221,53 @@ def visualize_explanation_similarities(
     df_sim["orig_label"] = df_sim["orig_label"].astype(int)
     df_sim["adv_label"] = df_sim["adv_label"].astype(int)
     df_sim["orig_label_name"] = df_sim["orig_label"].map(data_set_map)
+    sorted_df_sim = df_sim.sort_values(by="orig_label")
+
+    # Save similarities DataFrame as csv
+    csv_path = os.path.join(
+        model.hparams["hparams"]["log_path"], f"{stage}_similarities.csv"
+    )
+    sorted_df_sim.to_csv(csv_path)
 
     manipulated_classes = [
         data_set_map[c] for c in model.hparams["hparams"]["included_classes"]
     ]
 
     # Plot similarity histograms for both MSE and PCC
-    sorted_df_sim = df_sim.sort_values(by="orig_label")
+    hist_mse, hist_pcc, kde_mse, kde_pcc = plot_similarities(
+        sorted_df_sim, data_set_name, data_set_map, manipulated_classes, stage
+    )
+    # Save plots
+    hist_mse.savefig(
+        os.path.join(
+            model.image_log_path, f"{stage}_explanation_similarity_hist_mse.png"
+        )
+    )
+    hist_pcc.savefig(
+        os.path.join(
+            model.image_log_path, f"{stage}_explanation_similarity_hist_pcc.png"
+        )
+    )
+    kde_mse.savefig(
+        os.path.join(
+            model.image_log_path, f"{stage}_explanation_similarity_kde_mse.png"
+        )
+    )
+    kde_pcc.savefig(
+        os.path.join(
+            model.image_log_path, f"{stage}_explanation_similarity_kde_pcc.png"
+        )
+    )
+
+
+def plot_similarities(
+    sorted_df_sim, data_set_name, data_set_map, manipulated_classes, stage
+):
     hist_mse = plot_similarities_histogram_with_boxplot(
         sorted_df_sim,
         "orig_label_name",
         "mse_sim",
-        f"{data_set_name} original vs. adversarial "
+        f"{data_set_name} {stage} original vs. adversarial "
         f"explanation similarities (MSE) "
         f"after manipulating on classes '{manipulated_classes}'",
         log_x=True,
@@ -214,7 +276,7 @@ def visualize_explanation_similarities(
         sorted_df_sim,
         "orig_label_name",
         "pcc_sim",
-        f"{data_set_name} original vs. adversarial "
+        f"{data_set_name} {stage} original vs. adversarial "
         f"explanation similarities (PCC) histogram "
         f"after manipulating on classes '{manipulated_classes}'",
         log_x=False,
@@ -223,7 +285,7 @@ def visualize_explanation_similarities(
         sorted_df_sim,
         "mse_sim",
         list(data_set_map.values()),
-        f"{data_set_name} original vs. adversarial "
+        f"{data_set_name} {stage} original vs. adversarial "
         f"explanation similarities (MSE) histogram"
         f" KDE plots after manipulating on classes '{manipulated_classes}'",
         log_x=True,
@@ -232,7 +294,8 @@ def visualize_explanation_similarities(
         sorted_df_sim,
         "pcc_sim",
         list(data_set_map.values()),
-        f"{data_set_name} original vs. adversarial explanation similarities (PCC)"
+        f"{data_set_name} {stage} original vs. "
+        f"adversarial explanation similarities (PCC)"
         f" KDE plots after manipulating on classes '{manipulated_classes}'",
         log_x=False,
     )
@@ -274,6 +337,7 @@ def run_visualize_explanation_similarities(
         train_loader,
         data_set_name,
         device,
+        stage="train",
     )
 
 

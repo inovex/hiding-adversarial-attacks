@@ -250,20 +250,19 @@ def run_training(
     test_results = trainer.test(model=model, test_dataloaders=test_loader)
     logger.info(f"Test results: \n {pformat(test_results)}")
 
-    hist_mse, hist_pcc, kde_mse, kde_pcc = visualize_explanation_similarities(
-        model, train_loader, config.data_set.name, device
+    visualize_explanation_similarities(
+        model,
+        train_loader,
+        config.data_set.name,
+        device,
+        stage="train",
     )
-    hist_mse.savefig(
-        os.path.join(model.image_log_path, "explanation_similarity_hist_mse.png")
-    )
-    hist_pcc.savefig(
-        os.path.join(model.image_log_path, "explanation_similarity_hist_pcc.png")
-    )
-    kde_mse.savefig(
-        os.path.join(model.image_log_path, "explanation_similarity_kde_mse.png")
-    )
-    kde_pcc.savefig(
-        os.path.join(model.image_log_path, "explanation_similarity_kde_pcc.png")
+    visualize_explanation_similarities(
+        model,
+        test_loader,
+        config.data_set.name,
+        device,
+        stage="test",
     )
 
     # Test with best model checkpoint (Lightning does this automatically)
