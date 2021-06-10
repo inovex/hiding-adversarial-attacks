@@ -26,6 +26,9 @@ from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossNames,
 )
 from hiding_adversarial_attacks.config.manipulated_model_training_config import Stage
+from hiding_adversarial_attacks.custom_metrics.pearson_corrcoef import (
+    custom_pearson_corrcoef,
+)
 from hiding_adversarial_attacks.custom_metrics.relu_pearson_corrcoef import (
     ReluBatchedPearsonCorrCoef,
 )
@@ -243,6 +246,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 original_explanation_maps,
                 original_images,
                 original_labels,
+                batch_indeces,
                 fig_name,
             )
         return total_loss
@@ -608,6 +612,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         original_explanation_maps,
         original_images,
         original_labels,
+        batch_indeces,
         fig_name: str,
     ):
         figure, axes = self._visualize_explanations(
@@ -617,6 +622,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
             adversarial_explanation_maps,
             original_labels,
             adversarial_labels,
+            batch_indeces,
         )
         fig_path = os.path.join(self.image_log_path, fig_name)
         figure.savefig(fig_path)
@@ -647,6 +653,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
             adv_explanation_maps,
             self.metricized_explanations.top_and_bottom_original_labels,
             self.metricized_explanations.top_and_bottom_adversarial_labels,
+            self.metricized_explanations.top_and_bottom_indices,
         )
         top_bottom_k_fig_name = (
             f"epoch={self.trainer.current_epoch}_"
@@ -663,6 +670,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         adversarial_explanation_maps,
         original_labels,
         adversarial_labels,
+        batch_indeces,
     ):
         n_rows = 8 if self.hparams.batch_size > 8 else self.hparams.batch_size
         indeces = torch.arange(0, n_rows)
@@ -685,13 +693,20 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 raise TrialPruned(
                     "Trial pruned due to too many explanation maps becoming zero."
                 )
+            if self.hparams.similarity_loss["name"] == SimilarityLossNames.PCC:
+                sim_loss = custom_pearson_corrcoef
+                num_format = "{:.2f}"
+            else:
+                sim_loss = self.similarity_loss
+                num_format = "{:.2e}"
             explanation_similarity = (
-                self.similarity_loss(
+                sim_loss(
                     original_explanation_maps[index],
                     adversarial_explanation_maps[index],
                 )
                 .detach()
                 .cpu()
+                .item()
             )
             if np.count_nonzero(orig_expl[index]) == 0:
                 self.hydra_logger.warning(
@@ -705,10 +720,12 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 )
                 self.zero_explanation_count += 1
                 continue
+            similarity = num_format.format(explanation_similarity)
             visualize_single_explanation(
                 orig_images[index],
                 orig_expl[index],
-                f"{original_titles[index]}, sim: {explanation_similarity}",
+                f"{original_titles[index]}, sim: {similarity}, "
+                f"id: {batch_indeces[index]}",
                 (fig, row_axis[0]),
                 display_figure=False,
             )
