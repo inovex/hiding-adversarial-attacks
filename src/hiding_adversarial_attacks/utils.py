@@ -168,14 +168,6 @@ def display_random_original_and_adversarial_training_image(path: str):
     )
 
 
-if __name__ == "__main__":
-    path = (
-        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-        "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.2--cp-run=HAA-943"
-    )
-    display_random_original_and_adversarial_training_image(path)
-
-
 def create_mask(source: torch.Tensor, included_classes: List[Any]):
     if ALL_CLASSES in included_classes:
         return torch.ones(len(source), dtype=torch.bool, device=source.device)
@@ -183,3 +175,11 @@ def create_mask(source: torch.Tensor, included_classes: List[Any]):
     for c in included_classes:
         mask += source == c
     return mask
+
+
+if __name__ == "__main__":
+    path = (
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+        "adversarial/data-set=MNIST--attack=FGSM--eps=0.3--cp-run=HAA-946"
+    )
+    display_random_original_and_adversarial_training_image(path)
