@@ -383,9 +383,13 @@ def run_optuna_study(
     contour_fig = plot_contour(study)
     param_imp_fig = plot_param_importances(study)
     parallel_coord_fig = plot_parallel_coordinate(study)
+    hist_fig.write_image("~/Downloads/history.png")
     hist_fig.show()
+    contour_fig.write_image("~/Downloads/contours.png")
     contour_fig.show()
+    param_imp_fig.write_image("~/Downloads/param_importance.png")
     param_imp_fig.show()
+    parallel_coord_fig.write_image("~/Downloads/parallel_coordinates.png")
     parallel_coord_fig.show()
 
 
