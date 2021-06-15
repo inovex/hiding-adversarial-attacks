@@ -21,6 +21,7 @@ dependencies:
   - matplotlib
   - seaborn
   - plotly
+  - plotly-orca
   # ML, STATS & DEEP LEARNING
   - pytorch
   - pytorch-lightning
