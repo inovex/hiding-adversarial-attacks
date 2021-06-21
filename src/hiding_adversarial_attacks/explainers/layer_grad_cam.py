@@ -4,6 +4,7 @@ import pytorch_lightning as pl
 import torch
 from captum.attr import LayerAttribution, LayerGradCam
 
+from hiding_adversarial_attacks.classifiers.utils import _get_conv2d_layer_by_name
 from hiding_adversarial_attacks.explainers.base import BaseExplainer
 
 
@@ -20,7 +21,7 @@ class LayerGradCamExplainer(BaseExplainer):
         self._layer_name = layer_name
         self._image_shape = image_shape
         self._relu_attributions = relu_attributions
-        self._layer = self._get_conv2d_layer_by_name(self._layer_name)
+        self._layer = _get_conv2d_layer_by_name(self._model, self._layer_name)
         self._xai_algorithm = LayerGradCam(self._model, self._layer)
 
     def explain(self, image: torch.Tensor, target: torch.Tensor, **kwargs):
@@ -36,11 +37,3 @@ class LayerGradCamExplainer(BaseExplainer):
             attribution, self._image_shape, interpolate_mode="bicubic"
         )
         return interpolated_attribution
-
-    def _get_conv2d_layer_by_name(self, layer_name: str):
-        named_modules = dict(self._model.named_modules())
-        assert layer_name in named_modules, f"Layer name '{layer_name}' not in model."
-        assert (
-            type(named_modules[layer_name]) == torch.nn.modules.conv.Conv2d
-        ), f"Specified layer '{layer_name}' is not of type Conv2d."
-        return named_modules[layer_name]

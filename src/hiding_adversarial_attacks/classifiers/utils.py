@@ -28,3 +28,12 @@ def get_model_from_checkpoint(
         raise SystemExit(f"ERROR: Unknown data set name: {data_set_name}. Exiting.")
     model = model.to(device)
     return model
+
+
+def _get_conv2d_layer_by_name(model, layer_name: str):
+    named_modules = dict(model.named_modules())
+    assert layer_name in named_modules, f"Layer name '{layer_name}' not in model."
+    assert (
+        type(named_modules[layer_name]) == torch.nn.modules.conv.Conv2d
+    ), f"Specified layer '{layer_name}' is not of type Conv2d."
+    return named_modules[layer_name]
