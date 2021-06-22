@@ -31,6 +31,7 @@ from hiding_adversarial_attacks.callbacks.utils import copy_run_outputs
 from hiding_adversarial_attacks.config.config_validator import ConfigValidator
 from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossMapping,
+    SimilarityLossNames,
 )
 from hiding_adversarial_attacks.config.manipulated_model_training_config import (
     VAL_NORM_TOTAL_LOSS,
@@ -107,6 +108,8 @@ def suggest_hyperparameters(config, trial):
         loss_weight_similarity_options["high"],
         step=loss_weight_similarity_options["step"],
     )
+    if config.similarity_loss.name == SimilarityLossNames.MSE:
+        loss_weight_similarity = 10 ** loss_weight_similarity
     # # note: both adv and original cross entropy loss weights should be the same
     # -> it makes no sense to prioritize the one over the other
     loss_weight_orig_ce = 1
@@ -383,13 +386,9 @@ def run_optuna_study(
     contour_fig = plot_contour(study)
     param_imp_fig = plot_param_importances(study)
     parallel_coord_fig = plot_parallel_coordinate(study)
-    hist_fig.write_image("~/Downloads/history.png")
     hist_fig.show()
-    contour_fig.write_image("~/Downloads/contours.png")
     contour_fig.show()
-    param_imp_fig.write_image("~/Downloads/param_importance.png")
     param_imp_fig.show()
-    parallel_coord_fig.write_image("~/Downloads/parallel_coordinates.png")
     parallel_coord_fig.show()
 
 
