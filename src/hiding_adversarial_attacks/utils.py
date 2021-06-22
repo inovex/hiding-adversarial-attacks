@@ -168,6 +168,36 @@ def display_random_original_and_adversarial_training_image(path: str):
     )
 
 
+def display_random_original_and_adversarial_explanation(path: str):
+    orig_images, orig_labels = torch.load(os.path.join(path, "training_orig.pt"))
+    orig_explanations, _, _ = torch.load(os.path.join(path, "training_orig_exp.pt"))
+    adv_images, adv_labels = torch.load(os.path.join(path, "training_adv.pt"))
+    adv_explanations, _, _ = torch.load(os.path.join(path, "training_adv_exp.pt"))
+    random_idx = np.random.randint(0, len(orig_labels))
+    orig_img, orig_label = orig_images[random_idx].unsqueeze(0), int(
+        orig_labels[random_idx]
+    )
+    adv_img, adv_label = adv_images[random_idx].unsqueeze(0), int(
+        adv_labels[random_idx]
+    )
+    orig_expl, adv_expl = (
+        orig_explanations[random_idx].unsqueeze(0),
+        adv_explanations[random_idx].unsqueeze(0),
+    )
+    visualize_explanations(
+        orig_img,
+        orig_expl,
+        [f"Original explanation, label={orig_label}, idx={random_idx}"],
+        display_figure=True,
+    )
+    visualize_explanations(
+        adv_img,
+        adv_expl,
+        [f"Adversarial explanation, label={adv_label}, idx={random_idx}"],
+        display_figure=True,
+    )
+
+
 def create_mask(source: torch.Tensor, included_classes: List[Any]):
     if ALL_CLASSES in included_classes:
         return torch.ones(len(source), dtype=torch.bool, device=source.device)
@@ -179,7 +209,9 @@ def create_mask(source: torch.Tensor, included_classes: List[Any]):
 
 if __name__ == "__main__":
     path = (
-        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-        "adversarial/data-set=MNIST--attack=FGSM--eps=0.3--cp-run=HAA-946"
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data"
+        "/preprocessed/adversarial/data-set=FashionMNIST--attack="
+        "DeepFool--eps=0.105--cp-run=HAA-952/exp=DeepLIFT--bl=zero--mbi=False"
     )
-    display_random_original_and_adversarial_training_image(path)
+    # display_random_original_and_adversarial_training_image(path)
+    display_random_original_and_adversarial_explanation(path)
