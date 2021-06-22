@@ -37,10 +37,14 @@ class MNISTNet(pl.LightningModule):
         self.dropout2 = nn.Dropout(0.5)
         self.fc1 = nn.Linear(9216, 128)
         self.fc2 = nn.Linear(128, 10)
+        self.softplus1 = nn.Softplus()
+        self.softplus2 = nn.Softplus()
+        self.softplus3 = nn.Softplus()
         self.relu1 = nn.ReLU()
         self.relu2 = nn.ReLU()
         self.relu3 = nn.ReLU()
         self.max_pool2d = nn.MaxPool2d(2)
+        self.log_softmax = nn.LogSoftmax(dim=1)
 
     def _setup_metrics(self):
         # Classification accuracy
@@ -76,7 +80,7 @@ class MNISTNet(pl.LightningModule):
         x = self.relu3(x)
         x = self.dropout2(x)
         x = self.fc2(x)
-        output = F.log_softmax(x, dim=1)
+        output = self.log_softmax(x)
         return output
 
     def configure_optimizers(self):
