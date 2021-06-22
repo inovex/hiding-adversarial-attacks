@@ -9,7 +9,9 @@ from hiding_adversarial_attacks.config.explainers.deep_lift_baseline_config impo
 
 class ExplainerNames:
     DEEP_LIFT = "DeepLIFT"
+    GUIDED_BACKPROP = "GuidedBackprop"
     GRAD_CAM = "GradCAM"
+    INPUT_X_GRADIENT = "InputXGradient"
 
 
 @dataclass
@@ -23,6 +25,16 @@ class DeepLiftConfig(ExplainerConfig):
     name: str = ExplainerNames.DEEP_LIFT
     baseline: DeepLiftBaselineConfig = MISSING
     multiply_by_inputs: bool = False
+
+
+@dataclass
+class GuidedBackpropConfig(ExplainerConfig):
+    name: str = ExplainerNames.GUIDED_BACKPROP
+
+
+@dataclass
+class InputXGradientConfig(ExplainerConfig):
+    name: str = ExplainerNames.INPUT_X_GRADIENT
 
 
 @dataclass

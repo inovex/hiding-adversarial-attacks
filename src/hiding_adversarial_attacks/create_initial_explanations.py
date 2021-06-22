@@ -72,6 +72,10 @@ def get_explanations_path(config):
             f"l={config.explainer.layer_name}--"
             f"ra={config.explainer.relu_attributions}"
         )
+    elif config.explainer.name == ExplainerNames.GUIDED_BACKPROP:
+        explanations_dir = f"exp={ExplainerNames.GUIDED_BACKPROP}"
+    elif config.explainer.name == ExplainerNames.INPUT_X_GRADIENT:
+        explanations_dir = f"exp={ExplainerNames.INPUT_X_GRADIENT}"
     explanations_path = os.path.join(config.data_path, explanations_dir)
     os.makedirs(explanations_path, exist_ok=True)
     return explanations_path

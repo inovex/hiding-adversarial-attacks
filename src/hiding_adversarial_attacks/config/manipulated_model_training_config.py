@@ -31,6 +31,8 @@ from hiding_adversarial_attacks.config.explainers.deep_lift_baseline_config impo
 from hiding_adversarial_attacks.config.explainers.explainer_config import (
     DeepLiftConfig,
     ExplainerConfig,
+    GuidedBackpropConfig,
+    InputXGradientConfig,
     LayerGradCamConfig,
 )
 from hiding_adversarial_attacks.config.logger.logger import LoggingConfig
@@ -63,18 +65,31 @@ optuna_search_spaces = {
         # currently unused:
         "similarity_loss": {"choices": [MSELoss]},
     },
-    "FashionMNIST": {
+    "FashionMNIST_PCC": {
         "lr": {
             "log": True,
-            "low": 1e-5,
-            "high": 2e-4,
+            "low": 1e-7,
+            "high": 1e-4,
         },
-        "loss_weight_similarity": {"low": 7, "high": 9, "step": 1},
-        "batch_size": [128, 256],
-        "steps_lr": {"low": 1, "high": 10, "step": 2},
-        "gamma": {"low": 0.1, "high": 0.9, "step": 0.1},
+        "loss_weight_similarity": {"low": 1, "high": 3, "step": 1},
+        "batch_size": [128],
+        "steps_lr": {"low": 1, "high": 11, "step": 1},
+        "gamma": {"low": 1.0, "high": 1.0, "step": 0.1},
         # currently unused:
         "similarity_loss": {"choices": [PCCLoss]},
+    },
+    "FashionMNIST_MSE": {
+        "lr": {
+            "log": True,
+            "low": 1e-7,
+            "high": 1e-4,
+        },
+        "loss_weight_similarity": {"low": 0, "high": 8, "step": 1},
+        "batch_size": [128],
+        "steps_lr": {"low": 1, "high": 11, "step": 1},
+        "gamma": {"low": 0.1, "high": 1.0, "step": 0.1},
+        # currently unused:
+        "similarity_loss": {"choices": [MSELoss]},
     },
     "CIFAR10": {
         "lr": {
@@ -115,7 +130,7 @@ class OptunaConfig:
 
     # Search spaces for hyperparameters
     search_space: Any = field(
-        default_factory=lambda: optuna_search_spaces["FashionMNIST"]
+        default_factory=lambda: optuna_search_spaces["FashionMNIST_PCC"]
     )
 
 
@@ -203,6 +218,7 @@ cs.store(
 )
 cs.store(group="classifier", name="Cifar10Classifier", node=Cifar10ClassifierConfig)
 cs.store(group="explainer", name="DeepLiftExplainer", node=DeepLiftConfig)
+cs.store(group="explainer", name="GuidedBackpropExplainer", node=GuidedBackpropConfig)
 cs.store(group="explainer.baseline", name="ZeroBaseline", node=ZeroBaselineConfig)
 cs.store(group="explainer.baseline", name="BlurBaseline", node=BlurBaselineConfig)
 cs.store(
@@ -211,6 +227,7 @@ cs.store(
     node=LocalMeanBaselineConfig,
 )
 cs.store(group="explainer", name="GradCamExplainer", node=LayerGradCamConfig)
+cs.store(group="explainer", name="InputXGradientExplainer", node=InputXGradientConfig)
 cs.store(group="similarity_loss", name="MSE", node=MSELoss)
 cs.store(group="similarity_loss", name="PCC", node=PCCLoss)
 cs.store(group="similarity_loss", name="SSIM", node=SSIMLoss)

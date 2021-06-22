@@ -25,6 +25,8 @@ from hiding_adversarial_attacks.config.explainers.deep_lift_baseline_config impo
 from hiding_adversarial_attacks.config.explainers.explainer_config import (
     DeepLiftConfig,
     ExplainerConfig,
+    GuidedBackpropConfig,
+    InputXGradientConfig,
     LayerGradCamConfig,
 )
 from hiding_adversarial_attacks.config.logger.logger import LoggingConfig
@@ -95,5 +97,6 @@ cs.store(
     node=LocalMeanBaselineConfig,
 )
 cs.store(group="explainer", name="GradCamExplainer", node=LayerGradCamConfig)
-
+cs.store(group="explainer", name="InputXGradientExplainer", node=InputXGradientConfig)
+cs.store(group="explainer", name="GuidedBackpropExplainer", node=GuidedBackpropConfig)
 cs.store(name="explanation_config", node=ExplanationConfig)
