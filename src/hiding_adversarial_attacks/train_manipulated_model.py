@@ -248,6 +248,9 @@ def run_training(
         max_epochs=config.max_epochs,
     )
     trainer.fit(model, train_loader, validation_loader)
+    trainer.save_checkpoint(
+        os.path.join(config.log_path, "checkpoints/final-model.ckpt")
+    )
 
     # Test with best model checkpoint (Lightning does this automatically)
     test_results = trainer.test(model=model, test_dataloaders=test_loader)
