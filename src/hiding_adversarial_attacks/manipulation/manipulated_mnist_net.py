@@ -154,7 +154,6 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
-        # scheduler = StepLR(optimizer, step_size=1, gamma=self.gamma)
         return optimizer
 
     def forward(self, x):
@@ -624,9 +623,10 @@ class ManipulatedMNISTNet(pl.LightningModule):
             adversarial_labels,
             batch_indeces,
         )
-        fig_path = os.path.join(self.image_log_path, fig_name)
-        figure.savefig(fig_path)
-        plt.close("all")
+        if figure is not None and axes is not None:
+            fig_path = os.path.join(self.image_log_path, fig_name)
+            figure.savefig(fig_path)
+            plt.close("all")
 
     def _visualize_top_and_bottom_k_explanations(self):
         # visualize top and bottom k explanations from initial evaluation
@@ -655,12 +655,15 @@ class ManipulatedMNISTNet(pl.LightningModule):
             self.metricized_explanations.top_and_bottom_adversarial_labels,
             self.metricized_explanations.top_and_bottom_indices,
         )
-        top_bottom_k_fig_name = (
-            f"epoch={self.trainer.current_epoch}_"
-            f"step={self.global_step}_top_bottom_k_explanations.png"
-        )
-        top_bottom_k_fig_path = os.path.join(self.image_log_path, top_bottom_k_fig_name)
-        top_bottom_k_figure.savefig(top_bottom_k_fig_path)
+        if top_bottom_k_figure is not None and top_bottom_k_axes is not None:
+            top_bottom_k_fig_name = (
+                f"epoch={self.trainer.current_epoch}_"
+                f"step={self.global_step}_top_bottom_k_explanations.png"
+            )
+            top_bottom_k_fig_path = os.path.join(
+                self.image_log_path, top_bottom_k_fig_name
+            )
+            top_bottom_k_figure.savefig(top_bottom_k_fig_path)
 
     def _visualize_explanations(
         self,
@@ -673,7 +676,14 @@ class ManipulatedMNISTNet(pl.LightningModule):
         batch_indeces,
     ):
         n_rows = 8 if self.hparams.batch_size > 8 else self.hparams.batch_size
-        indeces = torch.arange(0, n_rows)
+        indeces = (
+            torch.arange(0, n_rows)
+            if len(original_images) > n_rows
+            else torch.arange(0, len(original_images))
+        )
+        if len(indeces) == 0:
+            print("WARNING: Batch to visualize was empty.")
+            return None, None
 
         original_titles = [
             f"Original, label: {label}" for label in original_labels[indeces]
