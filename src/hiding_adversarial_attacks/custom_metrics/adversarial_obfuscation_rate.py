@@ -1,3 +1,5 @@
+import os
+
 import hydra
 import numpy as np
 import pandas as pd
@@ -34,9 +36,10 @@ def load_pre_and_post_manipulation_models(config, device):
     return pre_manipulation_model, post_manipulation_model
 
 
-def adversarial_obfuscation_rate(pre_model, post_model, device, config, taus=None):
+def adversarial_obfuscation_rate(model, device, config, taus=None):
     if taus is None:
         taus = [0.3]
+
     (
         orig_explanations,
         orig_labels,
@@ -52,8 +55,7 @@ def adversarial_obfuscation_rate(pre_model, post_model, device, config, taus=Non
         adv_labels,
     ) = load_attacked_data(config.explanations_path, device, stage="test")
 
-    aors = {"pre": {tau: 0 for tau in taus}, "post": {tau: 0 for tau in taus}}
-
+    aors = {tau: 0 for tau in taus}
     # Iterate over orig_explanations and adv_images
     for orig_expl, orig_lbl, orig_idx, adv_img, adv_lbl in tqdm(
         zip(
@@ -65,45 +67,21 @@ def adversarial_obfuscation_rate(pre_model, post_model, device, config, taus=Non
         )
     ):
         _adv_img = adv_img.unsqueeze(0)
-        _adv_lbl = adv_lbl.long().unsqueeze(0)
 
-        update_aor(
-            pre_model,
-            _adv_img,
-            _adv_lbl,
-            orig_expl,
-            orig_lbl,
-            aors,
-            stage="pre",
-        )
-        update_aor(
-            post_model,
-            _adv_img,
-            _adv_lbl,
-            orig_expl,
-            orig_lbl,
-            aors,
-            stage="post",
-        )
+        # Get explanation for adv_img
+        adv_expl = model.explainer.explain(_adv_img, adv_lbl.long().unsqueeze(0))
 
-    normalized_aors = {
-        "pre": {tau: aor / len(orig_explanations) for tau, aor in aors["pre"].items()},
-        "post": {
-            tau: aor / len(orig_explanations) for tau, aor in aors["post"].items()
-        },
-    }
+        # Get predicted label for adv_img
+        adv_pred_lbl = torch.argmax(model(_adv_img))
+
+        spearman_rank = custom_spearman_corrcoef(orig_expl, adv_expl.squeeze(0))
+
+        for tau in aors.keys():
+            if spearman_rank >= tau and adv_pred_lbl != orig_lbl:
+                aors[tau] += 1
+
+    normalized_aors = {tau: aor / len(orig_explanations) for tau, aor in aors.items()}
     return normalized_aors
-
-
-def update_aor(model, _adv_img, _adv_lbl, orig_expl, orig_lbl, aors, stage="pre"):
-    # Get explanation for adv_img
-    adv_expl = model.explainer.explain(_adv_img, _adv_lbl)
-    # Get predicted label for adv_img
-    adv_pred_lbl = torch.argmax(model(_adv_img))
-    spearman_rank = custom_spearman_corrcoef(orig_expl, adv_expl.squeeze(0))
-    for tau in aors[stage].keys():
-        if spearman_rank >= tau and adv_pred_lbl != orig_lbl:
-            aors[stage][tau] += 1
 
 
 @hydra.main(config_name="manipulated_model_training_config")
@@ -124,15 +102,20 @@ def run(config: ManipulatedModelTrainingConfig):
 
     taus = np.around(np.linspace(0, 1, 10, endpoint=False), decimals=1)
 
-    aors = adversarial_obfuscation_rate(
+    pre_aors = adversarial_obfuscation_rate(
         pre_manipulation_model,
+        device,
+        config,
+        taus=taus,
+    )
+    post_aors = adversarial_obfuscation_rate(
         post_manipulation_model,
         device,
         config,
         taus=taus,
     )
 
-    aor_df = pd.DataFrame(aors)
+    aor_df = pd.DataFrame([pre_aors, post_aors], index=["pre", "post"]).T
     ax = aor_df.plot.line(
         style=["o-", "^-"], color={"pre": "slateblue", "post": "purple"}
     )
@@ -140,6 +123,22 @@ def run(config: ManipulatedModelTrainingConfig):
     ax.set_xlabel("Tau")
     ax.set_ylabel("AOR")
     plt.show()
+
+
+def save_adversarial_obfuscation_rate_to_csv(
+    model, trainer, device, config: ManipulatedModelTrainingConfig, stage="pre"
+):
+    taus = np.around(np.linspace(0, 1, 10, endpoint=False), decimals=1)
+    aors = adversarial_obfuscation_rate(
+        model,
+        device,
+        config,
+        taus=taus,
+    )
+    aors_df = pd.DataFrame(aors, index=[stage])
+    aor_csv_file = os.path.join(config.log_path, f"{stage}_aors.csv")
+    aors_df.to_csv(aor_csv_file)
+    trainer.logger.experiment.log_artifact(aor_csv_file)
 
 
 if __name__ == "__main__":

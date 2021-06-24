@@ -37,6 +37,9 @@ from hiding_adversarial_attacks.config.manipulated_model_training_config import 
     VAL_NORM_TOTAL_LOSS,
     ManipulatedModelTrainingConfig,
 )
+from hiding_adversarial_attacks.custom_metrics.adversarial_obfuscation_rate import (
+    save_adversarial_obfuscation_rate_to_csv,
+)
 from hiding_adversarial_attacks.data_modules.k_fold_cross_validation import (
     StratifiedKFoldCVDataModule,
 )
@@ -247,14 +250,23 @@ def run_training(
         logger=neptune_logger,
         max_epochs=config.max_epochs,
     )
+
+    # Compute and save Adversarial Obfuscation Rate (AOR) before adversarial fine-tuning
+    logger.info("Computing and saving pre fine-tuning AOR metric.")
+    save_adversarial_obfuscation_rate_to_csv(model, trainer, device, config, "pre")
+
     trainer.fit(model, train_loader, validation_loader)
-    trainer.save_checkpoint(
-        os.path.join(config.log_path, "checkpoints/final-model.ckpt")
-    )
+
+    latest_checkpoint = os.path.join(config.log_path, "checkpoints/final-model.ckpt")
+    trainer.save_checkpoint(latest_checkpoint)
 
     # Test with best model checkpoint (Lightning does this automatically)
     test_results = trainer.test(model=model, test_dataloaders=test_loader)
     logger.info(f"Test results: \n {pformat(test_results)}")
+
+    # Compute and save Adversarial Obfuscation Rate (AOR) after adversarial fine-tuning
+    logger.info("Computing and saving post fine-tuning AOR metric.")
+    save_adversarial_obfuscation_rate_to_csv(model, trainer, device, config, "post")
 
     visualize_explanation_similarities(
         model,
@@ -271,7 +283,6 @@ def run_training(
         stage="test",
     )
 
-    # Test with best model checkpoint (Lightning does this automatically)
     copy_run_outputs(
         config.log_path,
         os.getcwd(),
