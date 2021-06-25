@@ -14,6 +14,9 @@ class ConfigValidator:
     ERROR_DATA_SET_DATA_PATH_MISMATCH = (
         "data_set '{data_set}' and data_path '{data_path}' mismatch."
     )
+    ERROR_EXPLAINER_EXPLANATIONS_PATH_MISMATCH = (
+        "explainer '{explainer}' and explanations_path '{explanations_path}' mismatch."
+    )
 
     DATA_SET_CLASSIFIER_MAPPING = {
         DataSetNames.MNIST: ClassifierNames.MNIST_CLASSIFIER,
@@ -50,6 +53,15 @@ class ConfigValidator:
             data_set=data_set_name, classifier=classifier_name
         )
 
+    def _validate_explainer_matches_explanations_path(self, config):
+        explanations_path = config.explanations_path
+        explainer_name = config.explainer.name
+        assert (
+            explainer_name in explanations_path
+        ), self.ERROR_EXPLAINER_EXPLANATIONS_PATH_MISMATCH.format(
+            explainer=explainer_name, explanations_path=explanations_path
+        )
+
     def _validate_data_path_matches_data_set(self, config):
         if "explainer" in config:
             data_set_name = config.data_set.name
@@ -60,11 +72,11 @@ class ConfigValidator:
                 data_set=data_set_name, data_path=data_path
             )
 
-    @staticmethod
-    def _validate_manipulated_model_training_config(config):
+    def _validate_manipulated_model_training_config(self, config):
         if not config.test:
             assert (
                 config.classifier_checkpoint != ""
             ), "classifier_checkpoint is unset for training"
         else:
             assert config.checkpoint != "", "checkpoint is unset for testing"
+        self._validate_explainer_matches_explanations_path(config)
