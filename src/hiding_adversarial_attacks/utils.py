@@ -140,9 +140,10 @@ def save_confusion_matrix(matrix: np.array, log_path: str):
     index = list(range(0, matrix.shape[0]))
     columns = range(0, matrix.shape[1])
     df = pd.DataFrame(_matrix, index=index, columns=columns)
+    df.to_csv(os.path.join(log_path, "confusion_matrix.csv"))
     fig = plt.figure(figsize=(10, 7))
     sn.heatmap(df, annot=True, fmt="d", cmap="YlGnBu")
-    fig.savefig(os.path.join(log_path, "confusion_matrix.png"))
+    fig.savefig(os.path.join(log_path, "image_log/confusion_matrix.png"))
     fig.show()
 
 
