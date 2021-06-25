@@ -26,6 +26,9 @@ from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossNames,
 )
 from hiding_adversarial_attacks.config.manipulated_model_training_config import Stage
+from hiding_adversarial_attacks.custom_metrics.adversarial_obfuscation_rate import (
+    AdversarialObfuscationRate,
+)
 from hiding_adversarial_attacks.custom_metrics.pearson_corrcoef import (
     custom_pearson_corrcoef,
 )
@@ -70,8 +73,10 @@ class ManipulatedMNISTNet(pl.LightningModule):
         # Explainer
         self.explainer = get_explainer(self.model, hparams)
         self.test_orig_explanations = torch.tensor([]).to(self.device)
+        self.test_orig_images = torch.tensor([]).to(self.device)
         self.test_orig_labels = torch.tensor([]).to(self.device)
         self.test_adv_explanations = torch.tensor([]).to(self.device)
+        self.test_adv_images = torch.tensor([]).to(self.device)
         self.test_adv_labels = torch.tensor([]).to(self.device)
 
         # Explanation similarity loss
@@ -191,9 +196,11 @@ class ManipulatedMNISTNet(pl.LightningModule):
             adversarial_images, adversarial_labels
         )
         if stage == Stage.STAGE_TEST:
-            self.append_test_explanations(
+            self.append_test_images_and_explanations(
+                original_images,
                 original_explanation_maps,
                 original_labels,
+                adversarial_images,
                 adversarial_explanation_maps,
                 adversarial_labels,
             )
@@ -320,6 +327,15 @@ class ManipulatedMNISTNet(pl.LightningModule):
             self.global_test_step += 1
             self.test_confusion_matrix(orig_pred_label.argmax(dim=-1), original_label)
             self.test_f1_score(orig_pred_label.argmax(dim=-1), original_label)
+            orig_expl_map = original_explanation_map
+            if initial_original_explanation_map is not None:
+                orig_expl_map = initial_original_explanation_map
+            self.test_aor(
+                orig_expl_map,
+                original_label,
+                adversarial_explanation_map,
+                adv_pred_label.argmax(dim=-1),
+            )
 
         # Log metrics
         self.log_classification_metrics(
@@ -383,13 +399,22 @@ class ManipulatedMNISTNet(pl.LightningModule):
         norm_total_loss = norm_ce_orig + norm_ce_adv + norm_sim
         return norm_total_loss
 
-    def append_test_explanations(
+    def append_test_images_and_explanations(
         self,
+        original_images,
         original_explanation_maps,
         original_labels,
+        adversarial_images,
         adversarial_explanation_maps,
         adversarial_labels,
     ):
+        self.test_orig_images = torch.cat(
+            (
+                self.test_orig_images.to(self.device),
+                original_images.detach().to(self.device),
+            ),
+            dim=0,
+        )
         self.test_orig_explanations = torch.cat(
             (
                 self.test_orig_explanations.to(self.device),
@@ -401,6 +426,13 @@ class ManipulatedMNISTNet(pl.LightningModule):
             (
                 self.test_orig_labels.to(self.device),
                 original_labels.detach().to(self.device),
+            ),
+            dim=0,
+        )
+        self.test_adv_images = torch.cat(
+            (
+                self.test_adv_images.to(self.device),
+                adversarial_images.detach().to(self.device),
             ),
             dim=0,
         )
@@ -456,23 +488,38 @@ class ManipulatedMNISTNet(pl.LightningModule):
         self.test_similarity_metrics.reset()
         test_confusion_matrix = self.test_confusion_matrix.compute()
         save_confusion_matrix(
-            test_confusion_matrix.cpu().detach().numpy(), self.image_log_path
+            test_confusion_matrix.cpu().detach().numpy(), self.hparams.log_path
         )
         test_f1_score = self.test_f1_score.compute()
         self.log("test_f1_score", test_f1_score)
 
+        test_aor = self.test_aor.compute()
+        self.log_dict(
+            {
+                f"test_aor_tau={tau}": aor
+                for tau, aor in zip(self.test_aor._taus, test_aor)
+            }
+        )
         # Save explanations
-        self.save_explanations()
+        self.save_test_images_and_explanations()
 
-    def save_explanations(self):
-        orig_path = os.path.join(self.hparams.log_path, "test_orig_expl.pt")
-        adv_path = os.path.join(self.hparams.log_path, "test_adv_expl.pt")
+    def save_test_images_and_explanations(self):
+        orig_path = os.path.join(self.hparams.log_path, "test_orig.pt")
+        adv_path = os.path.join(self.hparams.log_path, "test_adv.pt")
         torch.save(
-            (self.test_orig_explanations.cpu(), self.test_orig_labels.cpu()),
+            (
+                self.test_orig_images.cpu(),
+                self.test_orig_explanations.cpu(),
+                self.test_orig_labels.cpu(),
+            ),
             orig_path,
         )
         torch.save(
-            (self.test_adv_explanations.cpu(), self.test_adv_labels.cpu()),
+            (
+                self.test_adv_images.cpu(),
+                self.test_adv_explanations.cpu(),
+                self.test_adv_labels.cpu(),
+            ),
             adv_path,
         )
 
@@ -571,6 +618,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         # Test performance metrics
         self.test_f1_score = F1(num_classes=self.num_classes)
         self.test_confusion_matrix = ConfusionMatrix(num_classes=self.num_classes)
+        self.test_aor = AdversarialObfuscationRate()
 
     def log_similarity_metrics(self, pred, target, stage: Stage):
         if stage == Stage.STAGE_TRAIN:
