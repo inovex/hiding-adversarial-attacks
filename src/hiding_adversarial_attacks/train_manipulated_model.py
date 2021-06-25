@@ -8,7 +8,9 @@ from typing import Tuple
 
 import hydra
 import optuna
+import pandas as pd
 import torch
+from matplotlib import pyplot as plt
 from omegaconf import OmegaConf
 from optuna.integration import PyTorchLightningPruningCallback
 from optuna.visualization import (
@@ -19,7 +21,6 @@ from optuna.visualization import (
 )
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import NeptuneLogger
-from torch._vmap_internals import vmap
 from torch.utils.data import DataLoader
 
 from hiding_adversarial_attacks._neptune.utils import get_neptune_logger
@@ -30,15 +31,11 @@ from hiding_adversarial_attacks.callbacks.neptune_callback import NeptuneLogging
 from hiding_adversarial_attacks.callbacks.utils import copy_run_outputs
 from hiding_adversarial_attacks.config.config_validator import ConfigValidator
 from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
-    SimilarityLossMapping,
     SimilarityLossNames,
 )
 from hiding_adversarial_attacks.config.manipulated_model_training_config import (
     VAL_NORM_TOTAL_LOSS,
     ManipulatedModelTrainingConfig,
-)
-from hiding_adversarial_attacks.custom_metrics.adversarial_obfuscation_rate import (
-    save_adversarial_obfuscation_rate_to_csv,
 )
 from hiding_adversarial_attacks.data_modules.k_fold_cross_validation import (
     StratifiedKFoldCVDataModule,
@@ -51,48 +48,52 @@ from hiding_adversarial_attacks.manipulation.metricized_explanations import (
 from hiding_adversarial_attacks.manipulation.utils import (
     get_manipulatable_model,
     get_metricized_top_and_bottom_explanations,
-    get_top_and_bottom_k_explanations,
-    load_filtered_data,
+    get_similarities,
+    get_top_and_bottom_k_indices,
 )
 
 logger = logging.getLogger(__file__)
 
 
+def save_test_results_as_csv(config, test_results, prefix=""):
+    test_results_df = pd.DataFrame(test_results)
+    test_results_csv = os.path.join(config.log_path, f"{prefix}test_results.csv")
+    test_results_df.to_csv(test_results_csv)
+
+
 def visualize_top_bottom_k(config, device, model):
-    similarity_loss = SimilarityLossMapping[config.similarity_loss.name]
-    batched_sim_loss = vmap(similarity_loss)
-    (
-        test_orig_images,
-        _,
-        test_orig_labels,
-        test_adv_images,
-        _,
-        test_adv_labels,
-    ) = load_filtered_data(config, device, stage="test")
-    (
-        top_orig_expl,
-        top_adv_expl,
-        top_similarities,
-        top_indices,
-        bottom_orig_expl,
-        bottom_adv_expl,
-        bottom_similarities,
-        bottom_indices,
-    ) = get_top_and_bottom_k_explanations(
-        model.test_adv_explanations,
-        model.test_orig_explanations,
-        batched_sim_loss,
+    test_orig_images, test_orig_expl, test_orig_labels = torch.load(
+        os.path.join(config.log_path, "test_orig.pt"),
+        map_location=device,
     )
-    test_orig_expl = torch.cat((top_orig_expl, bottom_orig_expl), dim=0)
-    test_adv_expl = torch.cat((top_adv_expl, bottom_adv_expl), dim=0)
-    indeces = torch.cat((top_indices, bottom_indices), dim=0)
+    test_adv_images, test_adv_expl, test_adv_labels = torch.load(
+        os.path.join(config.log_path, "test_adv.pt"),
+        map_location=device,
+    )
+
+    reverse, similarities = get_similarities(
+        config.similarity_loss.name, test_orig_expl, test_adv_expl
+    )
+    top_indices, bottom_indices = get_top_and_bottom_k_indices(
+        similarities, k=4, reverse=reverse
+    )
+    top_bottom_indices = torch.cat((top_indices, bottom_indices), dim=0)
+
+    # Plot similarity loss distribution on all training samples
+    df_similarities = pd.DataFrame(similarities.cpu().detach().numpy())
+    df_similarities.hist(bins=20, log=True)
+    plt.show()
+
+    # todo: for some reason, the top and bottom k do not appear to have top
+    #  and bottom PCC values
     model._visualize_batch_explanations(
-        test_adv_expl,
-        test_adv_images[indeces],
-        test_adv_labels[indeces].cpu(),
-        test_orig_expl,
-        test_orig_images[indeces],
-        test_orig_labels[indeces].cpu(),
+        test_adv_expl[top_bottom_indices],
+        test_adv_images[top_bottom_indices],
+        test_adv_labels[top_bottom_indices],
+        test_orig_expl[top_bottom_indices],
+        test_orig_images[top_bottom_indices],
+        test_orig_labels[top_bottom_indices],
+        top_bottom_indices,
         "test-top-bottom-k-explanations.png",
     )
 
@@ -251,10 +252,6 @@ def run_training(
         max_epochs=config.max_epochs,
     )
 
-    # Compute and save Adversarial Obfuscation Rate (AOR) before adversarial fine-tuning
-    logger.info("Computing and saving pre fine-tuning AOR metric.")
-    save_adversarial_obfuscation_rate_to_csv(model, trainer, device, config, "pre")
-
     trainer.fit(model, train_loader, validation_loader)
 
     latest_checkpoint = os.path.join(config.log_path, "checkpoints/final-model.ckpt")
@@ -264,9 +261,7 @@ def run_training(
     test_results = trainer.test(model=model, test_dataloaders=test_loader)
     logger.info(f"Test results: \n {pformat(test_results)}")
 
-    # Compute and save Adversarial Obfuscation Rate (AOR) after adversarial fine-tuning
-    logger.info("Computing and saving post fine-tuning AOR metric.")
-    save_adversarial_obfuscation_rate_to_csv(model, trainer, device, config, "post")
+    save_test_results_as_csv(config, test_results)
 
     visualize_explanation_similarities(
         model,
@@ -324,14 +319,19 @@ def test(
     model.set_metricized_explanations(metricized_top_and_bottom_explanations)
     model.to(device)
     model.eval()
+
     test_results = trainer.test(model, test_loader)
     logger.info(f"Pre-test results before manipulation: \n {pformat(test_results)}")
-    # Rename image log files so that they are not overwritten by second model run
-    for image_path in glob.glob(os.path.join(config.log_path, "image_log", "*.png")):
-        new_image_path = (
-            f"{os.path.dirname(image_path)}/pre-{os.path.basename(image_path)}"
-        )
-        shutil.move(image_path, new_image_path)
+    save_test_results_as_csv(config, test_results, prefix="pre-")
+
+    # Rename files so that they are not overwritten by second model run
+    types = ("image_log/*.png", "*.csv")  # the tuple of file types
+    files_to_move = []
+    for files in types:
+        files_to_move.extend(glob.glob(os.path.join(config.log_path, files)))
+    for file in files_to_move:
+        new_path = f"{os.path.dirname(file)}/pre-{os.path.basename(file)}"
+        shutil.move(file, new_path)
 
     # Test: test model after manipulation
     model = get_manipulatable_model(config).load_from_checkpoint(config.checkpoint)
@@ -339,8 +339,10 @@ def test(
     model.set_metricized_explanations(metricized_top_and_bottom_explanations)
     model.to(device)
     model.eval()
+
     test_results = trainer.test(model, test_loader)
     logger.info(f"Test results: \n {pformat(test_results)}")
+    save_test_results_as_csv(config, test_results, prefix="post-")
 
     # Visualize top and bottom k explanations after manipulation
     visualize_top_bottom_k(config, device, model)
