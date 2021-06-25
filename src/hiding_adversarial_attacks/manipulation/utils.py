@@ -128,29 +128,6 @@ def get_top_and_bottom_k_indices(
     return top_indices.long(), bottom_indices.long()
 
 
-def get_top_and_bottom_k_explanations(
-    training_adv_expl,
-    training_orig_expl,
-    batched_sim_loss,
-):
-    similarity_results = batched_sim_loss(training_orig_expl, training_adv_expl)
-    top_indices, bottom_indices = get_top_and_bottom_k_indices(similarity_results)
-    top_similarities, bottom_similarities = (
-        similarity_results[top_indices],
-        similarity_results[bottom_indices],
-    )
-    return (
-        training_orig_expl[top_indices],
-        training_adv_expl[top_indices],
-        top_similarities,
-        top_indices,
-        training_orig_expl[bottom_indices],
-        training_adv_expl[bottom_indices],
-        bottom_similarities,
-        bottom_indices,
-    )
-
-
 def get_metricized_top_and_bottom_explanations(
     config: ManipulatedModelTrainingConfig, device: torch.device
 ) -> MetricizedTopAndBottomExplanations:
@@ -260,8 +237,6 @@ def get_similarities(similarity_loss_name, orig_explanations, adv_explanations):
         batched_sim_loss = partial(
             similarity_loss,
             reduction="none",
-            # kernel_size=(5, 5),
-            # sigma=(0.5, 0.5),
         )
         similarities = batched_sim_loss(orig_explanations, adv_explanations)
         similarities = similarities.mean(dim=(1, 2, 3))

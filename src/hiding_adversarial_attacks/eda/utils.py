@@ -165,9 +165,12 @@ def visualize_explanation_similarities(
     )
 
     orig_labels = np.array([])
+    orig_pred_labels = np.array([])
     adv_labels = np.array([])
+    adv_pred_labels = np.array([])
     sim_mse = np.array([])
     sim_pcc = np.array([])
+    sim_ssim = np.array([])
     for batch in tqdm(data_loader):
         if use_original_explanations:
             (
@@ -188,13 +191,20 @@ def visualize_explanation_similarities(
                 batch_indices,
             ) = batch
 
+        original_images = original_images.to(device)
+        adversarial_images = adversarial_images.to(device)
+
         # get explanation maps
         original_explanation_maps = model.explainer.explain(
-            original_images.to(device), original_labels.to(device)
+            original_images, original_labels.to(device)
         )
         adversarial_explanation_maps = model.explainer.explain(
-            adversarial_images.to(device), adversarial_labels.to(device)
+            adversarial_images, adversarial_labels.to(device)
         )
+        # Predict orig and adv label
+        original_pred_labels = torch.argmax(model(original_images), dim=-1)
+        adversarial_pred_labels = torch.argmax(model(adversarial_images), dim=-1)
+
         # calculate similarities
         _, similarities_mse = get_similarities(
             "MSE", original_explanation_maps, adversarial_explanation_maps
@@ -202,24 +212,47 @@ def visualize_explanation_similarities(
         _, similarities_pcc = get_similarities(
             "PCC", original_explanation_maps, adversarial_explanation_maps
         )
+        _, similarities_ssim = get_similarities(
+            "SSIM", original_explanation_maps, adversarial_explanation_maps
+        )
 
         # concat arrays
         orig_labels = np.append(orig_labels, original_labels.cpu().detach().numpy())
+        orig_pred_labels = np.append(
+            orig_pred_labels, original_pred_labels.cpu().detach().numpy()
+        )
         adv_labels = np.append(adv_labels, adversarial_labels.cpu().detach().numpy())
+        adv_pred_labels = np.append(
+            adv_pred_labels, adversarial_pred_labels.cpu().detach().numpy()
+        )
         sim_mse = np.append(sim_mse, similarities_mse.cpu().detach().numpy())
         sim_pcc = np.append(sim_pcc, similarities_pcc.cpu().detach().numpy())
+        sim_ssim = np.append(sim_ssim, similarities_ssim.cpu().detach().numpy())
 
     df_sim = pd.DataFrame(
         [
             sim_mse,
             sim_pcc,
+            sim_ssim,
             orig_labels,
+            orig_pred_labels,
             adv_labels,
+            adv_pred_labels,
         ],
-        index=["mse_sim", "pcc_sim", "orig_label", "adv_label"],
+        index=[
+            "mse_sim",
+            "pcc_sim",
+            "ssim_sim",
+            "orig_label",
+            "orig_pred_label",
+            "adv_label",
+            "adv_pred_label",
+        ],
     ).T
     df_sim["orig_label"] = df_sim["orig_label"].astype(int)
+    df_sim["orig_pred_label"] = df_sim["orig_pred_label"].astype(int)
     df_sim["adv_label"] = df_sim["adv_label"].astype(int)
+    df_sim["adv_pred_label"] = df_sim["adv_pred_label"].astype(int)
     df_sim["orig_label_name"] = df_sim["orig_label"].map(data_set_map)
     sorted_df_sim = df_sim.sort_values(by="orig_label")
 
