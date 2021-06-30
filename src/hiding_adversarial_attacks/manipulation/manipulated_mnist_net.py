@@ -41,8 +41,8 @@ from hiding_adversarial_attacks.manipulation.metricized_explanations import (
 )
 from hiding_adversarial_attacks.utils import (
     assert_not_none,
-    create_mask,
     save_confusion_matrix,
+    select_included_class_samples,
     tensor_to_pil_numpy,
     visualize_difference_image_np,
     visualize_single_explanation,
@@ -166,6 +166,13 @@ class ManipulatedMNISTNet(pl.LightningModule):
         output = torch.exp(softmax_output)
         return output
 
+    def normalize_explanations(self, explanations: torch.Tensor):
+        normalized_explanations = explanations / torch.abs(
+            torch.sum(explanations, dim=(1, 2, 3))
+        ).view(len(explanations), 1, 1, 1)
+        ranged_norm_explanations = (normalized_explanations + 1) / 2
+        return ranged_norm_explanations
+
     def _predict(self, batch, stage: Stage):
         if self.use_original_explanations:
             (
@@ -195,6 +202,29 @@ class ManipulatedMNISTNet(pl.LightningModule):
         adversarial_explanation_maps = self.explainer.explain(
             adversarial_images, adversarial_labels
         )
+        # Normalize explanations
+        norm_original_explanation_maps = self.normalize_explanations(
+            original_explanation_maps
+        )
+        norm_adversarial_explanation_maps = self.normalize_explanations(
+            adversarial_explanation_maps
+        )
+
+        if not original_explanation_maps.requires_grad:
+            original_explanation_maps.requires_grad = True
+        if not adversarial_explanation_maps.requires_grad:
+            adversarial_explanation_maps.requires_grad = True
+
+        norm_initial_original_explanations = None
+        if (
+            initial_original_explanations is not None
+            and not initial_original_explanations.requires_grad
+        ):
+            norm_initial_original_explanations = self.normalize_explanations(
+                initial_original_explanations
+            )
+            norm_initial_original_explanations.requires_grad = True
+
         if stage == Stage.STAGE_TEST:
             self.append_test_images_and_explanations(
                 original_images,
@@ -214,12 +244,12 @@ class ManipulatedMNISTNet(pl.LightningModule):
         ) = self.combined_loss(
             original_images,
             adversarial_images,
-            original_explanation_maps,
-            adversarial_explanation_maps,
+            norm_original_explanation_maps,
+            norm_adversarial_explanation_maps,
             original_labels,
             adversarial_labels,
             stage=stage,
-            initial_original_explanation_map=initial_original_explanations,
+            initial_original_explanation_map=norm_initial_original_explanations,
         )
         self.log_losses(
             total_loss,
@@ -281,39 +311,48 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         # Create mask to include only classes in self.included_classes
         # when calculating explanation similarity
-        included_mask = create_mask(original_label, self.included_classes)
+        included_mask = select_included_class_samples(
+            original_label, self.included_classes
+        )
+        # included_mask = create_mask(original_label, self.included_classes)
 
         # Part 3: Similarity between original and adversarial explanation maps
-        if initial_original_explanation_map is None:
-            explanation_similarity = self.calculate_similarity_loss(
-                original_explanation_map[included_mask],
-                adversarial_explanation_map[included_mask],
-            )
-        else:
-            original_double = torch.cat(
-                (
-                    initial_original_explanation_map[included_mask],
-                    initial_original_explanation_map[included_mask],
-                ),
-                dim=0,
-            )
-            predicted = torch.cat(
-                (
-                    original_explanation_map[included_mask],
-                    adversarial_explanation_map[included_mask],
-                ),
-                dim=0,
-            )
-            explanation_similarity = self.calculate_similarity_loss(
-                original_double, predicted
-            )
-
-        # Case when there are no samples for included_classes
-        # for explanation comparison in the batch
-        if explanation_similarity != explanation_similarity:
+        if len(torch.nonzero(included_mask)) == 0:
+            # Case when there are no samples for included_classes
+            # for explanation comparison in the batch
+            # if explanation_similarity != explanation_similarity:
             explanation_similarity = (
                 torch.FloatTensor(1).uniform_(0, self.max_loss).to(self.device)
             )[0]
+            explanation_similarity.requires_grad = True
+        else:
+            orig_expl = torch.index_select(original_explanation_map, 0, included_mask)
+            adv_expl = torch.index_select(adversarial_explanation_map, 0, included_mask)
+
+            if initial_original_explanation_map is None:
+                explanation_similarity = self.calculate_similarity_loss(
+                    orig_expl, adv_expl
+                )
+            else:
+                initial_orig_expl = initial_original_explanation_map[included_mask]
+
+                original_double = torch.cat(
+                    (
+                        initial_orig_expl,
+                        initial_orig_expl,
+                    ),
+                    dim=0,
+                )
+                predicted = torch.cat(
+                    (
+                        orig_expl,
+                        adv_expl,
+                    ),
+                    dim=0,
+                )
+                explanation_similarity = self.calculate_similarity_loss(
+                    original_double, predicted
+                )
 
         # Normalized total loss
         normalized_total_loss = self.get_normalized_total_loss(
@@ -751,16 +790,24 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 raise TrialPruned(
                     "Trial pruned due to too many explanation maps becoming zero."
                 )
+            orig_expl_maps = original_explanation_maps[index]
+            adv_expl_maps = adversarial_explanation_maps[index]
+
             if self.hparams.similarity_loss["name"] == SimilarityLossNames.PCC:
                 sim_loss = custom_pearson_corrcoef
                 num_format = "{:.2f}"
+            elif self.hparams.similarity_loss["name"] == SimilarityLossNames.SSIM:
+                sim_loss = self.similarity_loss
+                num_format = "{:.2f}"
+                orig_expl_maps = original_explanation_maps[index].unsqueeze(0)
+                adv_expl_maps = adversarial_explanation_maps[index].unsqueeze(0)
             else:
                 sim_loss = self.similarity_loss
                 num_format = "{:.2e}"
             explanation_similarity = (
                 sim_loss(
-                    original_explanation_maps[index],
-                    adversarial_explanation_maps[index],
+                    orig_expl_maps,
+                    adv_expl_maps,
                 )
                 .detach()
                 .cpu()
