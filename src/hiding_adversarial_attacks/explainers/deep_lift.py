@@ -26,7 +26,6 @@ class DeepLiftExplainer(BaseExplainer):
         self._baseline = self._baseline_wrapper()
 
     def explain(self, image: torch.Tensor, target: torch.Tensor, **kwargs):
-        self._model.zero_grad()
         return self.xai_algorithm.attribute(
             image, target=target, baselines=self._baseline(image), **kwargs
         )

@@ -25,7 +25,6 @@ class LayerGradCamExplainer(BaseExplainer):
         self._xai_algorithm = LayerGradCam(self._model, self._layer)
 
     def explain(self, image: torch.Tensor, target: torch.Tensor, **kwargs):
-        self._model.zero_grad()
         attribution = self.xai_algorithm.attribute(
             image,
             target=target,
