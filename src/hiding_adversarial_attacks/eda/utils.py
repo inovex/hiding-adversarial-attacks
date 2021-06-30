@@ -274,22 +274,26 @@ def visualize_explanation_similarities(
     hist_mse.savefig(
         os.path.join(
             model.image_log_path, f"{stage}_explanation_similarity_hist_mse.png"
-        )
+        ),
+        transparent=True,
     )
     hist_pcc.savefig(
         os.path.join(
             model.image_log_path, f"{stage}_explanation_similarity_hist_pcc.png"
-        )
+        ),
+        transparent=True,
     )
     kde_mse.savefig(
         os.path.join(
             model.image_log_path, f"{stage}_explanation_similarity_kde_mse.png"
-        )
+        ),
+        transparent=True,
     )
     kde_pcc.savefig(
         os.path.join(
             model.image_log_path, f"{stage}_explanation_similarity_kde_pcc.png"
-        )
+        ),
+        transparent=True,
     )
 
 
