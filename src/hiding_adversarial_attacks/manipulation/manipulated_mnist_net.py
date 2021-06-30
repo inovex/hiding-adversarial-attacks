@@ -41,8 +41,8 @@ from hiding_adversarial_attacks.manipulation.metricized_explanations import (
 )
 from hiding_adversarial_attacks.utils import (
     assert_not_none,
+    get_included_class_indices,
     save_confusion_matrix,
-    select_included_class_samples,
     tensor_to_pil_numpy,
     visualize_difference_image_np,
     visualize_single_explanation,
@@ -311,7 +311,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         # Create mask to include only classes in self.included_classes
         # when calculating explanation similarity
-        included_mask = select_included_class_samples(
+        included_mask = get_included_class_indices(
             original_label, self.included_classes
         )
         # included_mask = create_mask(original_label, self.included_classes)

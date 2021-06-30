@@ -15,10 +15,6 @@ from matplotlib.pyplot import axis, figure
 from numpy import ndarray
 from torchvision.transforms import ToPILImage
 
-from hiding_adversarial_attacks.config.attack.adversarial_attack_config import (
-    ALL_CLASSES,
-)
-
 
 def timeit(func):
     @wraps(func)
@@ -199,13 +195,13 @@ def display_random_original_and_adversarial_explanation(path: str):
     )
 
 
-def create_mask(source: torch.Tensor, included_classes: List[Any]):
-    if ALL_CLASSES in included_classes:
-        return torch.ones(len(source), dtype=torch.bool, device=source.device)
-    mask = torch.zeros(len(source), dtype=torch.bool, device=source.device)
+def get_included_class_indices(labels: torch.Tensor, included_classes: List[Any]):
+    selected_indeces = torch.tensor([], device=labels.device, dtype=torch.long)
     for c in included_classes:
-        mask += source == c
-    return mask
+        selected_indeces = torch.cat(
+            (selected_indeces, (labels == c).nonzero(as_tuple=True)[0].long()), dim=0
+        )
+    return selected_indeces
 
 
 if __name__ == "__main__":
