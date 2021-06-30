@@ -42,6 +42,7 @@ from hiding_adversarial_attacks.data_modules.k_fold_cross_validation import (
 )
 from hiding_adversarial_attacks.data_modules.utils import get_data_module
 from hiding_adversarial_attacks.eda.utils import visualize_explanation_similarities
+from hiding_adversarial_attacks.eda.visualization import plot_aor
 from hiding_adversarial_attacks.manipulation.metricized_explanations import (
     MetricizedTopAndBottomExplanations,
 )
@@ -250,6 +251,7 @@ def run_training(
         gpus=config.gpus,
         logger=neptune_logger,
         max_epochs=config.max_epochs,
+        gradient_clip_val=1.0,
     )
 
     trainer.fit(model, train_loader, validation_loader)
@@ -347,6 +349,9 @@ def test(
     # Visualize top and bottom k explanations after manipulation
     visualize_top_bottom_k(config, device, model)
 
+    # Visualize and save Adversarial Obfuscation Rate (AOR) plot
+    plot_aor(config.log_path)
+
     copy_run_outputs(
         config.log_path,
         os.getcwd(),
@@ -385,7 +390,7 @@ def run_optuna_study(
         n_trials=config.optuna.number_of_trials,
         timeout=config.optuna.timeout,
         gc_after_trial=True,
-        catch=(KeyboardInterrupt,),
+        catch=(KeyboardInterrupt, AssertionError),
     )
     logger.info("\n************ Optuna trial results ***************")
     logger.info("Number of finished trials: {}".format(len(study.trials)))
