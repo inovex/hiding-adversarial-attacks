@@ -231,7 +231,7 @@ def run_training(
         gpus=config.gpus,
         logger=neptune_logger,
         max_epochs=config.max_epochs,
-        gradient_clip_val=0.01,
+        gradient_clip_val=config.gradient_clip_val,
     )
 
     trainer.fit(model, train_loader, validation_loader)

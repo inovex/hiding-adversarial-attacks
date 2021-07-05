@@ -192,6 +192,7 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     early_stopping: bool = False
 
     kfold_num_folds: Optional[int] = None
+    gradient_clip_val: float = 0.1
 
 
 cs = ConfigStore.instance()
