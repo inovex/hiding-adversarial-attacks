@@ -75,6 +75,18 @@ data_set_mappings = {
         8: "Ship",
         9: "Truck",
     },
+    AdversarialDataSetNames.ADVERSARIAL_CIFAR10_EXPL: {
+        0: "Airplane",
+        1: "Car",
+        2: "Bird",
+        3: "Cat",
+        4: "Deer",
+        5: "Dog",
+        6: "Frog",
+        7: "Horse",
+        8: "Ship",
+        9: "Truck",
+    },
 }
 
 
