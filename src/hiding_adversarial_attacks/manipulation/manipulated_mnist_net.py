@@ -406,8 +406,8 @@ class ManipulatedMNISTNet(pl.LightningModule):
             return torch.mean(sim)
 
     def get_normalized_total_loss(self, ce_orig, ce_adv, similarity, stage):
-        norm_ce_orig = 1 - torch.exp(-ce_orig)
-        norm_ce_adv = 1 - torch.exp(-ce_adv)
+        norm_ce_orig = ce_orig
+        norm_ce_adv = ce_adv
 
         if self.hparams.similarity_loss["name"] == SimilarityLossNames.PCC:
             norm_sim = self.loss_weights[2] * similarity
@@ -796,6 +796,8 @@ class ManipulatedMNISTNet(pl.LightningModule):
             if self.hparams.similarity_loss["name"] == SimilarityLossNames.PCC:
                 sim_loss = custom_pearson_corrcoef
                 num_format = "{:.2f}"
+                orig_expl_maps = original_explanation_maps[index].unsqueeze(0)
+                adv_expl_maps = adversarial_explanation_maps[index].unsqueeze(0)
             elif self.hparams.similarity_loss["name"] == SimilarityLossNames.SSIM:
                 sim_loss = self.similarity_loss
                 num_format = "{:.2f}"
