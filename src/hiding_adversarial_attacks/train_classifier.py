@@ -200,7 +200,7 @@ def run(config: ClassifierTrainingConfig) -> None:
     logger.info("**** Parameters: ******")
     logger.info(OmegaConf.to_yaml(config))
 
-    transform = get_transform(config.data_set.name)
+    transform = get_transform(config.data_set.name, data_is_tensor=False)
 
     data_module = get_data_module(
         data_set=config.data_set.name,

@@ -41,6 +41,7 @@ from hiding_adversarial_attacks.data_modules.k_fold_cross_validation import (
     StratifiedKFoldCVDataModule,
 )
 from hiding_adversarial_attacks.data_modules.utils import get_data_module
+from hiding_adversarial_attacks.data_sets.utils import get_transform
 from hiding_adversarial_attacks.eda.utils import visualize_explanation_similarities
 from hiding_adversarial_attacks.eda.visualization import plot_aor
 from hiding_adversarial_attacks.manipulation.metricized_explanations import (
@@ -421,13 +422,15 @@ def run(config: ManipulatedModelTrainingConfig) -> None:
     logger.info("Starting train_manipulated_model.py")
     logger.info(f"cwd: {os.getcwd()}")
 
+    transform = get_transform(config.data_set.name, data_is_tensor=True)
+
     data_module = get_data_module(
         data_set=config.data_set.name,
         data_path=config.data_path,
         download=False,
         batch_size=config.batch_size,
         val_split=config.val_split,
-        transform=None,
+        transform=transform,
         random_seed=config.random_seed,
     )
 
