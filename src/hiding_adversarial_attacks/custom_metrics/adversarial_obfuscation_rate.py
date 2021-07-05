@@ -2,8 +2,8 @@ import numpy as np
 import torch
 from torchmetrics import Metric
 
-from hiding_adversarial_attacks.custom_metrics.spearman_corrcoef import (
-    custom_spearman_corrcoef,
+from hiding_adversarial_attacks.custom_metrics.pearson_corrcoef import (
+    custom_pearson_corrcoef,
 )
 
 
@@ -47,5 +47,5 @@ def compute_adversarial_obfuscation_rate(
     adv_pred_lbl: torch.Tensor,
     tau,
 ):
-    spearman_rank = custom_spearman_corrcoef(orig_expl, adv_expl)
-    return torch.sum((spearman_rank >= tau) & (adv_pred_lbl != orig_label))
+    rank = custom_pearson_corrcoef(orig_expl, adv_expl)
+    return torch.sum((rank >= tau) & (adv_pred_lbl != orig_label))
