@@ -8,7 +8,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchmetrics
-from torch.optim.lr_scheduler import StepLR
 
 
 class MNISTNet(pl.LightningModule):
@@ -84,9 +83,8 @@ class MNISTNet(pl.LightningModule):
         return output
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adadelta(self.parameters(), lr=self.lr)
-        scheduler = StepLR(optimizer, step_size=1, gamma=self.gamma)
-        return [optimizer], [scheduler]
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+        return [optimizer]
 
     def _predict(self, batch):
         image, gt_label = batch
