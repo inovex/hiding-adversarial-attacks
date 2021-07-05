@@ -124,35 +124,12 @@ def suggest_hyperparameters(config, trial):
         "batch_size", config.optuna.search_space["batch_size"]
     )
 
-    steps_lr = config.steps_lr
-    gamma = config.gamma
-    if (
-        "steps_lr" in config.optuna.search_space
-        and "gamma" in config.optuna.search_space
-    ):
-        steps_lr_options = config.optuna.search_space["steps_lr"]
-        steps_lr = trial.suggest_int(
-            "steps_lr",
-            steps_lr_options["low"],
-            steps_lr_options["high"],
-            step=steps_lr_options["step"],
-        )
-        gamma_options = config.optuna.search_space["gamma"]
-        gamma = trial.suggest_float(
-            "gamma",
-            gamma_options["low"],
-            gamma_options["high"],
-            step=gamma_options["step"],
-        )
-
     return (
         loss_weight_orig_ce,
         loss_weight_adv_ce,
         loss_weight_similarity,
         lr,
         batch_size,
-        steps_lr,
-        gamma,
     )
 
 
@@ -177,8 +154,6 @@ def train(
             config.loss_weight_similarity,
             config.lr,
             config.batch_size,
-            config.steps_lr,
-            config.gamma,
         ) = suggest_hyperparameters(config, trial)
 
     logger.info("**** Parameters: ******")
@@ -237,8 +212,8 @@ def run_training(
     if config.early_stopping:
         early_stopping_callback = CustomEarlyStopping(
             monitor="val_exp_sim",
-            min_delta=0.001,
-            patience=5,
+            min_delta=0.01,
+            patience=4,
             verbose=False,
             mode="min",
         )
@@ -252,7 +227,7 @@ def run_training(
         gpus=config.gpus,
         logger=neptune_logger,
         max_epochs=config.max_epochs,
-        gradient_clip_val=1.0,
+        gradient_clip_val=0.01,
     )
 
     trainer.fit(model, train_loader, validation_loader)
@@ -265,6 +240,8 @@ def run_training(
     logger.info(f"Test results: \n {pformat(test_results)}")
 
     save_test_results_as_csv(config, test_results)
+
+    model.to(device)
 
     visualize_explanation_similarities(
         model,
@@ -391,7 +368,7 @@ def run_optuna_study(
         n_trials=config.optuna.number_of_trials,
         timeout=config.optuna.timeout,
         gc_after_trial=True,
-        catch=(KeyboardInterrupt, AssertionError),
+        catch=(KeyboardInterrupt, AssertionError, RuntimeError),
     )
     logger.info("\n************ Optuna trial results ***************")
     logger.info("Number of finished trials: {}".format(len(study.trials)))
