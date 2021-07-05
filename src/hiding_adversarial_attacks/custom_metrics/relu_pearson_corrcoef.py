@@ -1,7 +1,10 @@
 import torch
 from torch.nn.functional import relu
 from torchmetrics import Metric
-from torchmetrics.functional.regression.pearson import _pearson_corrcoef_compute
+
+from hiding_adversarial_attacks.custom_metrics.pearson_corrcoef import (
+    custom_pearson_corrcoef,
+)
 
 
 class ReluBatchedPearsonCorrCoef(Metric):
@@ -30,37 +33,9 @@ class ReluBatchedPearsonCorrCoef(Metric):
         return torch.mean(torch.tensor(self.pcc, device=self.device))
 
 
-def relu_pearson_corrcoef(preds: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-    assert preds.shape == target.shape
-    if preds.ndim > 1 or target.ndim > 1:
-        r = pearson_corrcoef_compute(preds, target)
-    else:
-        r = _pearson_corrcoef_compute(preds, target)
+def relu_pearson_corrcoef(
+    preds: torch.Tensor, target: torch.Tensor, windowed: bool = False
+) -> torch.Tensor:
+    r = custom_pearson_corrcoef(preds, target, windowed)
     _r = relu(r)
     return _r
-
-
-def pearson_corrcoef_compute(
-    preds: torch.Tensor, target: torch.Tensor, eps: float = 1e-6
-) -> torch.Tensor:
-    """ Custom implementation of the PCC for data with 4 dimensions: (B, C, M, N) """
-
-    preds_diff = preds.view(preds.shape[0], -1) - preds.mean(dim=(1, 2, 3)).view(
-        preds.shape[0], -1
-    )
-    target_diff = target.view(target.shape[0], -1) - target.mean(dim=(1, 2, 3)).view(
-        target.shape[0], -1
-    )
-
-    cov = (preds_diff * target_diff).mean(dim=1)
-    preds_std = torch.sqrt((preds_diff * preds_diff).mean(dim=1))
-    target_std = torch.sqrt((target_diff * target_diff).mean(dim=1))
-
-    denom = preds_std * target_std
-    # prevent division by zero
-    zero_mask = denom == 0
-    if torch.nonzero(zero_mask).numel():
-        denom[zero_mask] = eps
-
-    corrcoef = cov / denom
-    return torch.clamp(corrcoef, -1.0, 1.0)

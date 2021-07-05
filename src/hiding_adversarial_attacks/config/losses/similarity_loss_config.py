@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from functools import partial
 
 from omegaconf import MISSING
 from torchmetrics.functional import mean_squared_error, ssim
@@ -14,9 +15,11 @@ class SimilarityLossNames:
     SSIM: str = "SSIM"
 
 
+pssim = partial(ssim, data_range=1)
+
 SimilarityLossMapping = {
     SimilarityLossNames.MSE: mean_squared_error,
-    SimilarityLossNames.SSIM: ssim,
+    SimilarityLossNames.SSIM: pssim,
     SimilarityLossNames.PCC: relu_pearson_corrcoef,
 }
 
