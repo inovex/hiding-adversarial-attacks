@@ -23,7 +23,11 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import NeptuneLogger
 from torch.utils.data import DataLoader
 
-from hiding_adversarial_attacks._neptune.utils import get_neptune_logger
+from hiding_adversarial_attacks._neptune.utils import (
+    get_neptune_logger,
+    init_current_neptune_run,
+    save_run_data,
+)
 from hiding_adversarial_attacks.callbacks.early_stopping_callback import (
     CustomEarlyStopping,
 )
@@ -234,12 +238,17 @@ def run_training(
 
     latest_checkpoint = os.path.join(config.log_path, "checkpoints/final-model.ckpt")
     trainer.save_checkpoint(latest_checkpoint)
-
     # Test with best model checkpoint (Lightning does this automatically)
     test_results = trainer.test(model=model, test_dataloaders=test_loader)
     logger.info(f"Test results: \n {pformat(test_results)}")
 
     save_test_results_as_csv(config, test_results)
+
+    # Save run metrics to .csv
+    run = init_current_neptune_run(neptune_logger.version)
+    save_run_data(run, config.log_path, stage="train")
+    save_run_data(run, config.log_path, stage="val")
+    save_run_data(run, config.log_path, stage="test")
 
     model.to(device)
 
