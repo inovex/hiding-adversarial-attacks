@@ -312,7 +312,10 @@ def get_manipulatable_model(config):
         )
         model = ManipulatedFashionMNISTNet(classifier_model, config)
         return model
-    if config.data_set.name == AdversarialDataSetNames.ADVERSARIAL_CIFAR10:
+    if config.data_set.name in [
+        AdversarialDataSetNames.ADVERSARIAL_CIFAR10,
+        AdversarialDataSetNames.ADVERSARIAL_CIFAR10_EXPL,
+    ]:
         classifier_model = CifarNet(config).load_from_checkpoint(
             config.classifier_checkpoint
         )

@@ -26,6 +26,7 @@ class ConfigValidator:
         AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST: ClassifierNames.FASHION_MNIST_CLASSIFIER,  # noqa: E501
         AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST_EXPL: ClassifierNames.FASHION_MNIST_CLASSIFIER,  # noqa: E501
         AdversarialDataSetNames.ADVERSARIAL_CIFAR10: ClassifierNames.CIFAR10_CLASSIFIER,
+        AdversarialDataSetNames.ADVERSARIAL_CIFAR10_EXPL: ClassifierNames.CIFAR10_CLASSIFIER,  # noqa: E501
     }
     DATA_SET_DATA_PATH_MATCHER = {
         DataSetNames.MNIST: f"data-set={DataSetNames.MNIST}",
@@ -35,6 +36,7 @@ class ConfigValidator:
         AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST: f"data-set={DataSetNames.FASHION_MNIST}",  # noqa: E501
         AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST_EXPL: f"data-set={DataSetNames.FASHION_MNIST}",  # noqa: E501
         AdversarialDataSetNames.ADVERSARIAL_CIFAR10: f"data-set={DataSetNames.CIFAR10}",
+        AdversarialDataSetNames.ADVERSARIAL_CIFAR10_EXPL: f"data-set={DataSetNames.CIFAR10}",  # noqa: E501
     }
 
     def validate(self, config):

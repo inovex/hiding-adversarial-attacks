@@ -15,6 +15,9 @@ from hiding_adversarial_attacks.config.data_sets.data_set_config import (
     DataSetNames,
 )
 from hiding_adversarial_attacks.data_sets.adversarial_cifar10 import AdversarialCIFAR10
+from hiding_adversarial_attacks.data_sets.adversarial_cifar10_with_explanations import (
+    AdversarialCIFAR10WithExplanations,
+)
 from hiding_adversarial_attacks.data_sets.adversarial_fashion_mnist import (
     AdversarialFashionMNIST,
 )
@@ -35,6 +38,7 @@ class BaseDataModule(pl.LightningDataModule):
         AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST: AdversarialFashionMNIST,
         AdversarialDataSetNames.ADVERSARIAL_FASHION_MNIST_EXPL: AdversarialFashionMNISTWithExplanations,  # noqa: E501
         AdversarialDataSetNames.ADVERSARIAL_CIFAR10: AdversarialCIFAR10,
+        AdversarialDataSetNames.ADVERSARIAL_CIFAR10_EXPL: AdversarialCIFAR10WithExplanations,  # noqa: E501
     }
 
     def __init__(

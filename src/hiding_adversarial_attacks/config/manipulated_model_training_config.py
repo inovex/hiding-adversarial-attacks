@@ -19,6 +19,7 @@ from hiding_adversarial_attacks.config.classifiers.classifier_config import (
 )
 from hiding_adversarial_attacks.config.data_sets.data_set_config import (
     AdversarialCifar10Config,
+    AdversarialCifar10WithExplanationsConfig,
     AdversarialFashionMNISTConfig,
     AdversarialFashionMNISTWithExplanationsConfig,
     AdversarialMNISTConfig,
@@ -209,6 +210,11 @@ cs.store(
     group="data_set",
     name="AdversarialCifar10",
     node=AdversarialCifar10Config,
+)
+cs.store(
+    group="data_set",
+    name="AdversarialCifar10WithExplanations",
+    node=AdversarialCifar10WithExplanationsConfig,
 )
 cs.store(group="classifier", name="MNISTClassifier", node=MNISTClassifierConfig)
 cs.store(

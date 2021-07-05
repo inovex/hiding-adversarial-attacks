@@ -33,3 +33,27 @@ class AdversarialCIFAR10DataModule(BaseDataModule):
             included_classes=included_classes,
             random_seed=random_seed,
         )
+
+
+class AdversarialCIFAR10WithExplanationsDataModule(BaseDataModule):
+    def __init__(
+        self,
+        data_path: str,
+        download: bool = False,
+        batch_size: int = 64,
+        val_split: float = 0.1,
+        transform: transforms = None,
+        included_classes: List[Union[str, int]] = ALL_CLASSES,
+        random_seed: int = 42,
+    ):
+        super().__init__(
+            AdversarialDataSetNames.ADVERSARIAL_CIFAR10_EXPL,
+            data_path=data_path,
+            download=False,
+            num_classes=10,
+            batch_size=batch_size,
+            val_split=val_split,
+            transform=transform,
+            included_classes=included_classes,
+            random_seed=random_seed,
+        )
