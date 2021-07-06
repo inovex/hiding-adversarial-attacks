@@ -248,7 +248,6 @@ def run_training(
     run = init_current_neptune_run(neptune_logger.version)
     save_run_data(run, config.log_path, stage="train")
     save_run_data(run, config.log_path, stage="val")
-    save_run_data(run, config.log_path, stage="test")
 
     model.to(device)
 
