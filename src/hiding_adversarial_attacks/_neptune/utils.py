@@ -51,7 +51,6 @@ def save_run_data(run: Run, log_path: str, stage: str = "train"):
         "exp_pcc",
         "exp_ssim",
         "exp_mse",
-        "f1_score",
         "normalized_total_loss",
     ]
     # Train

@@ -12,6 +12,6 @@ def get_transform(data_set_name: str, data_is_tensor: bool = False):
         std = [0.2023, 0.1994, 0.2010]
         transform.append(transforms.Normalize(mean, std))
         transform = transforms.Compose(transform)
-    if len(transform) == 0:
+    if isinstance(transform, list) and len(transform) == 0:
         transform = None
     return transform
