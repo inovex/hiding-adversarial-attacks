@@ -30,7 +30,7 @@ class ReluBatchedPearsonCorrCoef(Metric):
         self.pcc = torch.cat((self.pcc, r), dim=0)
 
     def compute(self):
-        return torch.mean(torch.tensor(self.pcc, device=self.device))
+        return torch.mean(self.pcc)
 
 
 def relu_pearson_corrcoef(
