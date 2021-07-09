@@ -40,10 +40,14 @@ def suggest_hyperparameters(config, trial):
     batch_size = trial.suggest_categorical(
         "batch_size", config.optuna.search_space["batch_size"]
     )
+    weight_decay = trial.suggest_categorical(
+        "weight_decay", config.optuna.search_space["weight_decay"]
+    )
 
     return (
         lr,
         batch_size,
+        weight_decay,
     )
 
 
@@ -58,6 +62,7 @@ def train(
         (
             config.lr,
             config.batch_size,
+            config.weight_decay,
         ) = suggest_hyperparameters(config, trial)
 
     logger.info("**** Parameters: ******")
@@ -106,6 +111,8 @@ def train(
     model = get_model(config)
 
     trainer.fit(model, train_loader, validation_loader)
+
+    return trainer.callback_metrics["val_loss"].item()
 
 
 def test(

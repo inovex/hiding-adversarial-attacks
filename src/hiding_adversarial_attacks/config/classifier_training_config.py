@@ -53,6 +53,7 @@ class ClassifierTrainingConfig:
     test: bool = False
 
     lr: float = 0.01
+    weight_decay: float = 0.001
     gamma: float = 0.07
     batch_size: int = 64
     val_split: float = 0.1
