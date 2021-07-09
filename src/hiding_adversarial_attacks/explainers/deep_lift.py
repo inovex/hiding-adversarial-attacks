@@ -2,6 +2,7 @@ import pytorch_lightning as pl
 import torch
 import torchvision
 from captum.attr import DeepLift
+from torch import relu
 
 from hiding_adversarial_attacks.config.explainers.deep_lift_baseline_config import (
     DeepLiftBaselineNames,
@@ -17,18 +18,23 @@ class DeepLiftExplainer(BaseExplainer):
         model: pl.LightningModule,
         baseline_name: str = DeepLiftBaselineNames.ZERO,
         multiply_by_inputs: bool = False,
+        relu_attributions: bool = False,
         random_seed: int = 42,
     ):
         super().__init__(model=model, random_seed=random_seed)
         self._multiply_by_inputs = multiply_by_inputs
+        self._relu_attributions = relu_attributions
         self._xai_algorithm = DeepLift(self._model, self._multiply_by_inputs)
         self._baseline_name = baseline_name
         self._baseline = self._baseline_wrapper()
 
     def explain(self, image: torch.Tensor, target: torch.Tensor, **kwargs):
-        return self.xai_algorithm.attribute(
+        attribution = self.xai_algorithm.attribute(
             image, target=target, baselines=self._baseline(image), **kwargs
         )
+        if self._relu_attributions:
+            attribution = relu(attribution)
+        return attribution
 
     def _baseline_wrapper(self):
         def inner(image: torch.Tensor):

@@ -28,6 +28,7 @@ def get_explainer(
             model,
             baseline_name=config.explainer.baseline.name,
             multiply_by_inputs=config.explainer.multiply_by_inputs,
+            relu_attributions=config.explainer.relu_attributions,
         )
     elif explainer_name == ExplainerNames.GUIDED_BACKPROP:
         return GuidedBackpropExplainer(
