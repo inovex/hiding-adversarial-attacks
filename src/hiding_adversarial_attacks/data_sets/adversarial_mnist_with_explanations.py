@@ -77,9 +77,7 @@ class AdversarialMNISTWithExplanations(MNIST):
 
         if self.transform is not None:
             img = self.transform(img)
-            expl = self.transform(expl)
             adv_img = self.transform(adv_img)
-            adv_expl = self.transform(adv_expl)
 
         if self.target_transform is not None:
             target = self.target_transform(target)
