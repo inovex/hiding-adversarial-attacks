@@ -17,6 +17,7 @@ from hiding_adversarial_attacks.config.create_explanations_config import (
 )
 from hiding_adversarial_attacks.config.explainers.explainer_config import ExplainerNames
 from hiding_adversarial_attacks.data_modules.utils import get_data_module
+from hiding_adversarial_attacks.data_sets.utils import get_transform
 from hiding_adversarial_attacks.explainers.base import BaseExplainer
 from hiding_adversarial_attacks.explainers.utils import get_explainer
 from hiding_adversarial_attacks.utils import visualize_explanations
@@ -188,13 +189,15 @@ def run(config: ExplanationConfig) -> None:
 
     neptune_run["parameters"] = OmegaConf.to_container(config)
 
+    transform = get_transform(config.data_set.name, data_is_tensor=True)
+
     data_module = get_data_module(
         data_set=config.data_set.name,
         data_path=config.data_path,
         download=False,
         batch_size=config.batch_size,
         val_split=0.0,
-        transform=None,
+        transform=transform,
         random_seed=config.seed,
     )
 
