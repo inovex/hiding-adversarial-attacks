@@ -114,6 +114,19 @@ class Stage(Enum):
 
 
 @dataclass
+class EarlyStoppingConfig:
+    _target_: str = (
+        "hiding_adversarial_attacks.callbacks."
+        "early_stopping_callback.CustomEarlyStopping"
+    )
+    monitor: str = "val_exp_sim"
+    min_delta: float = 0.005
+    patience: int = 5
+    verbose: bool = False
+    mode: str = "min"
+
+
+@dataclass
 class ManipulatedClassifierCheckpointConfig:
     _target_: str = "pytorch_lightning.callbacks.model_checkpoint.ModelCheckpoint"
     monitor: str = VAL_NORM_TOTAL_LOSS
@@ -191,6 +204,7 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     # Optuna options
     optuna: OptunaConfig = OptunaConfig()
     early_stopping: bool = False
+    early_stopping_config: EarlyStoppingConfig = EarlyStoppingConfig()
 
     kfold_num_folds: Optional[int] = None
     gradient_clip_val: Optional[float] = None

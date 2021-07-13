@@ -28,9 +28,6 @@ from hiding_adversarial_attacks._neptune.utils import (
     init_current_neptune_run,
     save_run_data,
 )
-from hiding_adversarial_attacks.callbacks.early_stopping_callback import (
-    CustomEarlyStopping,
-)
 from hiding_adversarial_attacks.callbacks.neptune_callback import NeptuneLoggingCallback
 from hiding_adversarial_attacks.callbacks.utils import copy_run_outputs
 from hiding_adversarial_attacks.classifiers.utils import convert_relu_to_softplus
@@ -217,13 +214,7 @@ def run_training(
     )
     callbacks = [checkpoint_callback, neptune_callback]
     if config.early_stopping:
-        early_stopping_callback = CustomEarlyStopping(
-            monitor="val_exp_sim",
-            min_delta=0.00,
-            patience=6,
-            verbose=False,
-            mode="min",
-        )
+        early_stopping_callback = hydra.utils.instantiate(config.early_stopping_config)
         callbacks.append(early_stopping_callback)
     if trial is not None:
         callbacks.append(
