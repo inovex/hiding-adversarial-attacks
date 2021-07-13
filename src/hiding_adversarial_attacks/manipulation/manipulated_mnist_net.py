@@ -22,6 +22,7 @@ from torchmetrics import (
 )
 
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
+from hiding_adversarial_attacks.config.explainers.explainer_config import ExplainerNames
 from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossMapping,
     SimilarityLossNames,
@@ -168,11 +169,19 @@ class ManipulatedMNISTNet(pl.LightningModule):
         return output
 
     def normalize_explanations(self, explanations: torch.Tensor):
-        normalized_explanations = explanations / torch.abs(
-            torch.sum(explanations, dim=(1, 2, 3))
-        ).view(len(explanations), 1, 1, 1)
-        ranged_norm_explanations = (normalized_explanations + 1) / 2
-        return ranged_norm_explanations
+        normalized_explanations = explanations
+        if self.hparams["normalize_explanations"]:
+            # DeepLIFT
+            if ExplainerNames.DEEP_LIFT in self.hparams.explainer["name"]:
+                heatmap = torch.sum(torch.abs(explanations), dim=1)
+                normalized_explanations = (heatmap / torch.sum(heatmap)).unsqueeze(1)
+            # Grad-CAM ??
+            elif ExplainerNames.GRAD_CAM in self.hparams.explainer["name"]:
+                _explanations = explanations / torch.abs(
+                    torch.sum(explanations, dim=(1, 2, 3))
+                ).view(len(explanations), 1, 1, 1)
+                normalized_explanations = (_explanations + 1) / 2
+        return normalized_explanations
 
     def _predict(self, batch, stage: Stage):
         if self.use_original_explanations:
