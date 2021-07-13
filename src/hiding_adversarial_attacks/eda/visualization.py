@@ -44,6 +44,8 @@ def plot_similarities_histogram_with_boxplot(
             ax = sns.histplot(
                 g_nonzero, ax=ax, palette=p, label=similarity_col, bins=30
             )
+            if similarity_col == "pcc_sim":
+                ax.set(xlim=(-1, 1))
             y_lim = int(ax.get_ylim()[1] * ylim_factor)
             ax.set(ylim=(-5, y_lim))
             sns.boxplot(
@@ -57,7 +59,7 @@ def plot_similarities_histogram_with_boxplot(
                 linewidth=5,
                 label="mean",
             )
-            ax.legend(loc="lower left")
+            ax.get_legend().remove()
         except Exception as e:
             print(f"EXCEPTION: {e}")
 
