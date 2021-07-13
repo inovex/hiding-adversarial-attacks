@@ -8,6 +8,7 @@ from hiding_adversarial_attacks.config.explainers.deep_lift_baseline_config impo
 
 
 class ExplainerNames:
+    LAYER_DEEP_LIFT = "LayerDeepLIFT"
     DEEP_LIFT = "DeepLIFT"
     GUIDED_BACKPROP = "GuidedBackprop"
     GRAD_CAM = "GradCAM"
@@ -24,6 +25,15 @@ class ExplainerConfig:
 class DeepLiftConfig(ExplainerConfig):
     name: str = ExplainerNames.DEEP_LIFT
     baseline: DeepLiftBaselineConfig = MISSING
+    multiply_by_inputs: bool = False
+    relu_attributions: bool = False
+
+
+@dataclass
+class LayerDeepLiftConfig(ExplainerConfig):
+    name: str = ExplainerNames.LAYER_DEEP_LIFT
+    baseline: DeepLiftBaselineConfig = MISSING
+    layer_name: str = "conv2"
     multiply_by_inputs: bool = False
     relu_attributions: bool = False
 

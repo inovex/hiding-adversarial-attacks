@@ -17,15 +17,28 @@ def get_explainer(
     model: pl.LightningModule, config
 ) -> Union[
     DeepLiftExplainer,
-    LayerGradCamExplainer,
+    LayerDeepLiftExplainer,  # noqa: F821
     GuidedBackpropExplainer,
     InputXGradientExplainer,
+    LayerGradCamExplainer,
 ]:
 
     explainer_name = config.explainer.name
     if explainer_name == ExplainerNames.DEEP_LIFT:
         return DeepLiftExplainer(
             model,
+            baseline_name=config.explainer.baseline.name,
+            multiply_by_inputs=config.explainer.multiply_by_inputs,
+            relu_attributions=config.explainer.relu_attributions,
+        )
+    elif explainer_name == ExplainerNames.LAYER_DEEP_LIFT:
+        return LayerDeepLiftExplainer(  # noqa: F821
+            model,
+            layer_name=config.explainer.layer_name,
+            image_shape=(
+                config.data_set.image_width,
+                config.data_set.image_height,
+            ),
             baseline_name=config.explainer.baseline.name,
             multiply_by_inputs=config.explainer.multiply_by_inputs,
             relu_attributions=config.explainer.relu_attributions,
