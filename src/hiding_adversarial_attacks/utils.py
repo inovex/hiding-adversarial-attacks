@@ -148,7 +148,16 @@ def save_confusion_matrix(matrix: np.array, log_path: str):
 
 
 def normalize_to_range(x: torch.Tensor, min: int = 0, max: int = 1):
-    return min + ((x - torch.min(x)) * (max - min)) / (torch.max(x) - torch.min(x))
+    ranged_x = min + ((x - torch.min(x)) * (max - min)) / (torch.max(x) - torch.min(x))
+    return ranged_x
+
+
+def normalize_to_sum_to_one(x: torch.Tensor):
+    assert len(x.shape) == 4, (
+        f"Expected 4 dimensional tensor." f" Received '{len(x.shape)}' dimensions."
+    )
+    softmax_x = torch.softmax(x.view(x.shape[0], -1), dim=1).view(x.shape)
+    return softmax_x
 
 
 def assert_not_none(tensor, loss_name):
@@ -205,7 +214,8 @@ def get_included_class_indices(labels: torch.Tensor, included_classes: List[Any]
     selected_indeces = torch.tensor([], device=labels.device, dtype=torch.long)
     for c in included_classes:
         selected_indeces = torch.cat(
-            (selected_indeces, (labels == c).nonzero(as_tuple=True)[0].long()), dim=0
+            (selected_indeces, (labels == c).nonzero(as_tuple=True)[0].long()),
+            dim=0,
         )
     return selected_indeces
 
