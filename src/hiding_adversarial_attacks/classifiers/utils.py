@@ -3,6 +3,9 @@ from torch import nn
 
 from hiding_adversarial_attacks.classifiers.cifar_net import CifarNet
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
+from hiding_adversarial_attacks.config.classifiers.classifier_config import (
+    ClassifierNames,
+)
 from hiding_adversarial_attacks.config.data_sets.data_set_config import DataSetNames
 
 
@@ -40,12 +43,24 @@ def _get_conv2d_layer_by_name(model, layer_name: str):
     return named_modules[layer_name]
 
 
-def convert_relu_to_softplus(model, beta=30, threshold=30):
+def _convert_relu_to_softplus(model, beta=30, threshold=30):
     for child_name, child in model.named_children():
         if isinstance(child, nn.ReLU):
             setattr(model, child_name, nn.Softplus(beta=beta, threshold=threshold))
         else:
-            convert_relu_to_softplus(child)
+            _convert_relu_to_softplus(child)
+
+
+def convert_relu_to_softplus(model, config):
+    if config.classifier.name in [
+        ClassifierNames.FASHION_MNIST_CLASSIFIER,
+        ClassifierNames.MNIST_CLASSIFIER,
+    ]:
+        model.model.relu1 = model.model.softplus1
+        model.model.relu2 = model.model.softplus2
+        model.model.relu3 = model.model.softplus3
+    else:
+        _convert_relu_to_softplus(model)
 
 
 def convert_softplus_to_relu(model):

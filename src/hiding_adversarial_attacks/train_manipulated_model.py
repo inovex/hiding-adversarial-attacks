@@ -33,6 +33,7 @@ from hiding_adversarial_attacks.callbacks.early_stopping_callback import (
 )
 from hiding_adversarial_attacks.callbacks.neptune_callback import NeptuneLoggingCallback
 from hiding_adversarial_attacks.callbacks.utils import copy_run_outputs
+from hiding_adversarial_attacks.classifiers.utils import convert_relu_to_softplus
 from hiding_adversarial_attacks.config.config_validator import ConfigValidator
 from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossNames,
@@ -204,6 +205,9 @@ def run_training(
     model.set_hydra_logger(logger)
     model.to(device)
 
+    if config.convert_to_softplus:
+        convert_relu_to_softplus(model, config)
+
     # PyTorch Lightning Callbacks
     checkpoint_callback = hydra.utils.instantiate(config.checkpoint_config)
     neptune_callback = NeptuneLoggingCallback(
@@ -305,6 +309,8 @@ def test(
     model = get_manipulatable_model(config)
     model.override_hparams(config)
     model.set_metricized_explanations(metricized_top_and_bottom_explanations)
+    if config.convert_to_softplus:
+        convert_relu_to_softplus(model, config)
     model.to(device)
     model.eval()
 
@@ -325,6 +331,8 @@ def test(
     model = get_manipulatable_model(config).load_from_checkpoint(config.checkpoint)
     model.override_hparams(config)
     model.set_metricized_explanations(metricized_top_and_bottom_explanations)
+    if config.convert_to_softplus:
+        convert_relu_to_softplus(model, config)
     model.to(device)
     model.eval()
 

@@ -83,6 +83,7 @@ class ClassifierTrainingConfig:
 
     # Optuna options
     optuna: OptunaConfig = OptunaConfig()
+    convert_to_softplus: bool = False
 
 
 cs = ConfigStore.instance()

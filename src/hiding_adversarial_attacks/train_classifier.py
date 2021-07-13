@@ -18,7 +18,10 @@ from pytorch_lightning import Trainer
 from hiding_adversarial_attacks._neptune.utils import get_neptune_logger
 from hiding_adversarial_attacks.callbacks.neptune_callback import NeptuneLoggingCallback
 from hiding_adversarial_attacks.callbacks.utils import copy_run_outputs
-from hiding_adversarial_attacks.classifiers.utils import get_model
+from hiding_adversarial_attacks.classifiers.utils import (
+    convert_relu_to_softplus,
+    get_model,
+)
 from hiding_adversarial_attacks.config.classifier_training_config import (
     ClassifierTrainingConfig,
 )
@@ -109,6 +112,8 @@ def train(
     )
 
     model = get_model(config)
+    if config.convert_to_softplus:
+        convert_relu_to_softplus(model, config)
 
     trainer.fit(model, train_loader, validation_loader)
 
@@ -142,6 +147,8 @@ def test(
         )
 
     model = get_model(config).load_from_checkpoint(config.checkpoint)
+    if config.convert_to_softplus:
+        convert_relu_to_softplus(model, config)
 
     test_results = trainer.test(model, test_loader, ckpt_path="best")
     logger.info(f"Test results: \n {pformat(test_results)}")
