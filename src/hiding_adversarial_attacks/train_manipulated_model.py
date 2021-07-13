@@ -297,6 +297,7 @@ def test(
     os.makedirs(config.log_path, exist_ok=True)
 
     test_loader = data_module.test_dataloader()
+    train_loader = data_module.train_dataloader()
 
     trainer = Trainer(gpus=config.gpus, logger=neptune_logger)
 
@@ -336,6 +337,21 @@ def test(
 
     # Visualize and save Adversarial Obfuscation Rate (AOR) plot
     plot_aor(config.log_path)
+
+    visualize_explanation_similarities(
+        model,
+        train_loader,
+        config.data_set.name,
+        device,
+        stage="train",
+    )
+    visualize_explanation_similarities(
+        model,
+        test_loader,
+        config.data_set.name,
+        device,
+        stage="test",
+    )
 
     copy_run_outputs(
         config.log_path,
