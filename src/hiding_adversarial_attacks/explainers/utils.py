@@ -10,6 +10,7 @@ from hiding_adversarial_attacks.explainers.guided_backprop import (
 from hiding_adversarial_attacks.explainers.input_x_gradients import (
     InputXGradientExplainer,
 )
+from hiding_adversarial_attacks.explainers.layer_deep_lift import LayerDeepLiftExplainer
 from hiding_adversarial_attacks.explainers.layer_grad_cam import LayerGradCamExplainer
 
 
