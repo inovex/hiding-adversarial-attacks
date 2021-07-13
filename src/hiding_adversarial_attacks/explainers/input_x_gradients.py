@@ -15,5 +15,5 @@ class InputXGradientExplainer(BaseExplainer):
         self._xai_algorithm = InputXGradient(self._model)
 
     def explain(self, image: torch.Tensor, target: torch.Tensor, **kwargs):
-        # self._model.zero_grad()
-        return self.xai_algorithm.attribute(image, target=target, **kwargs)
+        attribution = self.xai_algorithm.attribute(image, target=target, **kwargs)
+        return attribution
