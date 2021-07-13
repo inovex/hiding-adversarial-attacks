@@ -208,6 +208,7 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
 
     kfold_num_folds: Optional[int] = None
     gradient_clip_val: Optional[float] = None
+    weight_decay: float = 0.0
     normalize_explanations: bool = False
 
 

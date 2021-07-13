@@ -14,9 +14,12 @@ class ManipulatedFashionMNISTNet(ManipulatedMNISTNet):
         super().__init__(model=model, hparams=hparams)
         self.gamma = hparams.gamma
         self.steps_lr = hparams.steps_lr
+        self.weight_decay = hparams.weight_decay
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.model.parameters(), lr=self.lr)
+        optimizer = torch.optim.Adam(
+            self.model.parameters(), lr=self.lr, weight_decay=self.weight_decay
+        )
         if self.steps_lr > 0 and self.gamma != 1.0:
             scheduler = StepLR(optimizer, step_size=self.steps_lr, gamma=self.gamma)
             return [optimizer], [scheduler]
