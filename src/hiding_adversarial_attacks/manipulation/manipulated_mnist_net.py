@@ -11,6 +11,7 @@ import torch
 import torch.nn.functional as F
 from omegaconf import OmegaConf
 from optuna import TrialPruned
+from torch import relu
 from torchmetrics import (
     F1,
     SSIM,
@@ -194,6 +195,11 @@ class ManipulatedMNISTNet(pl.LightningModule):
             ) = batch
             initial_original_explanations = None
 
+        if not original_images.requires_grad:
+            original_images.requires_grad = True
+        if not adversarial_images.requires_grad:
+            adversarial_images.requires_grad = True
+
         # Create explanation maps
         original_explanation_maps = self.explainer.explain(
             original_images, original_labels
@@ -259,7 +265,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
             stage.value,
         )
 
-        # Safe original and adversarial explanations locally
+        # Save original and adversarial explanations locally
         if (
             (stage == Stage.STAGE_TRAIN)
             and self.global_step % self.image_log_intervals[stage.value] == 0
@@ -298,22 +304,18 @@ class ManipulatedMNISTNet(pl.LightningModule):
         stage: Stage,
         initial_original_explanation_map: Optional = None,
     ):
+        # Create mask to include only classes in self.included_classes
+        included_mask = get_included_class_indices(
+            original_label, self.included_classes
+        )
+
         orig_pred_label = self(original_image)
 
         # Part 1: CrossEntropy for original image
         cross_entropy_orig = F.cross_entropy(orig_pred_label, original_label)
         assert_not_none(cross_entropy_orig, "cross_entropy_orig")
 
-        # Part 2: CrossEntropy for adversarial image
-        adv_pred_label = self(adversarial_image)
-        cross_entropy_adv = F.cross_entropy(adv_pred_label, adversarial_label)
-        assert_not_none(cross_entropy_adv, "cross_entropy_adv")
-
-        # Create mask to include only classes in self.included_classes
         # when calculating explanation similarity
-        included_mask = get_included_class_indices(
-            original_label, self.included_classes
-        )
         # included_mask = create_mask(original_label, self.included_classes)
 
         # Part 3: Similarity between original and adversarial explanation maps
@@ -328,6 +330,12 @@ class ManipulatedMNISTNet(pl.LightningModule):
         else:
             orig_expl = torch.index_select(original_explanation_map, 0, included_mask)
             adv_expl = torch.index_select(adversarial_explanation_map, 0, included_mask)
+            # adversarial_image = torch.index_select(
+            #     adversarial_image, 0, included_mask
+            # )
+            # adversarial_label = torch.index_select(
+            #     adversarial_label, 0, included_mask
+            # )
 
             if initial_original_explanation_map is None:
                 explanation_similarity = self.calculate_similarity_loss(
@@ -353,6 +361,11 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 explanation_similarity = self.calculate_similarity_loss(
                     original_double, predicted
                 )
+
+        # Part 2: CrossEntropy for adversarial image
+        adv_pred_label = self(adversarial_image)
+        cross_entropy_adv = F.cross_entropy(adv_pred_label, adversarial_label)
+        assert_not_none(cross_entropy_adv, "cross_entropy_adv")
 
         # Normalized total loss
         normalized_total_loss = self.get_normalized_total_loss(
@@ -412,7 +425,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         if self.hparams.similarity_loss["name"] == SimilarityLossNames.PCC:
             norm_sim = self.loss_weights[2] * similarity
         elif self.hparams.similarity_loss["name"] == SimilarityLossNames.SSIM:
-            norm_sim = self.loss_weights[2] * (1 - similarity / self.max_loss)
+            norm_sim = self.loss_weights[2] * similarity
         elif self.hparams.similarity_loss["name"] == SimilarityLossNames.MSE:
             norm_sim = self.loss_weights[2] * (similarity / self.max_loss)
         else:
@@ -422,12 +435,12 @@ class ManipulatedMNISTNet(pl.LightningModule):
         self.log(
             f"{stage}_norm_ce_orig",
             norm_ce_orig,
-            prog_bar=False,
+            prog_bar=True,
         )
         self.log(
             f"{stage}_norm_ce_adv",
             norm_ce_adv,
-            prog_bar=False,
+            prog_bar=True,
         )
         self.log(
             f"{stage}_norm_exp_sim",
@@ -435,7 +448,10 @@ class ManipulatedMNISTNet(pl.LightningModule):
             prog_bar=False,
         )
 
+        # norm_total_loss = norm_ce_orig + 0*norm_ce_adv + norm_sim
         norm_total_loss = norm_ce_orig + norm_ce_adv + norm_sim
+        # norm_total_loss = norm_ce_orig + norm_ce_adv
+        # norm_total_loss = norm_sim
         return norm_total_loss
 
     def append_test_images_and_explanations(
@@ -724,6 +740,12 @@ class ManipulatedMNISTNet(pl.LightningModule):
             adv_explanation_maps = (
                 self.metricized_explanations.top_and_bottom_adversarial_explanations
             )
+            if (
+                "relu_attributions" in self.hparams.explainer
+                and self.hparams.explainer["relu_attributions"]
+            ):
+                orig_explanation_maps = relu(orig_explanation_maps)
+                adv_explanation_maps = relu(adv_explanation_maps)
         else:
             orig_explanation_maps = self.explainer.explain(
                 self.metricized_explanations.top_and_bottom_original_images,
