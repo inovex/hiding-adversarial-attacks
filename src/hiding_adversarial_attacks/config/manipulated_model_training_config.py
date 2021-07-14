@@ -210,6 +210,7 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     gradient_clip_val: Optional[float] = None
     weight_decay: float = 0.0
     normalize_explanations: bool = False
+    precision: int = 32
 
 
 cs = ConfigStore.instance()
