@@ -10,13 +10,22 @@ def batched_pearson_corrcoef_compute(
     preds_diff = preds.view(preds.shape[0], -1) - preds.mean(dim=(1, 2, 3)).view(
         preds.shape[0], -1
     )
-    target_diff = target.view(target.shape[0], -1) - target.mean(dim=(1, 2, 3)).view(
-        target.shape[0], -1
-    )
+    t_mean = target.mean(dim=(1, 2, 3)).view(target.shape[0], -1)
+    target_diff = target.view(target.shape[0], -1) - t_mean
 
     cov = (preds_diff * target_diff).mean(dim=1)
-    preds_std = torch.sqrt((preds_diff * preds_diff).mean(dim=1))
-    target_std = torch.sqrt((target_diff * target_diff).mean(dim=1))
+    preds_diff_square = preds_diff * preds_diff
+    target_diff_square = target_diff * target_diff
+    # prevent sqrt of zero
+    zero_mask = preds_diff_square == 0
+    if torch.nonzero(zero_mask).numel():
+        preds_diff_square[zero_mask] = eps
+    preds_std = torch.sqrt((preds_diff_square).mean(dim=1))
+    # prevent sqrt of zero
+    zero_mask = target_diff_square == 0
+    if torch.nonzero(zero_mask).numel():
+        target_diff_square[zero_mask] = eps
+    target_std = torch.sqrt((target_diff_square).mean(dim=1))
 
     denom = preds_std * target_std
     # prevent division by zero
