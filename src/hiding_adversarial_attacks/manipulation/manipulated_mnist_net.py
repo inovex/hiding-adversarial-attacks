@@ -98,6 +98,8 @@ class ManipulatedMNISTNet(pl.LightningModule):
         self.included_classes = hparams.included_classes
         self.use_original_explanations = "Explanations" in self.hparams.data_set["name"]
 
+        self.last_expl_sim = torch.tensor(1.0).to(self.device)
+
     def override_hparams(self, hparams):
         # Hyperparams
         self.lr = hparams.lr
@@ -164,6 +166,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         return optimizer
 
     def forward(self, x):
+        self.log_grad_norm()
         softmax_output = self.model(x)
         output = torch.exp(softmax_output)
         return output
@@ -172,16 +175,43 @@ class ManipulatedMNISTNet(pl.LightningModule):
         normalized_explanations = explanations
         if self.hparams["normalize_explanations"]:
             # DeepLIFT
-            if ExplainerNames.DEEP_LIFT in self.hparams.explainer["name"]:
+            if self.hparams.explainer["name"] == ExplainerNames.DEEP_LIFT:
                 heatmap = torch.sum(torch.abs(explanations), dim=1)
                 normalized_explanations = (heatmap / torch.sum(heatmap)).unsqueeze(1)
             # Grad-CAM ??
-            elif ExplainerNames.GRAD_CAM in self.hparams.explainer["name"]:
+            elif self.hparams.explainer["name"] in [
+                ExplainerNames.GRAD_CAM,
+                ExplainerNames.INPUT_X_GRADIENT,
+            ]:
                 _explanations = explanations / torch.abs(
                     torch.sum(explanations, dim=(1, 2, 3))
                 ).view(len(explanations), 1, 1, 1)
                 normalized_explanations = (_explanations + 1) / 2
         return normalized_explanations
+
+    def log_grad_norm(self) -> None:
+        norm_type = 2
+        parameters = [
+            p for p in self.model.parameters() if p.grad is not None and p.requires_grad
+        ]
+        if len(parameters) == 0:
+            total_norm = 0.0
+        else:
+            device = parameters[0].grad.device
+            total_norm = torch.norm(
+                torch.stack(
+                    [
+                        torch.norm(p.grad.detach(), norm_type).to(device)
+                        for p in parameters
+                    ]
+                ),
+                2.0,
+            ).item()
+        self.log(
+            "total_grad_norm",
+            total_norm,
+            prog_bar=False,
+        )
 
     def _predict(self, batch, stage: Stage):
         if self.use_original_explanations:
@@ -204,10 +234,10 @@ class ManipulatedMNISTNet(pl.LightningModule):
             ) = batch
             initial_original_explanations = None
 
-        if not original_images.requires_grad:
-            original_images.requires_grad = True
-        if not adversarial_images.requires_grad:
-            adversarial_images.requires_grad = True
+        # if not original_images.requires_grad:
+        #     original_images.requires_grad = True
+        # if not adversarial_images.requires_grad:
+        #     adversarial_images.requires_grad = True
 
         # Create explanation maps
         original_explanation_maps = self.explainer.explain(
@@ -332,10 +362,13 @@ class ManipulatedMNISTNet(pl.LightningModule):
             # Case when there are no samples for included_classes
             # for explanation comparison in the batch
             # if explanation_similarity != explanation_similarity:
-            explanation_similarity = (
-                torch.FloatTensor(1).uniform_(0, self.max_loss).to(self.device)
-            )[0]
-            explanation_similarity.requires_grad = True
+            explanation_similarity = torch.normal(
+                self.last_expl_sim.item(),
+                1e-5,
+                (1,),
+                requires_grad=True,
+                device=self.device,
+            )
         else:
             orig_expl = torch.index_select(original_explanation_map, 0, included_mask)
             adv_expl = torch.index_select(adversarial_explanation_map, 0, included_mask)
@@ -370,6 +403,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 explanation_similarity = self.calculate_similarity_loss(
                     original_double, predicted
                 )
+        self.last_expl_sim = explanation_similarity
 
         # Part 2: CrossEntropy for adversarial image
         adv_pred_label = self(adversarial_image)
@@ -456,11 +490,11 @@ class ManipulatedMNISTNet(pl.LightningModule):
             norm_sim,
             prog_bar=False,
         )
+        self.norm_ce_orig = norm_ce_orig
+        self.norm_ce_adv = norm_ce_adv
+        self.norm_sim = norm_sim
 
-        # norm_total_loss = norm_ce_orig + 0*norm_ce_adv + norm_sim
         norm_total_loss = norm_ce_orig + norm_ce_adv + norm_sim
-        # norm_total_loss = norm_ce_orig + norm_ce_adv
-        # norm_total_loss = norm_sim
         return norm_total_loss
 
     def append_test_images_and_explanations(
