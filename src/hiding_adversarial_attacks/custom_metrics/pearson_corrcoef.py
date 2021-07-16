@@ -7,11 +7,12 @@ def batched_pearson_corrcoef_compute(
 ) -> torch.Tensor:
     """ Custom implementation of the PCC for data with 4 dimensions: (B, C, M, N) """
 
-    preds_diff = preds.view(preds.shape[0], -1) - preds.mean(dim=(1, 2, 3)).view(
-        preds.shape[0], -1
+    preds_mean = preds.mean(dim=(1, 2, 3)).view(preds.shape[0], -1)
+    preds_diff = preds.view(preds.shape[0], -1) - preds_mean
+    target_mean = torch.clamp(
+        target.mean(dim=(1, 2, 3)).view(target.shape[0], -1), min=eps
     )
-    t_mean = target.mean(dim=(1, 2, 3)).view(target.shape[0], -1)
-    target_diff = target.view(target.shape[0], -1) - t_mean
+    target_diff = target.view(target.shape[0], -1) - target_mean
 
     cov = (preds_diff * target_diff).mean(dim=1)
     preds_diff_square = preds_diff * preds_diff
