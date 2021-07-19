@@ -19,7 +19,7 @@ from optuna.visualization import (
     plot_parallel_coordinate,
     plot_param_importances,
 )
-from pytorch_lightning import Trainer
+from pytorch_lightning import Trainer, seed_everything
 from pytorch_lightning.loggers import NeptuneLogger
 from torch.utils.data import DataLoader
 
@@ -226,6 +226,9 @@ def run_training(
         gpus=config.gpus,
         logger=neptune_logger,
         precision=config.precision,
+        # accumulate_grad_batches=4,
+        # amp_level='O0',
+        # amp_backend='apex',
         max_epochs=config.max_epochs,
         gradient_clip_val=config.gradient_clip_val,
     )
@@ -417,6 +420,7 @@ def run_optuna_study(
 
 @hydra.main(config_name="manipulated_model_training_config")
 def run(config: ManipulatedModelTrainingConfig) -> None:
+    seed_everything(config.random_seed)
     # torch.autograd.set_detect_anomaly(True)
 
     config_validator = ConfigValidator()
