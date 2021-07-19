@@ -22,7 +22,6 @@ from torchmetrics import (
 )
 
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
-from hiding_adversarial_attacks.config.explainers.explainer_config import ExplainerNames
 from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossMapping,
     SimilarityLossNames,
@@ -44,6 +43,7 @@ from hiding_adversarial_attacks.manipulation.metricized_explanations import (
 from hiding_adversarial_attacks.utils import (
     assert_not_none,
     get_included_class_indices,
+    normalize_explanations,
     save_confusion_matrix,
     tensor_to_pil_numpy,
     visualize_difference_image_np,
@@ -171,24 +171,6 @@ class ManipulatedMNISTNet(pl.LightningModule):
         output = torch.exp(softmax_output)
         return output
 
-    def normalize_explanations(self, explanations: torch.Tensor):
-        normalized_explanations = explanations
-        if self.hparams["normalize_explanations"]:
-            # DeepLIFT
-            if self.hparams.explainer["name"] == ExplainerNames.DEEP_LIFT:
-                heatmap = torch.sum(torch.abs(explanations), dim=1)
-                normalized_explanations = (heatmap / torch.sum(heatmap)).unsqueeze(1)
-            # Grad-CAM ??
-            elif self.hparams.explainer["name"] in [
-                ExplainerNames.GRAD_CAM,
-                ExplainerNames.INPUT_X_GRADIENT,
-            ]:
-                _explanations = explanations / torch.abs(
-                    torch.sum(explanations, dim=(1, 2, 3))
-                ).view(len(explanations), 1, 1, 1)
-                normalized_explanations = (_explanations + 1) / 2
-        return normalized_explanations
-
     def log_grad_norm(self) -> None:
         norm_type = 2
         parameters = [
@@ -248,26 +230,28 @@ class ManipulatedMNISTNet(pl.LightningModule):
             adversarial_images, adversarial_labels
         )
         # Normalize explanations
-        norm_original_explanation_maps = self.normalize_explanations(
-            original_explanation_maps
-        )
-        norm_adversarial_explanation_maps = self.normalize_explanations(
-            adversarial_explanation_maps
-        )
+        norm_initial_original_explanations = None
+        if self.hparams["normalize_explanations"]:
+            norm_original_explanation_maps = normalize_explanations(
+                original_explanation_maps, self.hparams.explainer["name"]
+            )
+            norm_adversarial_explanation_maps = normalize_explanations(
+                adversarial_explanation_maps, self.hparams.explainer["name"]
+            )
+            if initial_original_explanations is not None:
+                norm_initial_original_explanations = normalize_explanations(
+                    initial_original_explanations,
+                    self.hparams.explainer["name"],
+                )
+        else:
+            norm_original_explanation_maps = original_explanation_maps
+            norm_adversarial_explanation_maps = adversarial_explanation_maps
 
         if not original_explanation_maps.requires_grad:
             original_explanation_maps.requires_grad = True
         if not adversarial_explanation_maps.requires_grad:
             adversarial_explanation_maps.requires_grad = True
-
-        norm_initial_original_explanations = None
-        if (
-            initial_original_explanations is not None
-            and not initial_original_explanations.requires_grad
-        ):
-            norm_initial_original_explanations = self.normalize_explanations(
-                initial_original_explanations
-            )
+        if not initial_original_explanations.requires_grad:
             norm_initial_original_explanations.requires_grad = True
 
         if stage == Stage.STAGE_TEST:
@@ -353,9 +337,6 @@ class ManipulatedMNISTNet(pl.LightningModule):
         # Part 1: CrossEntropy for original image
         cross_entropy_orig = F.cross_entropy(orig_pred_label, original_label)
         assert_not_none(cross_entropy_orig, "cross_entropy_orig")
-
-        # when calculating explanation similarity
-        # included_mask = create_mask(original_label, self.included_classes)
 
         # Part 3: Similarity between original and adversarial explanation maps
         if len(torch.nonzero(included_mask)) == 0:
@@ -862,10 +843,21 @@ class ManipulatedMNISTNet(pl.LightningModule):
             raise RuntimeError(
                 f"Unknown Similarity loss:" f" {self.hparams.similarity_loss['name']}"
             )
+
+        norm_orig_expl = (
+            normalize_explanations(orig_expl_maps, self.hparams.explainer["name"])
+            if self.hparams["normalize_explanations"]
+            else orig_expl_maps
+        )
+        norm_adv_expl = (
+            normalize_explanations(adv_expl_maps, self.hparams.explainer["name"])
+            if self.hparams["normalize_explanations"]
+            else adv_expl_maps
+        )
         similarities = (
             sim_loss(
-                self.normalize_explanations(orig_expl_maps),
-                self.normalize_explanations(adv_expl_maps),
+                norm_orig_expl,
+                norm_adv_expl,
             )
             .detach()
             .cpu()
