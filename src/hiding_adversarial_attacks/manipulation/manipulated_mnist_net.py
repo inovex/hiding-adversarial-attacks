@@ -843,43 +843,49 @@ class ManipulatedMNISTNet(pl.LightningModule):
         adversarial_titles = [
             f"Adversarial, label: {label}" for label in adversarial_labels[indeces]
         ]
+
+        orig_expl_maps = original_explanation_maps[indeces]
+        adv_expl_maps = adversarial_explanation_maps[indeces]
+        if self.hparams.similarity_loss["name"] == SimilarityLossNames.PCC:
+            sim_type = "PCC"
+            sim_loss = custom_pearson_corrcoef
+            num_format = "{:.2f}"
+        elif self.hparams.similarity_loss["name"] == SimilarityLossNames.SSIM:
+            sim_type = "SSIM"
+            sim_loss = self.similarity_loss
+            num_format = "{:.2f}"
+        elif self.hparams.similarity_loss["name"] == SimilarityLossNames.MSE:
+            sim_type = "MSE"
+            sim_loss = self.similarity_loss
+            num_format = "{:.2e}"
+        else:
+            raise RuntimeError(
+                f"Unknown Similarity loss:" f" {self.hparams.similarity_loss['name']}"
+            )
+        similarities = (
+            sim_loss(
+                self.normalize_explanations(orig_expl_maps),
+                self.normalize_explanations(adv_expl_maps),
+            )
+            .detach()
+            .cpu()
+        )
+
+        orig_expl = tensor_to_pil_numpy(orig_expl_maps)
+        adv_expl = tensor_to_pil_numpy(adv_expl_maps)
         orig_images = tensor_to_pil_numpy(original_images[indeces])
-        orig_expl = tensor_to_pil_numpy(original_explanation_maps[indeces])
         adv_images = tensor_to_pil_numpy(adversarial_images[indeces])
-        adv_expl = tensor_to_pil_numpy(adversarial_explanation_maps[indeces])
 
         fig, axes = plt.subplots(nrows=n_rows, ncols=3, figsize=(12, 12))
-        for i, (row_axis, index) in enumerate(zip(axes, indeces)):
+        for i, (row_axis, index, similarity) in enumerate(
+            zip(axes, indeces, similarities)
+        ):
             if self.zero_explanation_count >= 3:
                 self.logger.experiment.append_tag("pruned")
                 raise TrialPruned(
                     "Trial pruned due to too many explanation maps becoming zero."
                 )
-            orig_expl_maps = original_explanation_maps[index]
-            adv_expl_maps = adversarial_explanation_maps[index]
 
-            if self.hparams.similarity_loss["name"] == SimilarityLossNames.PCC:
-                sim_loss = custom_pearson_corrcoef
-                num_format = "{:.2f}"
-                orig_expl_maps = original_explanation_maps[index].unsqueeze(0)
-                adv_expl_maps = adversarial_explanation_maps[index].unsqueeze(0)
-            elif self.hparams.similarity_loss["name"] == SimilarityLossNames.SSIM:
-                sim_loss = self.similarity_loss
-                num_format = "{:.2f}"
-                orig_expl_maps = original_explanation_maps[index].unsqueeze(0)
-                adv_expl_maps = adversarial_explanation_maps[index].unsqueeze(0)
-            else:
-                sim_loss = self.similarity_loss
-                num_format = "{:.2e}"
-            explanation_similarity = (
-                sim_loss(
-                    orig_expl_maps,
-                    adv_expl_maps,
-                )
-                .detach()
-                .cpu()
-                .item()
-            )
             if np.count_nonzero(orig_expl[index]) == 0:
                 self.hydra_logger.warning(
                     "WARNING: original explanation contains all zeros!"
@@ -892,11 +898,11 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 )
                 self.zero_explanation_count += 1
                 continue
-            similarity = num_format.format(explanation_similarity)
+            sim = num_format.format(similarity.item())
             visualize_single_explanation(
                 orig_images[index],
                 orig_expl[index],
-                f"{original_titles[index]}, sim: {similarity}, "
+                f"{original_titles[index]}, {sim_type}: {sim}, "
                 f"id: {batch_indeces[index]}",
                 (fig, row_axis[0]),
                 display_figure=False,
