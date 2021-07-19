@@ -3,15 +3,16 @@ from torchmetrics.functional import pearson_corrcoef
 
 
 def batched_pearson_corrcoef_compute(
-    preds: torch.Tensor, target: torch.Tensor, eps: float = 1e-6
+    preds: torch.Tensor, target: torch.Tensor, eps: float = 1e-9
 ) -> torch.Tensor:
     """ Custom implementation of the PCC for data with 4 dimensions: (B, C, M, N) """
 
     preds_mean = preds.mean(dim=(1, 2, 3)).view(preds.shape[0], -1)
     preds_diff = preds.view(preds.shape[0], -1) - preds_mean
-    target_mean = torch.clamp(
-        target.mean(dim=(1, 2, 3)).view(target.shape[0], -1), min=eps
-    )
+    # target_mean = torch.clamp(
+    #     target.mean(dim=(1, 2, 3)).view(target.shape[0], -1), min=eps
+    # )
+    target_mean = target.mean(dim=(1, 2, 3)).view(target.shape[0], -1)
     target_diff = target.view(target.shape[0], -1) - target_mean
 
     cov = (preds_diff * target_diff).mean(dim=1)
