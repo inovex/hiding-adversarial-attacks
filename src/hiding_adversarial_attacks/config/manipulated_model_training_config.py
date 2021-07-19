@@ -211,6 +211,7 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     weight_decay: float = 0.0
     normalize_explanations: bool = False
     precision: int = 32
+    seed_everything: bool = False
 
 
 cs = ConfigStore.instance()

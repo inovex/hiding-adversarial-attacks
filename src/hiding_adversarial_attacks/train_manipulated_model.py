@@ -419,8 +419,9 @@ def run_optuna_study(
 
 @hydra.main(config_name="manipulated_model_training_config")
 def run(config: ManipulatedModelTrainingConfig) -> None:
-    seed_everything(config.random_seed)
     # torch.autograd.set_detect_anomaly(True)
+    if seed_everything:
+        seed_everything(config.random_seed)
 
     config_validator = ConfigValidator()
     config_validator.validate(config)
