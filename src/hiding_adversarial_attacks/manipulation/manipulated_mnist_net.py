@@ -243,6 +243,8 @@ class ManipulatedMNISTNet(pl.LightningModule):
                     initial_original_explanations,
                     self.hparams.explainer["name"],
                 )
+                if not norm_initial_original_explanations.requires_grad:
+                    norm_initial_original_explanations.requires_grad = True
         else:
             norm_original_explanation_maps = original_explanation_maps
             norm_adversarial_explanation_maps = adversarial_explanation_maps
@@ -252,7 +254,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         if not adversarial_explanation_maps.requires_grad:
             adversarial_explanation_maps.requires_grad = True
         if not initial_original_explanations.requires_grad:
-            norm_initial_original_explanations.requires_grad = True
+            initial_original_explanations.requires_grad = True
 
         if stage == Stage.STAGE_TEST:
             self.append_test_images_and_explanations(
