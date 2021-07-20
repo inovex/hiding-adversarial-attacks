@@ -20,7 +20,7 @@ from hiding_adversarial_attacks.data_modules.utils import get_data_module
 from hiding_adversarial_attacks.data_sets.utils import get_transform
 from hiding_adversarial_attacks.explainers.base import BaseExplainer
 from hiding_adversarial_attacks.explainers.utils import get_explainer
-from hiding_adversarial_attacks.utils import visualize_explanations
+from hiding_adversarial_attacks.visualization.explanations import visualize_explanations
 
 
 def save_and_upload_fig(file_name, fig, config, neptune_run):

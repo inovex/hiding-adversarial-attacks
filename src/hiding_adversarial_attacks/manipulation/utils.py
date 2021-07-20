@@ -37,11 +37,13 @@ from hiding_adversarial_attacks.manipulation.manipulated_mnist_net import (
 from hiding_adversarial_attacks.manipulation.metricized_explanations import (
     MetricizedTopAndBottomExplanations,
 )
-from hiding_adversarial_attacks.utils import (
-    tensor_to_pil_numpy,
+from hiding_adversarial_attacks.visualization.data_set_images import (
     visualize_difference_image_np,
+)
+from hiding_adversarial_attacks.visualization.explanations import (
     visualize_single_explanation,
 )
+from hiding_adversarial_attacks.visualization.helpers import tensor_to_pil_numpy
 
 
 def load_explanations(config, device: torch.device, stage: str = "training"):

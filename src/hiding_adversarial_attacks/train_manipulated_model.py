@@ -44,8 +44,6 @@ from hiding_adversarial_attacks.data_modules.k_fold_cross_validation import (
     StratifiedKFoldCVDataModule,
 )
 from hiding_adversarial_attacks.data_modules.utils import get_data_module
-from hiding_adversarial_attacks.eda.utils import visualize_explanation_similarities
-from hiding_adversarial_attacks.eda.visualization import plot_aor
 from hiding_adversarial_attacks.manipulation.metricized_explanations import (
     MetricizedTopAndBottomExplanations,
 )
@@ -54,6 +52,12 @@ from hiding_adversarial_attacks.manipulation.utils import (
     get_metricized_top_and_bottom_explanations,
     get_similarities,
     get_top_and_bottom_k_indices,
+)
+from hiding_adversarial_attacks.visualization.adversarial_obfuscation_rate import (
+    plot_aor,
+)
+from hiding_adversarial_attacks.visualization.explanation_similarities import (
+    visualize_explanation_similarities,
 )
 
 logger = logging.getLogger(__file__)

@@ -19,7 +19,7 @@ from hiding_adversarial_attacks.config.classifiers.classifier_config import (
     ClassifierConfig,
 )
 from hiding_adversarial_attacks.config.data_sets.data_set_config import DataSetConfig
-from hiding_adversarial_attacks.utils import tensor_to_pil_numpy
+from hiding_adversarial_attacks.visualization.helpers import tensor_to_pil_numpy
 
 
 class CifarNet(pl.LightningModule):

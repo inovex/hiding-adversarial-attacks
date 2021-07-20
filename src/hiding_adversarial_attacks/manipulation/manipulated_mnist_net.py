@@ -23,6 +23,7 @@ from torchmetrics import (
 )
 
 from hiding_adversarial_attacks.classifiers.mnist_net import MNISTNet
+from hiding_adversarial_attacks.config.data_sets.data_set_config import DataSetNames
 from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossMapping,
     SimilarityLossNames,
@@ -41,14 +42,19 @@ from hiding_adversarial_attacks.explainers.utils import get_explainer
 from hiding_adversarial_attacks.manipulation.metricized_explanations import (
     MetricizedTopAndBottomExplanations,
 )
-from hiding_adversarial_attacks.utils import (
-    assert_not_none,
-    get_included_class_indices,
-    normalize_explanations,
+from hiding_adversarial_attacks.utils import assert_not_none, get_included_class_indices
+from hiding_adversarial_attacks.visualization.confusion_matrix import (
     save_confusion_matrix,
-    tensor_to_pil_numpy,
+)
+from hiding_adversarial_attacks.visualization.data_set_images import (
     visualize_difference_image_np,
+)
+from hiding_adversarial_attacks.visualization.explanations import (
     visualize_single_explanation,
+)
+from hiding_adversarial_attacks.visualization.helpers import tensor_to_pil_numpy
+from hiding_adversarial_attacks.visualization.normalization import (
+    normalize_explanations,
 )
 
 
@@ -569,8 +575,14 @@ class ManipulatedMNISTNet(pl.LightningModule):
         )
         self.test_similarity_metrics.reset()
         test_confusion_matrix = self.test_confusion_matrix.compute()
+        if DataSetNames.FASHION_MNIST in self.hparams.data_set["name"]:
+            data_set_name = DataSetNames.FASHION_MNIST
+        else:
+            data_set_name = DataSetNames.CIFAR10
         save_confusion_matrix(
-            test_confusion_matrix.cpu().detach().numpy(), self.hparams.log_path
+            test_confusion_matrix.cpu().detach().numpy(),
+            data_set_name,
+            self.hparams.log_path,
         )
         test_f1_score = self.test_f1_score.compute()
         self.log("test_f1_score", test_f1_score)
