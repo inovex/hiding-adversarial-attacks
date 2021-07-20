@@ -80,7 +80,6 @@ def log_code(neptune_logger):
             for file in files:
                 if file.endswith(".py") and not file.startswith("__init__"):
                     code_file_path = os.path.join(root, file)
-                    print(code_file_path)
                     neptune_logger.log_artifact(
                         code_file_path, f"source_code/{dir_to_log}/{file}"
                     )
