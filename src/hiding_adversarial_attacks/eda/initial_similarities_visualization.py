@@ -180,5 +180,29 @@ def plot_fashion_mnist_similarities():
     )
 
 
+def plot_cifar10_similarities():
+    # Input X Gradient
+    plot_initial_similarities(
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+        "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.1--cp-run=resnet18/"
+        "exp=InputXGradient",
+        "CIFAR10",
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+        "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.1--cp-run=resnet18/"
+        "exp=InputXGradient",
+    )
+    # Grad-CAM
+    plot_initial_similarities(
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+        "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.1--cp-run=resnet18/"
+        "exp=GradCAM--l=model.layer2.1.conv2--ra=False",
+        "CIFAR10",
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+        "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.1--cp-run=resnet18/"
+        "exp=GradCAM--l=model.layer2.1.conv2--ra=False",
+    )
+
+
 if __name__ == "__main__":
-    plot_fashion_mnist_similarities()
+    plot_cifar10_similarities()
+    # plot_fashion_mnist_similarities()
