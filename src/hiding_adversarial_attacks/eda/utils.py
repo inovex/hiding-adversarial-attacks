@@ -343,7 +343,6 @@ def plot_similarities(
         f"explanation similarities (MSE) histogram"
         f" KDE plots after manipulating on classes '{manipulated_classes}'",
         log_x=True,
-        palette=MSE_COLOR_PALETTE,
     )
     kde_pcc = plot_similarities_kde(
         sorted_df_sim,
@@ -353,7 +352,6 @@ def plot_similarities(
         f"adversarial explanation similarities (PCC)"
         f" KDE plots after manipulating on classes '{manipulated_classes}'",
         log_x=False,
-        palette=PCC_COLOR_PALETTE,
     )
     return hist_mse, hist_pcc, kde_mse, kde_pcc
 
