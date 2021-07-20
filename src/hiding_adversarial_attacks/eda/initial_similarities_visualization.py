@@ -76,7 +76,7 @@ def create_sorted_similarities_df(
 
 
 def plot_initial_similarities(
-    data_path: str, data_set_name: str, output_path: str = None
+    data_path: str, data_set_name: str, explainer_name: str, output_path: str = None
 ):
     (
         train_similarities_pcc,
@@ -108,7 +108,8 @@ def plot_initial_similarities(
         train_sim_df,
         "orig_label_name",
         "mse_sim",
-        f"{data_set_name} train — initial explanation similarities (MSE) by class",
+        f"{data_set_name} train — initial {explainer_name} explanation map similarities"
+        f" (MSE) by class",
         log_x=True,
         palette="afmhot_r",
     )
@@ -116,7 +117,8 @@ def plot_initial_similarities(
         train_sim_df,
         "orig_label_name",
         "pcc_sim",
-        f"{data_set_name} train — initial explanation similarities (PCC) by class",
+        f"{data_set_name} train — initial {explainer_name} explanation map similarities"
+        f" (PCC) by class",
         palette="PuRd",
     )
 
@@ -124,7 +126,8 @@ def plot_initial_similarities(
         test_sim_df,
         "orig_label_name",
         "mse_sim",
-        f"{data_set_name} test — initial explanation similarities (MSE) by class",
+        f"{data_set_name} test — initial {explainer_name} explanation map similarities"
+        f" (MSE) by class",
         log_x=True,
         palette="afmhot_r",
     )
@@ -132,7 +135,8 @@ def plot_initial_similarities(
         test_sim_df,
         "orig_label_name",
         "pcc_sim",
-        f"{data_set_name} test — initial explanation similarities (PCC) by class",
+        f"{data_set_name} test — initial {explainer_name} explanation map similarities"
+        f" (PCC) by class",
         palette="PuRd",
     )
     if output_path is not None:
@@ -163,6 +167,7 @@ def plot_fashion_mnist_similarities():
         "adversarial/data-set=FashionMNIST--attack=DeepFool"
         "--eps=0.105--cp-run=HAA-1728/exp=InputXGradient",
         "FashionMNIST",
+        "Input X Gradient",
         "/home/steffi/dev/master_thesis/"
         "hiding_adversarial_attacks/data/preprocessed/"
         "adversarial/data-set=FashionMNIST--attack=DeepFool"
@@ -174,6 +179,7 @@ def plot_fashion_mnist_similarities():
         "preprocessed/adversarial/data-set=FashionMNIST--attack=DeepFool"
         "--eps=0.105--cp-run=HAA-1728/exp=GradCAM--l=conv2--ra=False",
         "FashionMNIST",
+        "Grad-CAM",
         "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
         "preprocessed/adversarial/data-set=FashionMNIST--attack=DeepFool"
         "--eps=0.105--cp-run=HAA-1728/exp=GradCAM--l=conv2--ra=False",
@@ -187,6 +193,7 @@ def plot_cifar10_similarities():
         "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.1--cp-run=resnet18/"
         "exp=InputXGradient",
         "CIFAR10",
+        "Input X Gradient",
         "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
         "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.1--cp-run=resnet18/"
         "exp=InputXGradient",
@@ -197,6 +204,7 @@ def plot_cifar10_similarities():
         "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.1--cp-run=resnet18/"
         "exp=GradCAM--l=model.layer2.1.conv2--ra=False",
         "CIFAR10",
+        "Grad-CAM",
         "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
         "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.1--cp-run=resnet18/"
         "exp=GradCAM--l=model.layer2.1.conv2--ra=False",
@@ -205,4 +213,4 @@ def plot_cifar10_similarities():
 
 if __name__ == "__main__":
     plot_cifar10_similarities()
-    # plot_fashion_mnist_similarities()
+    plot_fashion_mnist_similarities()
