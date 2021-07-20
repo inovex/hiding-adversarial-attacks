@@ -9,8 +9,8 @@ import torch.nn.functional as F
 import torchmetrics
 from matplotlib import pyplot as plt
 
-from hiding_adversarial_attacks.classifiers.pytorch_cifar10.cifar10_models.mobilenetv2 import (  # noqa: E501
-    mobilenet_v2,
+from hiding_adversarial_attacks.classifiers.pytorch_cifar10.cifar10_models.resnet import (  # noqa: E501
+    resnet18,
 )
 from hiding_adversarial_attacks.classifiers.pytorch_cifar10.scheduler import (
     WarmupCosineLR,
@@ -59,7 +59,7 @@ class CifarNet(pl.LightningModule):
             "cuda" if (torch.cuda.is_available() and hparams.gpus != 0) else "cpu"
         )
         # network
-        self.model = mobilenet_v2(pretrained=True, device=device)
+        self.model = resnet18(pretrained=True, device=device)
 
     @classmethod
     def as_foolbox_wrap(cls, hparams, device):
