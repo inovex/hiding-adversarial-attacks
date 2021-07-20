@@ -1,5 +1,5 @@
 import os
-from typing import Tuple, Union
+from typing import List, Tuple, Union
 
 import numpy as np
 import torch
@@ -8,10 +8,14 @@ from matplotlib.figure import Figure
 from matplotlib.pyplot import axis, figure
 from numpy import ndarray
 
-from hiding_adversarial_attacks.visualization.helpers import display_tensor_as_image
+from hiding_adversarial_attacks.visualization.config import data_set_mappings
+from hiding_adversarial_attacks.visualization.helpers import (
+    display_tensor_as_image,
+    tensor_to_pil_numpy,
+)
 
 
-def display_random_original_and_adversarial_training_image(path: str):
+def display_random_original_and_adversarial_training_image(path: str, output_path: str):
     orig_images, orig_labels = torch.load(os.path.join(path, "training_orig.pt"))
     adv_images, adv_labels = torch.load(os.path.join(path, "training_adv.pt"))
     random_idx = np.random.randint(0, len(orig_labels))
@@ -20,9 +24,75 @@ def display_random_original_and_adversarial_training_image(path: str):
     display_tensor_as_image(
         orig_img, title=f"Original, label={orig_label}, idx={random_idx}"
     )
+    orig_path = os.path.join(output_path, f"{int(orig_label)}_{random_idx}_orig.png")
+    plt.imsave(orig_path, tensor_to_pil_numpy(orig_img))
     display_tensor_as_image(
         adv_img, title=f"Adversarial, label={adv_label}, idx={random_idx}"
     )
+    adv_path = os.path.join(
+        output_path, f"{int(orig_label)}_{int(adv_label)}_{random_idx}_adv.png"
+    )
+    plt.imsave(adv_path, tensor_to_pil_numpy(adv_img))
+
+
+def display_original_and_adversarial_image_grid(
+    paths: List[str], class_ids: List[int], data_set_names: List[str]
+):
+    fig, axes = plt.subplots(
+        len(class_ids), 4, figsize=(12, 10), sharex=True, sharey=True
+    )
+
+    cols = [0, 1]
+    cmap = "gray"
+    for path, data_set_name in zip(paths, data_set_names):
+        orig_images, orig_labels = torch.load(os.path.join(path, "training_orig.pt"))
+        adv_images, adv_labels = torch.load(os.path.join(path, "training_adv.pt"))
+        mapping = data_set_mappings[data_set_name]
+
+        display_image_grid(
+            orig_images,
+            orig_labels,
+            adv_images,
+            adv_labels,
+            axes,
+            class_ids,
+            mapping,
+            cols=cols,
+            cmap=cmap,
+        )
+        cols = [col + 2 for col in cols]
+    plt.axis("off")
+    fig.tight_layout()
+    fig.show()
+
+
+def display_image_grid(
+    orig_images,
+    orig_labels,
+    adv_images,
+    adv_labels,
+    axes,
+    class_ids,
+    mapping,
+    cols: List[int],
+    cmap: str = "gray",
+):
+    for idx, class_id in enumerate(class_ids):
+        class_indeces = torch.nonzero(orig_labels == class_id)
+        rand = np.random.randint(0, len(class_indeces))
+        rand_mask_idx = class_indeces[rand]
+        orig_label = orig_labels[rand_mask_idx]
+        orig_img = tensor_to_pil_numpy(orig_images[rand_mask_idx].squeeze(0))
+        adv_label = adv_labels[rand_mask_idx]
+        adv_img = tensor_to_pil_numpy(adv_images[rand_mask_idx].squeeze(0))
+
+        axes[idx][cols[0]].set_title(f"Original label:\n{mapping[int(orig_label)]}")
+        axes[idx][cols[0]].imshow(orig_img, cmap=cmap, interpolation="nearest")
+        axes[idx][cols[0]].set_axis_off()
+
+        axes[idx][cols[1]].set_title(f"Adversarial label:\n{mapping[int(adv_label)]}")
+        axes[idx][cols[1]].imshow(adv_img, cmap=cmap, interpolation="nearest")
+        axes[idx][cols[1]].set_axis_off()
 
 
 def visualize_difference_image_np(
@@ -53,3 +123,17 @@ def visualize_difference_image_np(
         plt.show()
 
     return plt_fig, plt_axis
+
+
+if __name__ == "__main__":
+    class_ids = [0, 2, 3, 5, 8]
+    paths = [
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+        "preprocessed/adversarial/data-set=FashionMNIST--attack="
+        "DeepFool--eps=0.105--cp-run=HAA-1728",
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+        "preprocessed/adversarial/data-set=CIFAR10--attack="
+        "DeepFool--eps=0.1--cp-run=resnet18",
+    ]
+    data_set_names = ["FashionMNIST", "CIFAR10"]
+    display_original_and_adversarial_image_grid(paths, class_ids, data_set_names)
