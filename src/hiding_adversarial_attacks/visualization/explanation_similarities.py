@@ -327,13 +327,16 @@ def plot_similarities_histogram_with_boxplot(
                 label="mean",
             )
             ax.get_legend().remove()
-
-            ax.xaxis.label.set_size(14)
-            ax.yaxis.label.set_size(14)
             ax.tick_params(axis="both", labelsize=14)
             ax.title.set_size(16)
         except Exception as e:
             print(f"EXCEPTION: {e}")
+
+    x_label = "PCC"
+    if similarity_col == "mse_sim":
+        x_label = "MSE"
+    axes[-1][0].set_xlabel(x_label, fontsize=14)
+    axes[-1][1].set_xlabel(x_label, fontsize=14)
 
     fig.suptitle(title, fontsize=18)
     plt.tight_layout()
