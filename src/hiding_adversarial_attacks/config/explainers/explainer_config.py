@@ -13,6 +13,7 @@ class ExplainerNames:
     GUIDED_BACKPROP = "GuidedBackprop"
     GRAD_CAM = "GradCAM"
     INPUT_X_GRADIENT = "InputXGradient"
+    INTEGRATED_GRADIENTS = "IntegratedGradients"
 
 
 @dataclass
@@ -46,6 +47,14 @@ class GuidedBackpropConfig(ExplainerConfig):
 @dataclass
 class InputXGradientConfig(ExplainerConfig):
     name: str = ExplainerNames.INPUT_X_GRADIENT
+
+
+@dataclass
+class IntegratedGradientsConfig(ExplainerConfig):
+    name: str = ExplainerNames.INTEGRATED_GRADIENTS
+    baseline: DeepLiftBaselineConfig = MISSING
+    multiply_by_inputs: bool = False
+    relu_attributions: bool = False
 
 
 @dataclass

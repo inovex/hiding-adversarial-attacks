@@ -34,6 +34,7 @@ from hiding_adversarial_attacks.config.explainers.explainer_config import (
     ExplainerConfig,
     GuidedBackpropConfig,
     InputXGradientConfig,
+    IntegratedGradientsConfig,
     LayerDeepLiftConfig,
     LayerGradCamConfig,
 )
@@ -70,39 +71,46 @@ optuna_search_spaces = {
     "FashionMNIST_PCC": {
         "lr": {
             "log": True,
-            "low": 1e-7,
-            "high": 1e-4,
+            "low": 1e-5,
+            "high": 5e-3,
         },
-        "loss_weight_similarity": {"low": 1, "high": 3, "step": 1},
-        "batch_size": [128],
-        "steps_lr": {"low": 1, "high": 11, "step": 1},
-        "gamma": {"low": 1.0, "high": 1.0, "step": 0.1},
+        "loss_weight_similarity": {"low": 1, "high": 6, "step": 1},
+        "batch_size": [64, 128],
         # currently unused:
         "similarity_loss": {"choices": [PCCLoss]},
     },
     "FashionMNIST_MSE": {
         "lr": {
             "log": True,
-            "low": 1e-7,
+            "low": 1e-5,
             "high": 1e-4,
         },
-        "loss_weight_similarity": {"low": 0, "high": 8, "step": 1},
-        "batch_size": [128],
-        "steps_lr": {"low": 1, "high": 11, "step": 1},
-        "gamma": {"low": 0.1, "high": 1.0, "step": 0.1},
+        "loss_weight_similarity": {"low": 5, "high": 8, "step": 1},
+        "batch_size": [64],
         # currently unused:
         "similarity_loss": {"choices": [MSELoss]},
     },
-    "CIFAR10": {
+    "CIFAR10_PCC": {
         "lr": {
             "log": True,
-            "low": 1e-7,
-            "high": 1e-1,
+            "low": 1e-6,
+            "high": 1e-3,
         },
-        "loss_weight_similarity": {"low": 5, "high": 15, "step": 1},
-        "batch_size": [128, 256],
+        "loss_weight_similarity": {"low": 1, "high": 2, "step": 1},
+        "batch_size": [32, 64],
         # currently unused:
         "similarity_loss": {"choices": [PCCLoss]},
+    },
+    "CIFAR10_MSE": {
+        "lr": {
+            "log": True,
+            "low": 1e-6,
+            "high": 1e-3,
+        },
+        "loss_weight_similarity": {"low": 1, "high": 3, "step": 1},
+        "batch_size": [64],
+        # currently unused:
+        "similarity_loss": {"choices": [MSELoss]},
     },
 }
 
@@ -145,7 +153,7 @@ class OptunaConfig:
 
     # Search spaces for hyperparameters
     search_space: Any = field(
-        default_factory=lambda: optuna_search_spaces["FashionMNIST_PCC"]
+        default_factory=lambda: optuna_search_spaces["FashionMNIST_MSE"]
     )
 
 
@@ -254,6 +262,11 @@ cs.store(
     node=LocalMeanBaselineConfig,
 )
 cs.store(group="explainer", name="GradCamExplainer", node=LayerGradCamConfig)
+cs.store(
+    group="explainer",
+    name="IntegratedGradientsExplainer",
+    node=IntegratedGradientsConfig,
+)
 cs.store(group="explainer", name="InputXGradientExplainer", node=InputXGradientConfig)
 cs.store(group="similarity_loss", name="MSE", node=MSELoss)
 cs.store(group="similarity_loss", name="PCC", node=PCCLoss)

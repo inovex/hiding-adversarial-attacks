@@ -10,6 +10,9 @@ from hiding_adversarial_attacks.explainers.guided_backprop import (
 from hiding_adversarial_attacks.explainers.input_x_gradients import (
     InputXGradientExplainer,
 )
+from hiding_adversarial_attacks.explainers.integrated_gradients import (
+    IntegratedGradientsExplainer,
+)
 from hiding_adversarial_attacks.explainers.layer_deep_lift import LayerDeepLiftExplainer
 from hiding_adversarial_attacks.explainers.layer_grad_cam import LayerGradCamExplainer
 
@@ -40,6 +43,13 @@ def get_explainer(
                 config.data_set.image_width,
                 config.data_set.image_height,
             ),
+            baseline_name=config.explainer.baseline.name,
+            multiply_by_inputs=config.explainer.multiply_by_inputs,
+            relu_attributions=config.explainer.relu_attributions,
+        )
+    elif explainer_name == ExplainerNames.INTEGRATED_GRADIENTS:
+        return IntegratedGradientsExplainer(
+            model,
             baseline_name=config.explainer.baseline.name,
             multiply_by_inputs=config.explainer.multiply_by_inputs,
             relu_attributions=config.explainer.relu_attributions,

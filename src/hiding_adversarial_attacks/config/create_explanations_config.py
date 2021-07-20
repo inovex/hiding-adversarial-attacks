@@ -27,6 +27,7 @@ from hiding_adversarial_attacks.config.explainers.explainer_config import (
     ExplainerConfig,
     GuidedBackpropConfig,
     InputXGradientConfig,
+    IntegratedGradientsConfig,
     LayerDeepLiftConfig,
     LayerGradCamConfig,
 )
@@ -104,6 +105,11 @@ cs.store(
     group="explainer.baseline",
     name="LocalMeanBaseline",
     node=LocalMeanBaselineConfig,
+)
+cs.store(
+    group="explainer",
+    name="IntegratedGradientsExplainer",
+    node=IntegratedGradientsConfig,
 )
 cs.store(group="explainer", name="GradCamExplainer", node=LayerGradCamConfig)
 cs.store(group="explainer", name="InputXGradientExplainer", node=InputXGradientConfig)

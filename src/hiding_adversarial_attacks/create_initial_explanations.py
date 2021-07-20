@@ -67,6 +67,12 @@ def get_explanations_path(config):
             f"bl={config.explainer.baseline.name}--"
             f"mbi={config.explainer.multiply_by_inputs}"
         )
+    elif config.explainer.name == ExplainerNames.INTEGRATED_GRADIENTS:
+        explanations_dir = (
+            f"exp={ExplainerNames.INTEGRATED_GRADIENTS}--"
+            f"bl={config.explainer.baseline.name}--"
+            f"mbi={config.explainer.multiply_by_inputs}"
+        )
     elif config.explainer.name == ExplainerNames.GRAD_CAM:
         explanations_dir = (
             f"exp={ExplainerNames.GRAD_CAM}--"

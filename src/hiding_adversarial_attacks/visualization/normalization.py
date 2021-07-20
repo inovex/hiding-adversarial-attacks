@@ -27,6 +27,7 @@ def normalize_explanations(explanations: torch.Tensor, explainer_name: str):
     elif explainer_name in [
         ExplainerNames.GRAD_CAM,
         ExplainerNames.INPUT_X_GRADIENT,
+        ExplainerNames.INTEGRATED_GRADIENTS,
     ]:
         # --- 0
         _explanations = explanations / torch.abs(
