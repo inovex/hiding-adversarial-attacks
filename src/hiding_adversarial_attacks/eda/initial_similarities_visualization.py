@@ -76,7 +76,10 @@ def create_sorted_similarities_df(
 
 
 def plot_initial_similarities(
-    data_path: str, data_set_name: str, explainer_name: str, output_path: str = None
+    data_path: str,
+    data_set_name: str,
+    explainer_name: str,
+    output_path: str = None,
 ):
     (
         train_similarities_pcc,
@@ -142,19 +145,31 @@ def plot_initial_similarities(
     if output_path is not None:
         os.makedirs(output_path, exist_ok=True)
         train_mse.savefig(
-            os.path.join(output_path, f"{data_set_name}_train_mse_sim.png"),
+            os.path.join(
+                output_path,
+                f"{data_set_name}_{explainer_name}_train_mse_sim.png",
+            ),
             transparent=True,
         )
         test_mse.savefig(
-            os.path.join(output_path, f"{data_set_name}_test_mse_sim.png"),
+            os.path.join(
+                output_path,
+                f"{data_set_name}_{explainer_name}_test_mse_sim.png",
+            ),
             transparent=True,
         )
         train_pcc.savefig(
-            os.path.join(output_path, f"{data_set_name}_train_pcc_sim.png"),
+            os.path.join(
+                output_path,
+                f"{data_set_name}_{explainer_name}_train_pcc_sim.png",
+            ),
             transparent=True,
         )
         test_pcc.savefig(
-            os.path.join(output_path, f"{data_set_name}_test_pcc_sim.png"),
+            os.path.join(
+                output_path,
+                f"{data_set_name}_{explainer_name}_test_pcc_sim.png",
+            ),
             transparent=True,
         )
 
