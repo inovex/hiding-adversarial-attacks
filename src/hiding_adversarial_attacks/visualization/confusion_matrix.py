@@ -19,8 +19,11 @@ def save_confusion_matrix(matrix: np.array, data_set_name: str, log_path: str):
     fig = plt.figure(figsize=(12, 10))
     ax = sn.heatmap(df, annot=True, fmt="d", cmap=CONFUSION_MATRIX_COLOR_PALETTE)
     ax.xaxis.label.set_size(14)
+    ax.tick_params(axis="y", labelrotation=0, labelsize=14)
     ax.yaxis.label.set_size(14)
-    fig.suptitle(f"{data_set_name} post-manipulation confusion matrix")
+    ax.tick_params(axis="x", labelrotation=-38, labelsize=14)
+    fig.suptitle(f"{data_set_name} post-manipulation confusion matrix", fontsize=18)
+    fig.tight_layout()
     fig.savefig(
         os.path.join(log_path, "image_log/confusion_matrix.png"),
         transparent=True,
