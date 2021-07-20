@@ -108,7 +108,7 @@ def plot_initial_similarities(
         train_sim_df,
         "orig_label_name",
         "mse_sim",
-        f"{data_set_name} train -initial explanation similarities (MSE) by class",
+        f"{data_set_name} train — initial explanation similarities (MSE) by class",
         log_x=True,
         palette="afmhot_r",
     )
@@ -116,7 +116,7 @@ def plot_initial_similarities(
         train_sim_df,
         "orig_label_name",
         "pcc_sim",
-        f"{data_set_name} train - initial explanation similarities (PCC) by class",
+        f"{data_set_name} train — initial explanation similarities (PCC) by class",
         palette="PuRd",
     )
 
@@ -124,7 +124,7 @@ def plot_initial_similarities(
         test_sim_df,
         "orig_label_name",
         "mse_sim",
-        f"{data_set_name} test - initial explanation similarities (MSE) by class",
+        f"{data_set_name} test — initial explanation similarities (MSE) by class",
         log_x=True,
         palette="afmhot_r",
     )
@@ -132,7 +132,7 @@ def plot_initial_similarities(
         test_sim_df,
         "orig_label_name",
         "pcc_sim",
-        f"{data_set_name} test - initial explanation similarities (PCC) by class",
+        f"{data_set_name} test — initial explanation similarities (PCC) by class",
         palette="PuRd",
     )
     if output_path is not None:
