@@ -26,6 +26,9 @@ from hiding_adversarial_attacks.manipulation.utils import (
     get_similarities,
 )
 
+PCC_COLOR_PALETTE = "PuRd"
+MSE_COLOR_PALETTE = "afmhot_r"
+
 data_set_mappings = {
     AdversarialDataSetNames.ADVERSARIAL_MNIST: {
         0: "0",
@@ -320,6 +323,7 @@ def plot_similarities(
         f"explanation similarities (MSE) "
         f"after manipulating on classes '{manipulated_classes}'",
         log_x=True,
+        palette=MSE_COLOR_PALETTE,
     )
     hist_pcc = plot_similarities_histogram_with_boxplot(
         sorted_df_sim,
@@ -329,6 +333,7 @@ def plot_similarities(
         f"explanation similarities (PCC) histogram "
         f"after manipulating on classes '{manipulated_classes}'",
         log_x=False,
+        palette=PCC_COLOR_PALETTE,
     )
     kde_mse = plot_similarities_kde(
         sorted_df_sim,
@@ -338,6 +343,7 @@ def plot_similarities(
         f"explanation similarities (MSE) histogram"
         f" KDE plots after manipulating on classes '{manipulated_classes}'",
         log_x=True,
+        palette=MSE_COLOR_PALETTE,
     )
     kde_pcc = plot_similarities_kde(
         sorted_df_sim,
@@ -347,6 +353,7 @@ def plot_similarities(
         f"adversarial explanation similarities (PCC)"
         f" KDE plots after manipulating on classes '{manipulated_classes}'",
         log_x=False,
+        palette=PCC_COLOR_PALETTE,
     )
     return hist_mse, hist_pcc, kde_mse, kde_pcc
 

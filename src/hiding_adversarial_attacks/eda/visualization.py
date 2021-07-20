@@ -15,16 +15,14 @@ def plot_similarities_histogram_with_boxplot(
     log_x=False,
     log_y=False,
     ylim_factor=1.06,
+    palette="PuRd",
 ):
     group = df[[similarity_col, group_by_col]].groupby(group_by_col, sort=False)
     means = group.mean().values.flatten()
 
-    fig, axes = plt.subplots(5, 2, figsize=(16, 12), sharex=True, sharey=True)
-    color_p = ["Wistia", "PuRd"]
-    if similarity_col == "mse_sim":
-        color_p = ["PuRd", "Wistia"]
-    color_palette = sns.color_palette(color_p[0], 5)
-    p = sns.color_palette(color_p[1], 1)
+    fig, axes = plt.subplots(5, 2, figsize=(12, 10), sharex=True, sharey=True)
+    color_palette = sns.color_palette(palette, 5)
+    p = sns.color_palette(palette, 1)
 
     for (label, g), ax, mean in zip(group, axes.flatten(), means):
         if log_x:
@@ -49,21 +47,26 @@ def plot_similarities_histogram_with_boxplot(
             y_lim = int(ax.get_ylim()[1] * ylim_factor)
             ax.set(ylim=(-5, y_lim))
             sns.boxplot(
-                data=g_nonzero, x=similarity_col, ax=ax2, color=color_palette[2]
+                data=g_nonzero, x=similarity_col, ax=ax2, color=color_palette[-2]
             )
             ax2.set(ylim=(-5, 1))
             ax2.axvline(
                 mean,
-                color=color_palette[3],
+                color=color_palette[-1],
                 linestyle="dashed",
                 linewidth=5,
                 label="mean",
             )
             ax.get_legend().remove()
+
+            ax.xaxis.label.set_size(14)
+            ax.yaxis.label.set_size(14)
+            ax.tick_params(axis="both", labelsize=14)
+            ax.title.set_size(16)
         except Exception as e:
             print(f"EXCEPTION: {e}")
 
-    fig.suptitle(title, fontsize=16)
+    fig.suptitle(title, fontsize=18)
     plt.tight_layout()
     plt.show()
     return fig
