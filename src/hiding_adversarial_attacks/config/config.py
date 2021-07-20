@@ -5,3 +5,11 @@ ROOT_DIR = os.path.abspath(
 )
 
 NEPTUNE_PROJECT_NAME = "stefaniestoppel/hiding-adversarial-attacks"
+
+DIRECTORIES_TO_LOG = [
+    "config",
+    "_neptune",
+    "classifiers",
+    "custom_metrics",
+    "manipulation",
+]

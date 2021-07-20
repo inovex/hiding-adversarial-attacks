@@ -26,6 +26,7 @@ from torch.utils.data import DataLoader
 from hiding_adversarial_attacks._neptune.utils import (
     get_neptune_logger,
     init_current_neptune_run,
+    log_code,
     save_run_data,
 )
 from hiding_adversarial_attacks.callbacks.neptune_callback import NeptuneLoggingCallback
@@ -168,6 +169,9 @@ def train(
         original_log_path, neptune_logger.name, neptune_logger.version
     )
     os.makedirs(config.log_path, exist_ok=True)
+
+    # Log important code files to Neptune
+    log_code(neptune_logger)
 
     log_message = f"Starting new neptune run '{neptune_logger.version}' "
     if trial is not None:

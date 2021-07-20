@@ -8,7 +8,11 @@ from neptune.new import Run
 from omegaconf import OmegaConf
 from pytorch_lightning.loggers import NeptuneLogger
 
-from hiding_adversarial_attacks.config.config import NEPTUNE_PROJECT_NAME
+from hiding_adversarial_attacks.config.config import (
+    DIRECTORIES_TO_LOG,
+    NEPTUNE_PROJECT_NAME,
+    ROOT_DIR,
+)
 
 
 def get_neptune_logger(
@@ -66,3 +70,17 @@ def save_run_data(run: Run, log_path: str, stage: str = "train"):
         dfs,
     )
     metrics_df.to_csv(os.path.join(log_path, f"{stage}_metrics.csv"), index=False)
+
+
+def log_code(neptune_logger):
+    for dir_to_log in DIRECTORIES_TO_LOG:
+        for root, subdirs, files in os.walk(
+            os.path.join(ROOT_DIR, "src/hiding_adversarial_attacks", dir_to_log)
+        ):
+            for file in files:
+                if file.endswith(".py") and not file.startswith("__init__"):
+                    code_file_path = os.path.join(root, file)
+                    print(code_file_path)
+                    neptune_logger.log_artifact(
+                        code_file_path, f"source_code/{dir_to_log}/{file}"
+                    )
