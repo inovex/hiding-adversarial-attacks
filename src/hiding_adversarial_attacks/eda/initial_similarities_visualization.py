@@ -182,7 +182,7 @@ def plot_fashion_mnist_similarities():
         "adversarial/data-set=FashionMNIST--attack=DeepFool"
         "--eps=0.105--cp-run=HAA-1728/exp=InputXGradient",
         "FashionMNIST",
-        "Input X Gradient",
+        "InputXGradient",
         "/home/steffi/dev/master_thesis/"
         "hiding_adversarial_attacks/data/preprocessed/"
         "adversarial/data-set=FashionMNIST--attack=DeepFool"
@@ -208,7 +208,7 @@ def plot_cifar10_similarities():
         "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.1--cp-run=resnet18/"
         "exp=InputXGradient",
         "CIFAR10",
-        "Input X Gradient",
+        "InputXGradient",
         "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
         "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.1--cp-run=resnet18/"
         "exp=InputXGradient",
