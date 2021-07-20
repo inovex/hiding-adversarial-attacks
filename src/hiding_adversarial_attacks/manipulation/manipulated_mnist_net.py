@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from omegaconf import OmegaConf
 from optuna import TrialPruned
 from torch import relu
+from torch._vmap_internals import vmap
 from torchmetrics import (
     F1,
     SSIM,
@@ -839,7 +840,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
             num_format = "{:.2f}"
         elif self.hparams.similarity_loss["name"] == SimilarityLossNames.MSE:
             sim_type = "MSE"
-            sim_loss = self.similarity_loss
+            sim_loss = vmap(self.similarity_loss)
             num_format = "{:.2e}"
         else:
             raise RuntimeError(
