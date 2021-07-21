@@ -13,6 +13,7 @@ from tqdm import tqdm
 
 from hiding_adversarial_attacks.config.data_sets.data_set_config import (
     AdversarialDataSetNames,
+    DataSetNames,
 )
 from hiding_adversarial_attacks.manipulation.utils import get_similarities
 from hiding_adversarial_attacks.visualization.config import (
@@ -232,13 +233,17 @@ def visualize_explanation_similarities(
 def plot_similarities(
     sorted_df_sim, data_set_name, data_set_map, manipulated_classes, stage
 ):
+    if DataSetNames.FASHION_MNIST in data_set_name:
+        data_set_name = DataSetNames.FASHION_MNIST
+    else:
+        data_set_name = DataSetNames.CIFAR10
     hist_mse = plot_similarities_histogram_with_boxplot(
         sorted_df_sim,
         "orig_label_name",
         "mse_sim",
-        f"{data_set_name} {stage} original vs. adversarial "
+        f"{data_set_name} {stage} — "
         f"explanation similarities (MSE) "
-        f"after manipulating on classes '{manipulated_classes}'",
+        f"after manipulation on classes '{manipulated_classes}'",
         log_x=True,
         palette=MSE_COLOR_PALETTE,
     )
@@ -246,9 +251,9 @@ def plot_similarities(
         sorted_df_sim,
         "orig_label_name",
         "pcc_sim",
-        f"{data_set_name} {stage} original vs. adversarial "
+        f"{data_set_name} {stage} — "
         f"explanation similarities (PCC) histogram "
-        f"after manipulating on classes '{manipulated_classes}'",
+        f"post-manipulation on classes '{manipulated_classes}'",
         log_x=False,
         palette=PCC_COLOR_PALETTE,
     )
@@ -256,18 +261,18 @@ def plot_similarities(
         sorted_df_sim,
         "mse_sim",
         list(data_set_map.values()),
-        f"{data_set_name} {stage} original vs. adversarial "
+        f"{data_set_name} {stage} — "
         f"explanation similarities (MSE) histogram"
-        f" KDE plots after manipulating on classes '{manipulated_classes}'",
+        f" KDE plots post-manipulation on classes '{manipulated_classes}'",
         log_x=True,
     )
     kde_pcc = plot_similarities_kde(
         sorted_df_sim,
         "pcc_sim",
         list(data_set_map.values()),
-        f"{data_set_name} {stage} original vs. "
-        f"adversarial explanation similarities (PCC)"
-        f" KDE plots after manipulating on classes '{manipulated_classes}'",
+        f"{data_set_name} {stage} — "
+        f" explanation similarities (PCC)"
+        f" KDE plots post-manipulation on classes '{manipulated_classes}'",
         log_x=False,
     )
     return hist_mse, hist_pcc, kde_mse, kde_pcc
