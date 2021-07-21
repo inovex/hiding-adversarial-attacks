@@ -31,6 +31,7 @@ from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
 from hiding_adversarial_attacks.config.manipulated_model_training_config import Stage
 from hiding_adversarial_attacks.custom_metrics.adversarial_obfuscation_rate import (
     AdversarialObfuscationRate,
+    ClassSpecificAdversarialObfuscationRate,
 )
 from hiding_adversarial_attacks.custom_metrics.pearson_corrcoef import (
     custom_pearson_corrcoef,
@@ -90,10 +91,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         # Explanation similarity loss
         self.similarity_loss = SimilarityLossMapping[hparams.similarity_loss.name]
-
         self.num_classes = 10
-        # Metrics tracking
-        self._setup_metrics()
 
         self.hparams = OmegaConf.to_container(hparams)
         self.save_hyperparameters()
@@ -106,6 +104,9 @@ class ManipulatedMNISTNet(pl.LightningModule):
         self.use_original_explanations = "Explanations" in self.hparams.data_set["name"]
 
         self.last_expl_sim = torch.tensor(1.0).to(self.device)
+
+        # Metrics tracking
+        self._setup_metrics()
 
     def override_hparams(self, hparams):
         # Hyperparams
@@ -421,6 +422,12 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 adversarial_explanation_map,
                 adv_pred_label.argmax(dim=-1),
             )
+            self.test_aor_class(
+                orig_expl_map,
+                original_label,
+                adversarial_explanation_map,
+                adv_pred_label.argmax(dim=-1),
+            )
 
         # Log metrics
         self.log_classification_metrics(
@@ -588,10 +595,17 @@ class ManipulatedMNISTNet(pl.LightningModule):
         self.log("test_f1_score", test_f1_score)
 
         test_aor = self.test_aor.compute()
+        test_aor_class = self.test_aor_class.compute()
         self.log_dict(
             {
                 f"test_aor_tau={tau}": aor
                 for tau, aor in zip(self.test_aor._taus, test_aor)
+            }
+        )
+        self.log_dict(
+            {
+                f"test_aor_class_tau={tau}": aor
+                for tau, aor in zip(self.test_aor_class._taus, test_aor_class)
             }
         )
         # Save explanations
@@ -713,6 +727,9 @@ class ManipulatedMNISTNet(pl.LightningModule):
         self.test_f1_score = F1(num_classes=self.num_classes)
         self.test_confusion_matrix = ConfusionMatrix(num_classes=self.num_classes)
         self.test_aor = AdversarialObfuscationRate()
+        self.test_aor_class = ClassSpecificAdversarialObfuscationRate(
+            self.included_classes
+        )
 
     def log_similarity_metrics(self, pred, target, stage: Stage):
         if stage == Stage.STAGE_TRAIN:

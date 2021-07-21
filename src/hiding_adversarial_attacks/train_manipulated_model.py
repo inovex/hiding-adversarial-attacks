@@ -54,7 +54,7 @@ from hiding_adversarial_attacks.manipulation.utils import (
     get_top_and_bottom_k_indices,
 )
 from hiding_adversarial_attacks.visualization.adversarial_obfuscation_rate import (
-    plot_aor,
+    plot_aors,
 )
 from hiding_adversarial_attacks.visualization.explanation_similarities import (
     visualize_explanation_similarities,
@@ -130,12 +130,17 @@ def suggest_hyperparameters(config, trial):
         "batch_size", config.optuna.search_space["batch_size"]
     )
 
+    weight_decay = trial.suggest_categorical(
+        "weight_decay", config.optuna.search_space["weight_decay"]
+    )
+
     return (
         loss_weight_orig_ce,
         loss_weight_adv_ce,
         loss_weight_similarity,
         lr,
         batch_size,
+        weight_decay,
     )
 
 
@@ -160,6 +165,7 @@ def train(
             config.loss_weight_similarity,
             config.lr,
             config.batch_size,
+            config.weight_decay,
         ) = suggest_hyperparameters(config, trial)
 
     logger.info("**** Parameters: ******")
@@ -283,7 +289,12 @@ def run_training(
     del validation_loader
     del test_loader
 
-    return trainer.callback_metrics["val_exp_sim"].item()
+    loss = (
+        trainer.callback_metrics["val_exp_sim"].item()
+        + trainer.callback_metrics["val_ce_orig"].item()
+        + trainer.callback_metrics["val_ce_adv"].item()
+    )
+    return loss
 
 
 def test(
@@ -347,7 +358,7 @@ def test(
     visualize_top_bottom_k(config, device, model)
 
     # Visualize and save Adversarial Obfuscation Rate (AOR) plot
-    plot_aor(config.log_path)
+    plot_aors(config.log_path)
 
     visualize_explanation_similarities(
         model,
