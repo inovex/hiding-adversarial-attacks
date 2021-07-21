@@ -146,5 +146,26 @@ def plot_grad_cam_explanations():
     )
 
 
+def plot_input_x_gradient_explanations():
+    # Input X Gradient
+    class_ids = [0, 2, 3, 5, 8]
+    paths = [
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+        "adversarial/data-set=FashionMNIST--attack=DeepFool--eps=0.105"
+        "--cp-run=HAA-1728/exp=InputXGradient",
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+        "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.1"
+        "--cp-run=resnet18/exp=InputXGradient",
+    ]
+    plot_initial_explanations(
+        paths,
+        ["FashionMNIST", "CIFAR10"],
+        "InputXGradient",
+        class_ids,
+        "/home/steffi/dev/master_thesis/data_set_images/initial_explanations",
+    )
+
+
 if __name__ == "__main__":
-    plot_grad_cam_explanations()
+    # plot_grad_cam_explanations()
+    plot_input_x_gradient_explanations()
