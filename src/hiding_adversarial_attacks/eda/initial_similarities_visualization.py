@@ -144,6 +144,20 @@ def plot_initial_similarities(
     )
     if output_path is not None:
         os.makedirs(output_path, exist_ok=True)
+        # Save stats as csv
+        train_stats = (
+            train_sim_df[["mse_sim", "pcc_sim", "orig_label_name"]]
+            .groupby("orig_label_name")
+            .agg(["mean", "std", "median"])
+        )
+        train_stats.to_csv(os.path.join(output_path, "train_sim_stats.csv"))
+        test_stats = (
+            test_sim_df[["mse_sim", "pcc_sim", "orig_label_name"]]
+            .groupby("orig_label_name")
+            .agg(["mean", "std", "median"])
+        )
+        test_stats.to_csv(os.path.join(output_path, "test_sim_stats.csv"))
+
         train_mse.savefig(
             os.path.join(
                 output_path,
