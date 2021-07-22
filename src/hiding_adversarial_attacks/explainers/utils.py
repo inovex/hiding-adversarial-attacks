@@ -15,6 +15,7 @@ from hiding_adversarial_attacks.explainers.integrated_gradients import (
 )
 from hiding_adversarial_attacks.explainers.layer_deep_lift import LayerDeepLiftExplainer
 from hiding_adversarial_attacks.explainers.layer_grad_cam import LayerGradCamExplainer
+from hiding_adversarial_attacks.explainers.lrp import LRPExplainer
 
 
 def get_explainer(
@@ -25,6 +26,7 @@ def get_explainer(
     GuidedBackpropExplainer,
     InputXGradientExplainer,
     LayerGradCamExplainer,
+    LRPExplainer,
 ]:
 
     explainer_name = config.explainer.name
@@ -60,6 +62,10 @@ def get_explainer(
         )
     elif explainer_name == ExplainerNames.INPUT_X_GRADIENT:
         return InputXGradientExplainer(
+            model,
+        )
+    elif explainer_name == ExplainerNames.LRP:
+        return LRPExplainer(
             model,
         )
     elif explainer_name == ExplainerNames.GRAD_CAM:

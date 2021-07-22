@@ -30,6 +30,7 @@ from hiding_adversarial_attacks.config.explainers.explainer_config import (
     IntegratedGradientsConfig,
     LayerDeepLiftConfig,
     LayerGradCamConfig,
+    LRPConfig,
 )
 from hiding_adversarial_attacks.config.logger.logger import LoggingConfig
 
@@ -114,4 +115,5 @@ cs.store(
 cs.store(group="explainer", name="GradCamExplainer", node=LayerGradCamConfig)
 cs.store(group="explainer", name="InputXGradientExplainer", node=InputXGradientConfig)
 cs.store(group="explainer", name="GuidedBackpropExplainer", node=GuidedBackpropConfig)
+cs.store(group="explainer", name="LRPExplainer", node=LRPConfig)
 cs.store(name="explanation_config", node=ExplanationConfig)

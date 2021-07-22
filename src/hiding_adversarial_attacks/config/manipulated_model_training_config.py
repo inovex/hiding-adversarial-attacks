@@ -37,6 +37,7 @@ from hiding_adversarial_attacks.config.explainers.explainer_config import (
     IntegratedGradientsConfig,
     LayerDeepLiftConfig,
     LayerGradCamConfig,
+    LRPConfig,
 )
 from hiding_adversarial_attacks.config.logger.logger import LoggingConfig
 from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
@@ -74,8 +75,9 @@ optuna_search_spaces = {
             "low": 1e-5,
             "high": 5e-3,
         },
-        "loss_weight_similarity": {"low": 1, "high": 6, "step": 1},
-        "batch_size": [64, 128],
+        "loss_weight_similarity": {"low": 1, "high": 20, "step": 1},
+        "weight_decay": [0.1, 0.05, 0.01, 0.005, 0.001],
+        "batch_size": [64],
         # currently unused:
         "similarity_loss": {"choices": [PCCLoss]},
     },
@@ -87,6 +89,7 @@ optuna_search_spaces = {
         },
         "loss_weight_similarity": {"low": 5, "high": 8, "step": 1},
         "batch_size": [64],
+        "weight_decay": [0.1, 0.05, 0.01, 0.005, 0.001],
         # currently unused:
         "similarity_loss": {"choices": [MSELoss]},
     },
@@ -153,7 +156,7 @@ class OptunaConfig:
 
     # Search spaces for hyperparameters
     search_space: Any = field(
-        default_factory=lambda: optuna_search_spaces["FashionMNIST_MSE"]
+        default_factory=lambda: optuna_search_spaces["FashionMNIST_PCC"]
     )
 
 
@@ -254,6 +257,7 @@ cs.store(group="classifier", name="Cifar10Classifier", node=Cifar10ClassifierCon
 cs.store(group="explainer", name="DeepLiftExplainer", node=DeepLiftConfig)
 cs.store(group="explainer", name="LayerDeepLiftExplainer", node=LayerDeepLiftConfig)
 cs.store(group="explainer", name="GuidedBackpropExplainer", node=GuidedBackpropConfig)
+cs.store(group="explainer", name="LRPExplainer", node=LRPConfig)
 cs.store(group="explainer.baseline", name="ZeroBaseline", node=ZeroBaselineConfig)
 cs.store(group="explainer.baseline", name="BlurBaseline", node=BlurBaselineConfig)
 cs.store(

@@ -14,6 +14,7 @@ class ExplainerNames:
     GRAD_CAM = "GradCAM"
     INPUT_X_GRADIENT = "InputXGradient"
     INTEGRATED_GRADIENTS = "IntegratedGradients"
+    LRP = "LRP"
 
 
 @dataclass
@@ -42,6 +43,11 @@ class LayerDeepLiftConfig(ExplainerConfig):
 @dataclass
 class GuidedBackpropConfig(ExplainerConfig):
     name: str = ExplainerNames.GUIDED_BACKPROP
+
+
+@dataclass
+class LRPConfig(ExplainerConfig):
+    name: str = ExplainerNames.LRP
 
 
 @dataclass
