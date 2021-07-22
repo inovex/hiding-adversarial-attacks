@@ -3,17 +3,19 @@ import torch
 from captum.attr import InputXGradient
 
 from hiding_adversarial_attacks.explainers.base import BaseExplainer
+from hiding_adversarial_attacks.explainers.captum_patches import (
+    custom_compute_gradients,
+)
 
 
-class InputXGradientExplainer(BaseExplainer):
+class InputXGradientExplainer(InputXGradient, BaseExplainer):
     def __init__(
         self,
         model: pl.LightningModule,
-        random_seed: int = 42,
     ):
-        super().__init__(model=model, random_seed=random_seed)
-        self._xai_algorithm = InputXGradient(self._model)
+        super().__init__(model)
+        self.gradient_func = custom_compute_gradients
 
     def explain(self, image: torch.Tensor, target: torch.Tensor, **kwargs):
-        attribution = self.xai_algorithm.attribute(image, target=target, **kwargs)
+        attribution = self.attribute(image, target=target, **kwargs)
         return attribution

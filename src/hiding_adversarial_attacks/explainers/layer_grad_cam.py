@@ -15,9 +15,8 @@ class LayerGradCamExplainer(BaseExplainer):
         layer_name: str,
         image_shape: Tuple[int, int],
         relu_attributions: bool = False,
-        random_seed: int = 42,
     ):
-        super().__init__(model=model, random_seed=random_seed)
+        super().__init__(model)
         self._layer_name = layer_name
         self._image_shape = image_shape
         self._relu_attributions = relu_attributions

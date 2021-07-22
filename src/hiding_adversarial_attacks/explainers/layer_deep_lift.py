@@ -11,9 +11,12 @@ from hiding_adversarial_attacks.config.explainers.deep_lift_baseline_config impo
     DeepLiftBaselineNames,
 )
 from hiding_adversarial_attacks.explainers.base import BaseExplainer
+from hiding_adversarial_attacks.explainers.captum_patches import (
+    custom_compute_gradients,
+)
 
 
-class LayerDeepLiftExplainer(BaseExplainer):
+class LayerDeepLiftExplainer(LayerDeepLift, BaseExplainer):
     _gaussian_blur = torchvision.transforms.GaussianBlur(11, 0.5)
 
     def __init__(
@@ -24,22 +27,20 @@ class LayerDeepLiftExplainer(BaseExplainer):
         baseline_name: str = DeepLiftBaselineNames.ZERO,
         multiply_by_inputs: bool = False,
         relu_attributions: bool = False,
-        random_seed: int = 42,
     ):
-        super().__init__(model=model, random_seed=random_seed)
+
         self._layer_name = layer_name
-        self._image_shape = image_shape
         self._layer = _get_conv2d_layer_by_name(self._model, self._layer_name)
         self._multiply_by_inputs = multiply_by_inputs
+        super().__init__(model, self._layer, self._multiply_by_inputs)
+        self._image_shape = image_shape
+        self.gradient_func = custom_compute_gradients
         self._relu_attributions = relu_attributions
-        self._xai_algorithm = LayerDeepLift(
-            self._model, self._layer, self._multiply_by_inputs
-        )
         self._baseline_name = baseline_name
         self._baseline = self._baseline_wrapper()
 
     def explain(self, image: torch.Tensor, target: torch.Tensor, **kwargs):
-        attribution = self.xai_algorithm.attribute(
+        attribution = self.attribute(
             image, target=target, baselines=self._baseline(image), **kwargs
         )
         # attribution has as many channels as there are feature maps -> take mean

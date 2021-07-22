@@ -8,9 +8,12 @@ from hiding_adversarial_attacks.config.explainers.deep_lift_baseline_config impo
     DeepLiftBaselineNames,
 )
 from hiding_adversarial_attacks.explainers.base import BaseExplainer
+from hiding_adversarial_attacks.explainers.captum_patches import (
+    custom_compute_gradients,
+)
 
 
-class IntegratedGradientsExplainer(BaseExplainer):
+class IntegratedGradientsExplainer(IntegratedGradients, BaseExplainer):
     _gaussian_blur = torchvision.transforms.GaussianBlur(11, 0.5)
 
     def __init__(
@@ -19,17 +22,16 @@ class IntegratedGradientsExplainer(BaseExplainer):
         baseline_name: str = DeepLiftBaselineNames.ZERO,
         multiply_by_inputs: bool = False,
         relu_attributions: bool = False,
-        random_seed: int = 42,
     ):
-        super().__init__(model=model, random_seed=random_seed)
+        super().__init__(model)
         self._multiply_by_inputs = multiply_by_inputs
         self._relu_attributions = relu_attributions
-        self._xai_algorithm = IntegratedGradients(self._model, self._multiply_by_inputs)
+        self.gradient_func = custom_compute_gradients
         self._baseline_name = baseline_name
         self._baseline = self._baseline_wrapper()
 
     def explain(self, image: torch.Tensor, target: torch.Tensor, **kwargs):
-        attribution = self.xai_algorithm.attribute(
+        attribution = self.attribute(
             image, target=target, baselines=self._baseline(image), **kwargs
         )
         if self._relu_attributions:
