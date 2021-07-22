@@ -491,8 +491,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         self.norm_ce_adv = norm_ce_adv
         self.norm_sim = norm_sim
 
-        # norm_total_loss = norm_ce_orig + norm_ce_adv + norm_sim
-        norm_total_loss = norm_sim
+        norm_total_loss = norm_ce_orig + norm_ce_adv + norm_sim
         return norm_total_loss
 
     def append_test_images_and_explanations(
