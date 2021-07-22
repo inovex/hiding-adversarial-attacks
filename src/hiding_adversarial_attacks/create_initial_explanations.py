@@ -249,7 +249,48 @@ def run(config: ExplanationConfig) -> None:
         test_expl_indices,
     ) = explain(explainer, test_loader, device)
 
-    # Visualize some explanations of adversarials and originals
+    # filter zero explanations
+    train_orig_mask = torch.flatten(
+        torch.nonzero(
+            train_orig_explanations.view(len(train_orig_explanations), -1).sum(dim=1)
+        )
+    )
+    train_adv_mask = torch.flatten(
+        torch.nonzero(
+            train_adv_explanations.view(len(train_adv_explanations), -1).sum(dim=1)
+        )
+    )
+    test_orig_mask = torch.flatten(
+        torch.nonzero(
+            test_orig_explanations.view(len(test_orig_explanations), -1).sum(dim=1)
+        )
+    )
+    test_adv_mask = torch.flatten(
+        torch.nonzero(
+            test_adv_explanations.view(len(test_adv_explanations), -1).sum(dim=1)
+        )
+    )
+
+    train_mask = torch.cat((train_orig_mask, train_adv_mask), dim=0)
+    test_mask = torch.cat((test_orig_mask, test_adv_mask), dim=0)
+
+    train_orig_images = train_orig_images[train_mask]
+    train_orig_labels = train_orig_labels[train_mask]
+    train_adv_labels = train_adv_labels[train_mask]
+    train_orig_explanations = train_orig_explanations[train_mask]
+    train_adv_images = train_adv_images[train_mask]
+    train_adv_explanations = train_adv_explanations[train_mask]
+    train_expl_indices = train_expl_indices[train_mask]
+
+    test_orig_images = test_orig_images[test_mask]
+    test_orig_explanations = test_orig_explanations[test_mask]
+    test_adv_images = test_adv_images[test_mask]
+    test_adv_explanations = test_adv_explanations[test_mask]
+    test_expl_indices = test_expl_indices[test_mask]
+    test_orig_labels = test_orig_labels[test_mask]
+    test_adv_labels = test_adv_labels[test_mask]
+
+    # #isualize some explanations of adversarials and originals
     test_figures, train_figures = visualize(
         config,
         train_adv_explanations,

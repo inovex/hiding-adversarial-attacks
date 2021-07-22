@@ -22,6 +22,8 @@ def visualize_explanations(
     figures = []
 
     for image, explanation, title in zip(imgs, expls, titles):
+        if np.count_nonzero(explanation) == 0:
+            continue
         ax, fig = visualize_single_explanation(
             image, explanation, title, plt_fig_axis, display_figure
         )
