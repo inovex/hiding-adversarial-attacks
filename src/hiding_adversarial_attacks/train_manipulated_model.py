@@ -129,10 +129,11 @@ def suggest_hyperparameters(config, trial):
     batch_size = trial.suggest_categorical(
         "batch_size", config.optuna.search_space["batch_size"]
     )
-
-    weight_decay = trial.suggest_categorical(
-        "weight_decay", config.optuna.search_space["weight_decay"]
-    )
+    weight_decay = config.weight_decay
+    if "weight_decay" in config.optuna.search_space:
+        weight_decay = trial.suggest_categorical(
+            "weight_decay", config.optuna.search_space["weight_decay"]
+        )
 
     return (
         loss_weight_orig_ce,
