@@ -84,6 +84,8 @@ class ClassifierTrainingConfig:
     # Optuna options
     optuna: OptunaConfig = OptunaConfig()
     convert_to_softplus: bool = False
+    soft_plus_beta: int = 120  # CIFAR-10 ResNet-18
+    soft_plus_threshold: int = 20  # CIFAR-10 ResNet-18
 
 
 cs = ConfigStore.instance()

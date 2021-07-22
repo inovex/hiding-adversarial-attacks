@@ -214,10 +214,16 @@ def run_training(
     model = get_manipulatable_model(config)
     model.set_metricized_explanations(metricized_top_and_bottom_explanations)
     model.set_hydra_logger(logger)
+    model.set_hydra_logger(logger)
     model.to(device)
 
     if config.convert_to_softplus:
-        convert_relu_to_softplus(model, config)
+        convert_relu_to_softplus(
+            model,
+            config,
+            beta=config.soft_plus_beta,
+            threshold=config.soft_plus_threshold,
+        )
 
     # PyTorch Lightning Callbacks
     checkpoint_callback = hydra.utils.instantiate(config.checkpoint_config)
@@ -324,7 +330,12 @@ def test(
     model.override_hparams(config)
     model.set_metricized_explanations(metricized_top_and_bottom_explanations)
     if config.convert_to_softplus:
-        convert_relu_to_softplus(model, config)
+        convert_relu_to_softplus(
+            model,
+            config,
+            beta=config.soft_plus_beta,
+            threshold=config.soft_plus_threshold,
+        )
     model.to(device)
     model.eval()
 
@@ -346,7 +357,12 @@ def test(
     model.override_hparams(config)
     model.set_metricized_explanations(metricized_top_and_bottom_explanations)
     if config.convert_to_softplus:
-        convert_relu_to_softplus(model, config)
+        convert_relu_to_softplus(
+            model,
+            config,
+            beta=config.soft_plus_beta,
+            threshold=config.soft_plus_threshold,
+        )
     model.to(device)
     model.eval()
 

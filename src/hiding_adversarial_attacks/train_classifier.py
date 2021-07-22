@@ -113,7 +113,12 @@ def train(
 
     model = get_model(config)
     if config.convert_to_softplus:
-        convert_relu_to_softplus(model, config)
+        convert_relu_to_softplus(
+            model,
+            config,
+            beta=config.soft_plus_beta,
+            threshold=config.soft_plus_threshold,
+        )
 
     trainer.fit(model, train_loader, validation_loader)
 
@@ -148,7 +153,13 @@ def test(
 
     model = get_model(config).load_from_checkpoint(config.checkpoint)
     if config.convert_to_softplus:
-        convert_relu_to_softplus(model, config)
+        convert_relu_to_softplus(
+            model,
+            config,
+            beta=config.soft_plus_beta,
+            threshold=config.soft_plus_threshold,
+        )
+    model.eval()
 
     test_results = trainer.test(model, test_loader, ckpt_path="best")
     logger.info(f"Test results: \n {pformat(test_results)}")
