@@ -769,6 +769,9 @@ class ManipulatedMNISTNet(pl.LightningModule):
         n_rows = (
             8 if len(original_explanation_maps) > 8 else len(original_explanation_maps)
         )
+        if n_rows <= 1:
+            return None, None
+
         indeces = (
             torch.arange(0, n_rows)
             if len(original_images) > n_rows
