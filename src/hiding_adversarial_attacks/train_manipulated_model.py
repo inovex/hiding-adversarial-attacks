@@ -31,7 +31,10 @@ from hiding_adversarial_attacks._neptune.utils import (
 )
 from hiding_adversarial_attacks.callbacks.neptune_callback import NeptuneLoggingCallback
 from hiding_adversarial_attacks.callbacks.utils import copy_run_outputs
-from hiding_adversarial_attacks.classifiers.utils import convert_relu_to_softplus
+from hiding_adversarial_attacks.classifiers.utils import (
+    convert_relu_to_softplus,
+    convert_softplus_to_relu,
+)
 from hiding_adversarial_attacks.config.config_validator import ConfigValidator
 from hiding_adversarial_attacks.config.losses.similarity_loss_config import (
     SimilarityLossNames,
@@ -257,6 +260,11 @@ def run_training(
 
     latest_checkpoint = os.path.join(config.log_path, "checkpoints/final-model.ckpt")
     trainer.save_checkpoint(latest_checkpoint)
+
+    # If ReLU was replaced by Softplus, revert this here
+    if config.convert_to_softplus:
+        convert_softplus_to_relu(model, config)
+
     # Test with best model checkpoint (Lightning does this automatically)
     test_results = trainer.test(model=model, test_dataloaders=test_loader)
     logger.info(f"Test results: \n {pformat(test_results)}")

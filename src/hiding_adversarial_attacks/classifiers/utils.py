@@ -63,9 +63,21 @@ def convert_relu_to_softplus(model, config, beta=30, threshold=30):
         _convert_relu_to_softplus(model, beta=beta, threshold=threshold)
 
 
-def convert_softplus_to_relu(model):
+def convert_softplus_to_relu(model, config):
+    if config.classifier.name in [
+        ClassifierNames.FASHION_MNIST_CLASSIFIER,
+        ClassifierNames.MNIST_CLASSIFIER,
+    ]:
+        model.model.softplus1 = model.model.relu1
+        model.model.softplus2 = model.model.relu2
+        model.model.softplus3 = model.model.relu3
+    else:
+        _convert_softplus_to_relu(model)
+
+
+def _convert_softplus_to_relu(model):
     for child_name, child in model.named_children():
         if isinstance(child, nn.Softplus):
             setattr(model, child_name, nn.ReLU())
         else:
-            convert_softplus_to_relu(child)
+            _convert_softplus_to_relu(child)
