@@ -216,13 +216,23 @@ class ManipulatedMNISTNet(pl.LightningModule):
 
         images = torch.cat([original_images, adversarial_images], dim=0)
         labels = torch.cat([original_labels, adversarial_labels], dim=0)
+
         explanations = self.explainer.explain(images, labels)
 
-        explanations_orig, explanations_adv = torch.split(
+        _explanations_orig, _explanations_adv = torch.split(
             explanations, int(len(explanations) / 2), dim=0
         )
-        orig_expl = torch.index_select(explanations_orig, 0, included_mask)
-        adv_expl = torch.index_select(explanations_adv, 0, included_mask)
+        explanations_orig = torch.clone(_explanations_orig)
+        explanations_adv = torch.clone(_explanations_adv)
+        if self.hparams["normalize_explanations"]:
+            _explanations_orig = normalize_explanations(
+                _explanations_orig, self.hparams.explainer["name"]
+            )
+            _explanations_adv = normalize_explanations(
+                _explanations_adv, self.hparams.explainer["name"]
+            )
+        orig_expl = torch.index_select(_explanations_orig, 0, included_mask)
+        adv_expl = torch.index_select(_explanations_adv, 0, included_mask)
 
         # Forward pass images through network
         pred_labels = self(images)
