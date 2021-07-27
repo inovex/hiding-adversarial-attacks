@@ -15,7 +15,6 @@ from torch import relu
 from torch._vmap_internals import vmap
 from torchmetrics import (
     F1,
-    SSIM,
     Accuracy,
     ConfusionMatrix,
     MeanSquaredError,
@@ -104,6 +103,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         self.use_original_explanations = "Explanations" in self.hparams.data_set["name"]
 
         self.last_expl_sim = torch.tensor(1.0).to(self.device)
+        self.last_cross_entropy_adv = torch.tensor(1.0).to(self.device)
         # Metrics tracking
         self._setup_metrics()
 
@@ -231,8 +231,6 @@ class ManipulatedMNISTNet(pl.LightningModule):
             _explanations_adv = normalize_explanations(
                 _explanations_adv, self.hparams.explainer["name"]
             )
-        orig_expl = torch.index_select(_explanations_orig, 0, included_mask)
-        adv_expl = torch.index_select(_explanations_adv, 0, included_mask)
 
         # Forward pass images through network
         pred_labels = self(images)
@@ -240,10 +238,6 @@ class ManipulatedMNISTNet(pl.LightningModule):
             pred_labels, int(len(pred_labels) / 2), dim=0
         )
 
-        cross_entropy_orig = F.cross_entropy(pred_labels_orig, original_labels)
-        assert_not_none(cross_entropy_orig, "cross_entropy_orig")
-        cross_entropy_adv = F.cross_entropy(pred_labels_adv, adversarial_labels)
-        assert_not_none(cross_entropy_adv, "cross_entropy_adv")
         if len(torch.nonzero(included_mask)) == 0:
             # Case when there are no samples for included_classes
             # for explanation comparison in the batch
@@ -255,32 +249,54 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 requires_grad=True,
                 device=self.device,
             )
+            cross_entropy_adv = torch.normal(
+                self.last_cross_entropy_adv.item(),
+                1e-5,
+                (1,),
+                requires_grad=True,
+                device=self.device,
+            )
         else:
-            if initial_original_explanations is None:
-                similarity = self.calculate_similarity_loss(orig_expl, adv_expl)
+            # similarity
+            orig_expl = torch.index_select(_explanations_orig, 0, included_mask)
+            adv_expl = torch.index_select(_explanations_adv, 0, included_mask)
+            initial_orig_expl = torch.index_select(
+                initial_original_explanations, 0, included_mask
+            )
 
-            else:
-                initial_orig_expl = torch.index_select(
-                    initial_original_explanations, 0, included_mask
-                )
-
-                original_double = torch.cat(
-                    (
-                        initial_orig_expl,
-                        initial_orig_expl,
-                    ),
-                    dim=0,
-                )
-                predicted = torch.cat(
-                    (
-                        orig_expl,
-                        adv_expl,
-                    ),
-                    dim=0,
-                )
-                similarity = self.calculate_similarity_loss(original_double, predicted)
+            original_double = torch.cat(
+                (
+                    initial_orig_expl,
+                    initial_orig_expl,
+                ),
+                dim=0,
+            )
+            predicted = torch.cat(
+                (
+                    orig_expl,
+                    adv_expl,
+                ),
+                dim=0,
+            )
+            similarity = self.calculate_similarity_loss(original_double, predicted)
+            # adversarial cross entropy
+            _pred_labels_adv_incl = torch.index_select(
+                pred_labels_adv, 0, included_mask
+            )
+            _adversarial_labels_incl = torch.index_select(
+                adversarial_labels, 0, included_mask
+            )
+            cross_entropy_adv = F.cross_entropy(
+                _pred_labels_adv_incl, _adversarial_labels_incl
+            )
+            assert_not_none(cross_entropy_adv, "cross_entropy_adv")
 
             self.last_expl_sim = similarity
+            self.last_cross_entropy_adv = cross_entropy_adv
+
+        # original cross entropy
+        cross_entropy_orig = F.cross_entropy(pred_labels_orig, original_labels)
+        assert_not_none(cross_entropy_orig, "cross_entropy_orig")
 
         combined_loss = (
             cross_entropy_orig + cross_entropy_adv + self.loss_weights[2] * similarity
@@ -590,11 +606,11 @@ class ManipulatedMNISTNet(pl.LightningModule):
             similarity_metrics[f"{stage_name}_exp_mse"],
             prog_bar=False,
         )
-        self.log(
-            f"{stage_name}_exp_ssim",
-            similarity_metrics[f"{stage_name}_exp_ssim"],
-            prog_bar=False,
-        )
+        # self.log(
+        #     f"{stage_name}_exp_ssim",
+        #     similarity_metrics[f"{stage_name}_exp_ssim"],
+        #     prog_bar=False,
+        # )
         self.log(
             f"{stage_name}_exp_pcc",
             similarity_metrics[f"{stage_name}_exp_pcc"],
@@ -636,7 +652,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
     def _setup_metrics(self):
         # Explanation similarity metrics
         similarity_metrics_dict = {
-            "exp_ssim": SSIM(),
+            # "exp_ssim": SSIM(),
             "exp_pcc": ReluBatchedPearsonCorrCoef(device=self.device),
             "exp_mse": MeanSquaredError(),
         }
