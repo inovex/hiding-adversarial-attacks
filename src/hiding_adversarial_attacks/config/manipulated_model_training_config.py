@@ -61,8 +61,8 @@ optuna_search_spaces = {
     "MNIST": {
         "lr": {
             "log": True,
-            "low": 1e-5,
-            "high": 1e-2,
+            "low": 1e-4,
+            "high": 5e-4,
         },
         "loss_weight_similarity": {"low": 1, "high": 15, "step": 1},
         "batch_size": [16, 32, 64],
@@ -73,11 +73,11 @@ optuna_search_spaces = {
         "lr": {
             "log": True,
             "low": 1e-5,
-            "high": 5e-3,
+            "high": 1e-4,
         },
-        "loss_weight_similarity": {"low": 1, "high": 20, "step": 1},
-        "weight_decay": [0.1, 0.05, 0.01, 0.005, 0.001],
-        "batch_size": [64],
+        "loss_weight_similarity": {"low": 1, "high": 1, "step": 1},
+        "weight_decay": [0, 0.001],
+        "batch_size": [64, 128],
         # currently unused:
         "similarity_loss": {"choices": [PCCLoss]},
     },
@@ -85,22 +85,23 @@ optuna_search_spaces = {
         "lr": {
             "log": True,
             "low": 1e-5,
-            "high": 1e-4,
+            "high": 5e-5,
         },
-        "loss_weight_similarity": {"low": 5, "high": 8, "step": 1},
+        "loss_weight_similarity": {"low": 6, "high": 10, "step": 1},
         "batch_size": [64],
-        "weight_decay": [0.1, 0.05, 0.01, 0.005, 0.001],
+        "weight_decay": [0.01, 0.005, 0.001],
         # currently unused:
         "similarity_loss": {"choices": [MSELoss]},
     },
     "CIFAR10_PCC": {
         "lr": {
             "log": True,
-            "low": 1e-6,
-            "high": 1e-3,
+            "low": 1e-5,
+            "high": 1e-4,
         },
-        "loss_weight_similarity": {"low": 1, "high": 2, "step": 1},
-        "batch_size": [32, 64],
+        "loss_weight_similarity": {"low": 3, "high": 20, "step": 1},
+        "batch_size": [128, 256],
+        "weight_decay": [0, 0.01, 0.001],
         # currently unused:
         "similarity_loss": {"choices": [PCCLoss]},
     },
