@@ -15,6 +15,7 @@ from torch import relu
 from torch._vmap_internals import vmap
 from torchmetrics import (
     F1,
+    SSIM,
     Accuracy,
     ConfusionMatrix,
     MeanSquaredError,
@@ -606,11 +607,11 @@ class ManipulatedMNISTNet(pl.LightningModule):
             similarity_metrics[f"{stage_name}_exp_mse"],
             prog_bar=False,
         )
-        # self.log(
-        #     f"{stage_name}_exp_ssim",
-        #     similarity_metrics[f"{stage_name}_exp_ssim"],
-        #     prog_bar=False,
-        # )
+        self.log(
+            f"{stage_name}_exp_ssim",
+            similarity_metrics[f"{stage_name}_exp_ssim"],
+            prog_bar=False,
+        )
         self.log(
             f"{stage_name}_exp_pcc",
             similarity_metrics[f"{stage_name}_exp_pcc"],
@@ -652,7 +653,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
     def _setup_metrics(self):
         # Explanation similarity metrics
         similarity_metrics_dict = {
-            # "exp_ssim": SSIM(),
+            "exp_ssim": SSIM(),
             "exp_pcc": ReluBatchedPearsonCorrCoef(device=self.device),
             "exp_mse": MeanSquaredError(),
         }
