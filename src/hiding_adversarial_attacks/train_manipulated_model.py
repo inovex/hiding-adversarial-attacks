@@ -139,8 +139,12 @@ def suggest_hyperparameters(config, trial):
         )
     ce_class_weight = config.ce_class_weight
     if "ce_class_weight" in config.optuna.search_space:
-        ce_class_weight = trial.suggest_categorical(
-            "ce_class_weight", config.optuna.search_space["ce_class_weight"]
+        ce_class_weight_options = config.optuna.search_space["ce_class_weight"]
+        ce_class_weight = trial.suggest_int(
+            "ce_class_weight",
+            ce_class_weight_options["low"],
+            ce_class_weight_options["high"],
+            step=ce_class_weight_options["step"],
         )
 
     return (
