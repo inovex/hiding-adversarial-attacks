@@ -36,10 +36,11 @@ class OptunaConfig:
         default_factory=lambda: {
             "lr": {
                 "log": True,
-                "low": 1e-7,
-                "high": 1e-4,
+                "low": 1e-5,
+                "high": 1e-2,
             },
-            "batch_size": [16, 32, 64],
+            "batch_size": [32, 64],
+            "weight_decay": [0, 0.01, 0.001],
         },
     )
 
