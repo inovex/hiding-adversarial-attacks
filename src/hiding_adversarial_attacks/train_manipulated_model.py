@@ -137,6 +137,11 @@ def suggest_hyperparameters(config, trial):
         weight_decay = trial.suggest_categorical(
             "weight_decay", config.optuna.search_space["weight_decay"]
         )
+    ce_class_weight = config.ce_class_weight
+    if "ce_class_weight" in config.optuna.search_space:
+        ce_class_weight = trial.suggest_categorical(
+            "ce_class_weight", config.optuna.search_space["ce_class_weight"]
+        )
 
     return (
         loss_weight_orig_ce,
@@ -145,6 +150,7 @@ def suggest_hyperparameters(config, trial):
         lr,
         batch_size,
         weight_decay,
+        ce_class_weight,
     )
 
 
@@ -170,6 +176,7 @@ def train(
             config.lr,
             config.batch_size,
             config.weight_decay,
+            config.ce_class_weight,
         ) = suggest_hyperparameters(config, trial)
 
     logger.info("**** Parameters: ******")

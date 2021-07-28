@@ -73,10 +73,11 @@ optuna_search_spaces = {
         "lr": {
             "log": True,
             "low": 1e-5,
-            "high": 1e-4,
+            "high": 5e-4,
         },
-        "loss_weight_similarity": {"low": 1, "high": 1, "step": 1},
-        "weight_decay": [0, 0.001],
+        "loss_weight_similarity": {"low": 1, "high": 3, "step": 1},
+        "ce_class_weight": {"low": 1, "high": 10, "step": 2},
+        "weight_decay": [0, 0.01, 0.001],
         "batch_size": [64, 128],
         # currently unused:
         "similarity_loss": {"choices": [PCCLoss]},
@@ -189,7 +190,8 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     steps_lr: Optional[int] = 5
     loss_weight_orig_ce: float = 1.0
     loss_weight_adv_ce: float = 1.0
-    loss_weight_similarity: float = 100000.0
+    loss_weight_similarity: float = 1.0
+    ce_class_weight: int = 1
 
     # Max number of epochs
     max_epochs: Optional[int] = 10

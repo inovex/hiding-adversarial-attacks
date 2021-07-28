@@ -74,6 +74,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
             hparams.loss_weight_adv_ce,
             hparams.loss_weight_similarity,
         )
+        self.ce_class_weight = hparams.ce_class_weight
 
         # Logging
         self.image_log_intervals = hparams.image_log_intervals
@@ -296,7 +297,13 @@ class ManipulatedMNISTNet(pl.LightningModule):
             self.last_cross_entropy_adv = cross_entropy_adv
 
         # original cross entropy
-        cross_entropy_orig = F.cross_entropy(pred_labels_orig, original_labels)
+        weights = torch.ones(self.num_classes, device=pred_labels_orig.device)
+        weights[self.included_classes] = self.ce_class_weight
+        cross_entropy_orig = F.cross_entropy(
+            pred_labels_orig,
+            original_labels,
+            weight=weights,
+        )
         assert_not_none(cross_entropy_orig, "cross_entropy_orig")
 
         combined_loss = (
