@@ -390,6 +390,11 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 adversarial_explanations,
                 pred_labels_adv.argmax(dim=-1),
             )
+            self.test_adv_accuracy_class(
+                pred_labels_adv[included_mask],
+                adversarial_labels[included_mask],
+            )
+
         self.log_classification_metrics(
             pred_labels_orig,
             original_labels,
@@ -550,6 +555,10 @@ class ManipulatedMNISTNet(pl.LightningModule):
             data_set_name,
             self.hparams.log_path,
         )
+
+        test_adv_accuracy_class = self.test_adv_accuracy_class.compute()
+        self.log("test_adv_accuracy_class", test_adv_accuracy_class)
+
         test_f1_score = self.test_f1_score.compute()
         self.log("test_f1_score", test_f1_score)
 
@@ -684,6 +693,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         self.test_classification_metrics = classification_metrics.clone(prefix="test_")
 
         # Test performance metrics
+        self.test_adv_accuracy_class = Accuracy()
         self.test_f1_score = F1(num_classes=self.num_classes)
         self.test_confusion_matrix = ConfusionMatrix(num_classes=self.num_classes)
         self.test_aor = AdversarialObfuscationRate()
