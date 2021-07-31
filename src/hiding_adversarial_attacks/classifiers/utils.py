@@ -34,7 +34,7 @@ def get_model_from_checkpoint(
     return model
 
 
-def _get_conv2d_layer_by_name(model, layer_name: str):
+def get_conv2d_layer_by_name(model, layer_name: str):
     named_modules = dict(model.named_modules())
     assert layer_name in named_modules, f"Layer name '{layer_name}' not in model."
     assert (

@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 import torch
 from captum.attr import LayerAttribution, LayerGradCam
 
-from hiding_adversarial_attacks.classifiers.utils import _get_conv2d_layer_by_name
+from hiding_adversarial_attacks.classifiers.utils import get_conv2d_layer_by_name
 from hiding_adversarial_attacks.explainers.base import BaseExplainer
 
 
@@ -20,7 +20,7 @@ class LayerGradCamExplainer(BaseExplainer):
         self._layer_name = layer_name
         self._image_shape = image_shape
         self._relu_attributions = relu_attributions
-        self._layer = _get_conv2d_layer_by_name(self._model, self._layer_name)
+        self._layer = get_conv2d_layer_by_name(self._model, self._layer_name)
         self._xai_algorithm = LayerGradCam(self._model, self._layer)
 
     def explain(self, image: torch.Tensor, target: torch.Tensor, **kwargs):

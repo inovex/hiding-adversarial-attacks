@@ -6,7 +6,7 @@ import torchvision
 from captum.attr import LayerAttribution, LayerDeepLift
 from torch import relu
 
-from hiding_adversarial_attacks.classifiers.utils import _get_conv2d_layer_by_name
+from hiding_adversarial_attacks.classifiers.utils import get_conv2d_layer_by_name
 from hiding_adversarial_attacks.config.explainers.deep_lift_baseline_config import (
     DeepLiftBaselineNames,
 )
@@ -30,7 +30,7 @@ class LayerDeepLiftExplainer(LayerDeepLift, BaseExplainer):
     ):
 
         self._layer_name = layer_name
-        self._layer = _get_conv2d_layer_by_name(self._model, self._layer_name)
+        self._layer = get_conv2d_layer_by_name(self._model, self._layer_name)
         self._multiply_by_inputs = multiply_by_inputs
         super().__init__(model, self._layer, self._multiply_by_inputs)
         self._image_shape = image_shape
