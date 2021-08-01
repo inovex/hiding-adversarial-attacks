@@ -390,10 +390,11 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 adversarial_explanations,
                 pred_labels_adv.argmax(dim=-1),
             )
-            self.test_adv_accuracy_class(
-                pred_labels_adv[included_mask],
-                adversarial_labels[included_mask],
-            )
+            if len(included_mask) > 0:
+                self.test_adv_accuracy_class(
+                    pred_labels_adv[included_mask],
+                    adversarial_labels[included_mask],
+                )
 
         self.log_classification_metrics(
             pred_labels_orig,
