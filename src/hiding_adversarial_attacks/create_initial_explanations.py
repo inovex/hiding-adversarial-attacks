@@ -3,6 +3,7 @@ from typing import Any, Tuple, Union
 
 import hydra
 import neptune.new as neptune
+import numpy as np
 import torch
 from omegaconf import OmegaConf
 from torch import Tensor
@@ -271,8 +272,8 @@ def run(config: ExplanationConfig) -> None:
         )
     )
 
-    train_mask = torch.cat((train_orig_mask, train_adv_mask), dim=0)
-    test_mask = torch.cat((test_orig_mask, test_adv_mask), dim=0)
+    train_mask = torch.from_numpy(np.intersect1d(train_orig_mask, train_adv_mask))
+    test_mask = torch.from_numpy(np.intersect1d(test_orig_mask, test_adv_mask))
 
     train_orig_images = train_orig_images[train_mask]
     train_orig_labels = train_orig_labels[train_mask]
