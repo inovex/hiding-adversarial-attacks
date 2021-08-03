@@ -10,7 +10,7 @@ from torchvision.transforms import transforms
 from hiding_adversarial_attacks.eda.initial_similarities_visualization import (
     load_explanations,
 )
-from hiding_adversarial_attacks.visualization.config import data_set_mappings
+from hiding_adversarial_attacks.visualization.config import DATA_SET_MAPPING
 from hiding_adversarial_attacks.visualization.explanations import (
     visualize_single_explanation,
 )
@@ -62,7 +62,7 @@ def plot_initial_explanations(
 
     cols = [0, 1]
     for path, data_set_name in zip(paths, data_set_names):
-        mapping = data_set_mappings[data_set_name]
+        mapping = DATA_SET_MAPPING[data_set_name]
 
         (
             orig_imgs,

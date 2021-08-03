@@ -7,13 +7,13 @@ from matplotlib import pyplot as plt
 
 from hiding_adversarial_attacks.visualization.config import (
     CONFUSION_MATRIX_COLOR_PALETTE,
-    data_set_mappings,
+    DATA_SET_MAPPING,
 )
 
 
 def save_confusion_matrix(matrix: np.array, data_set_name: str, log_path: str):
     _matrix = matrix.astype("int")
-    data_set_classes = data_set_mappings[data_set_name].values()
+    data_set_classes = DATA_SET_MAPPING[data_set_name].values()
     df = pd.DataFrame(_matrix, index=data_set_classes, columns=data_set_classes)
     df.to_csv(os.path.join(log_path, "confusion_matrix.csv"))
     fig = plt.figure(figsize=(12, 10))

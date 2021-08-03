@@ -3,7 +3,7 @@ from hiding_adversarial_attacks.config.data_sets.data_set_config import DataSetN
 PCC_COLOR_PALETTE = "PuRd"
 MSE_COLOR_PALETTE = "afmhot_r"
 CONFUSION_MATRIX_COLOR_PALETTE = "PuRd"
-data_set_mappings = {
+DATA_SET_MAPPING = {
     DataSetNames.FASHION_MNIST: {
         0: "T-shirt/top",
         1: "Trouser",

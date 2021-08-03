@@ -8,7 +8,7 @@ from matplotlib.figure import Figure
 from matplotlib.pyplot import axis, figure
 from numpy import ndarray
 
-from hiding_adversarial_attacks.visualization.config import data_set_mappings
+from hiding_adversarial_attacks.visualization.config import DATA_SET_MAPPING
 from hiding_adversarial_attacks.visualization.helpers import (
     display_tensor_as_image,
     tensor_to_pil_numpy,
@@ -47,7 +47,7 @@ def display_original_and_adversarial_image_grid(
     for path, data_set_name in zip(paths, data_set_names):
         orig_images, orig_labels = torch.load(os.path.join(path, "training_orig.pt"))
         adv_images, adv_labels = torch.load(os.path.join(path, "training_adv.pt"))
-        mapping = data_set_mappings[data_set_name]
+        mapping = DATA_SET_MAPPING[data_set_name]
 
         display_image_grid(
             orig_images,

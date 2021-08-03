@@ -4,7 +4,7 @@ import pandas as pd
 import torch
 
 from hiding_adversarial_attacks.manipulation.utils import get_similarities
-from hiding_adversarial_attacks.visualization.config import data_set_mappings
+from hiding_adversarial_attacks.visualization.config import DATA_SET_MAPPING
 from hiding_adversarial_attacks.visualization.explanation_similarities import (
     plot_similarities_histogram_with_boxplot,
 )
@@ -69,7 +69,7 @@ def create_sorted_similarities_df(
     sim_df["orig_label"] = sim_df["orig_label"].astype(int)
     sim_df["adv_label"] = sim_df["adv_label"].astype(int)
     sim_df["orig_label_name"] = sim_df["orig_label"].map(
-        data_set_mappings[data_set_name]
+        DATA_SET_MAPPING[data_set_name]
     )
     sorted_df_sim = sim_df.sort_values(by="orig_label")
     return sorted_df_sim
