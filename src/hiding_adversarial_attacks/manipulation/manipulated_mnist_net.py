@@ -228,10 +228,14 @@ class ManipulatedMNISTNet(pl.LightningModule):
         explanations_adv = torch.clone(_explanations_adv)
         if self.hparams["normalize_explanations"]:
             _explanations_orig = normalize_explanations(
-                _explanations_orig, self.hparams.explainer["name"]
+                _explanations_orig,
+                self.hparams.explainer["name"],
+                self.hparams["normalize_abs"],
             )
             _explanations_adv = normalize_explanations(
-                _explanations_adv, self.hparams.explainer["name"]
+                _explanations_adv,
+                self.hparams.explainer["name"],
+                self.hparams["normalize_abs"],
             )
 
         # Forward pass images through network
@@ -853,12 +857,20 @@ class ManipulatedMNISTNet(pl.LightningModule):
             )
 
         norm_orig_expl = (
-            normalize_explanations(orig_expl_maps, self.hparams.explainer["name"])
+            normalize_explanations(
+                orig_expl_maps,
+                self.hparams.explainer["name"],
+                self.hparams["normalize_abs"],
+            )
             if self.hparams["normalize_explanations"]
             else orig_expl_maps
         )
         norm_adv_expl = (
-            normalize_explanations(adv_expl_maps, self.hparams.explainer["name"])
+            normalize_explanations(
+                adv_expl_maps,
+                self.hparams.explainer["name"],
+                self.hparams["normalize_abs"],
+            )
             if self.hparams["normalize_explanations"]
             else adv_expl_maps
         )

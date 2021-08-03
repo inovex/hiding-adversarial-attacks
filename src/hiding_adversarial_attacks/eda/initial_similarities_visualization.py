@@ -50,6 +50,7 @@ def get_similarity_tensors(data_path):
         train_label_adv,
         test_similarities_pcc,
         test_similarities_mse,
+        test_similarities_ssim,
         test_label_orig,
         test_label_adv,
     )
