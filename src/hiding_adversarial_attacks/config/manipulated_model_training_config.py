@@ -133,7 +133,7 @@ class EarlyStoppingConfig:
         "early_stopping_callback.CustomEarlyStopping"
     )
     monitor: str = "val_exp_sim"
-    min_delta: float = 0.005
+    min_delta: float = 0.0
     patience: int = 5
     verbose: bool = False
     mode: str = "min"
@@ -224,8 +224,10 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     gradient_clip_val: Optional[float] = None
     weight_decay: float = 0.0
     normalize_explanations: bool = False
+    normalize_abs: bool = False
     precision: int = 32
     seed_everything: bool = False
+    freeze: bool = False
 
 
 cs = ConfigStore.instance()

@@ -129,9 +129,11 @@ def suggest_hyperparameters(config, trial):
     # -> it makes no sense to prioritize the one over the other
     loss_weight_orig_ce = 1
     loss_weight_adv_ce = 1
-    batch_size = trial.suggest_categorical(
-        "batch_size", config.optuna.search_space["batch_size"]
-    )
+    batch_size = config.batch_size
+    if "batch_size" in config.optuna.search_space:
+        batch_size = trial.suggest_categorical(
+            "batch_size", config.optuna.search_space["batch_size"]
+        )
     weight_decay = config.weight_decay
     if "weight_decay" in config.optuna.search_space:
         weight_decay = trial.suggest_categorical(
@@ -231,6 +233,12 @@ def run_training(
     model.set_hydra_logger(logger)
     model.set_hydra_logger(logger)
     model.to(device)
+
+    if config.freeze:
+        for name, param in model.named_parameters():
+            if config.explainer["layer_name"] in name:
+                break
+            param.requires_grad = False
 
     if config.convert_to_softplus:
         convert_relu_to_softplus(
