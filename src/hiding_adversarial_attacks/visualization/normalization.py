@@ -16,18 +16,22 @@ def normalize_to_sum_to_one(x: torch.Tensor):
     return softmax_x
 
 
-def normalize_explanations(explanations: torch.Tensor, explainer_name: str):
+def normalize_explanations(
+    explanations: torch.Tensor, explainer_name: str, normalize_abs: bool = False
+):
     normalized_explanations = explanations
     # DeepLIFT
-    if explainer_name == ExplainerNames.DEEP_LIFT:
-        heatmap = torch.sum(torch.abs(explanations), dim=1)
-        normalized_explanations = (heatmap / torch.sum(heatmap)).unsqueeze(1)
+    if normalize_abs:
+        abs_explanations = torch.abs(explanations)
+        sum_abs_exp = torch.sum(abs_explanations, dim=(2, 3))
+        normalized_explanations = abs_explanations / sum_abs_exp.view(-1, 1, 1, 1)
 
     # Grad-CAM & Input x Gradient
     elif explainer_name in [
         ExplainerNames.GRAD_CAM,
         ExplainerNames.INPUT_X_GRADIENT,
         ExplainerNames.INTEGRATED_GRADIENTS,
+        ExplainerNames.GUIDED_BACKPROP,
     ]:
         # --- 0
         _explanations = explanations / torch.abs(
