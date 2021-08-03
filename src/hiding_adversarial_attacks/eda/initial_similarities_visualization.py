@@ -35,12 +35,17 @@ def get_similarity_tensors(data_path):
         test_label_adv,
     ) = load_explanations(data_path, test=True)
     _, train_similarities_mse = get_similarities("MSE", train_expl_orig, train_expl_adv)
-    _, test_similarities_mse = get_similarities("MSE", test_expl_orig, test_expl_adv)
+    _, train_similarities_ssim = get_similarities(
+        "SSIM", train_expl_orig, train_expl_adv
+    )
     _, train_similarities_pcc = get_similarities("PCC", train_expl_orig, train_expl_adv)
+    _, test_similarities_mse = get_similarities("MSE", test_expl_orig, test_expl_adv)
+    _, test_similarities_ssim = get_similarities("SSIM", test_expl_orig, test_expl_adv)
     _, test_similarities_pcc = get_similarities("PCC", test_expl_orig, test_expl_adv)
     return (
         train_similarities_pcc,
         train_similarities_mse,
+        train_similarities_ssim,
         train_label_orig,
         train_label_adv,
         test_similarities_pcc,
@@ -53,6 +58,7 @@ def get_similarity_tensors(data_path):
 def create_sorted_similarities_df(
     similarities_mse,
     similarities_pcc,
+    similarities_ssim,
     label_orig,
     label_adv,
     data_set_name,
@@ -61,10 +67,11 @@ def create_sorted_similarities_df(
         [
             similarities_mse.numpy(),
             similarities_pcc.numpy(),
+            similarities_ssim.numpy(),
             label_orig.numpy(),
             label_adv.numpy(),
         ],
-        index=["mse_sim", "pcc_sim", "orig_label", "adv_label"],
+        index=["mse_sim", "pcc_sim", "ssim_sim", "orig_label", "adv_label"],
     ).T
     sim_df["orig_label"] = sim_df["orig_label"].astype(int)
     sim_df["adv_label"] = sim_df["adv_label"].astype(int)
@@ -84,10 +91,12 @@ def plot_initial_similarities(
     (
         train_similarities_pcc,
         train_similarities_mse,
+        train_similarities_ssim,
         train_label_orig,
         train_label_adv,
         test_similarities_pcc,
         test_similarities_mse,
+        test_similarities_ssim,
         test_label_orig,
         test_label_adv,
     ) = get_similarity_tensors(data_path)
@@ -95,6 +104,7 @@ def plot_initial_similarities(
     train_sim_df = create_sorted_similarities_df(
         train_similarities_mse,
         train_similarities_pcc,
+        train_similarities_ssim,
         train_label_orig,
         train_label_adv,
         data_set_name,
@@ -102,6 +112,7 @@ def plot_initial_similarities(
     test_sim_df = create_sorted_similarities_df(
         test_similarities_mse,
         test_similarities_pcc,
+        test_similarities_ssim,
         test_label_orig,
         test_label_adv,
         data_set_name,
@@ -145,6 +156,9 @@ def plot_initial_similarities(
     if output_path is not None:
         os.makedirs(output_path, exist_ok=True)
         # Save stats as csv
+        train_sim_df.to_csv(os.path.join(output_path, "train_similarities.csv"))
+        test_sim_df.to_csv(os.path.join(output_path, "test_similarities.csv"))
+
         train_stats = (
             train_sim_df[["mse_sim", "pcc_sim", "orig_label_name"]]
             .groupby("orig_label_name")
