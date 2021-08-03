@@ -1,3 +1,4 @@
+import math
 import os
 from functools import partial
 
@@ -44,6 +45,7 @@ from hiding_adversarial_attacks.visualization.explanations import (
     visualize_single_explanation,
 )
 from hiding_adversarial_attacks.visualization.helpers import tensor_to_pil_numpy
+from hiding_adversarial_attacks.visualization.normalization import normalize_to_range
 
 
 def load_explanations(config, device: torch.device, stage: str = "training"):
@@ -240,8 +242,23 @@ def get_similarities(similarity_loss_name, orig_explanations, adv_explanations):
             similarity_loss,
             reduction="none",
         )
-        similarities = batched_sim_loss(orig_explanations, adv_explanations)
-        similarities = similarities.mean(dim=(1, 2, 3))
+        orig_explanations = normalize_to_range(orig_explanations, 0, 1)
+        adv_explanations = normalize_to_range(adv_explanations, 0, 1)
+        if len(orig_explanations) > 40000:
+            similarities = torch.tensor([], device=orig_explanations.device)
+            orig_expl = torch.split(
+                orig_explanations, math.ceil(len(orig_explanations) / 2), dim=0
+            )
+            adv_expl = torch.split(
+                adv_explanations, math.ceil(len(adv_explanations) / 2), dim=0
+            )
+            for orig_exp, adv_exp in zip(orig_expl, adv_expl):
+                sim = batched_sim_loss(orig_exp, adv_exp)
+                sim = sim.mean(dim=(1, 2, 3))
+                similarities = torch.cat((similarities, sim), dim=0)
+        else:
+            similarities = batched_sim_loss(orig_explanations, adv_explanations)
+            similarities = similarities.mean(dim=(1, 2, 3))
     if similarity_loss_name == SimilarityLossNames.PCC:
         similarity_loss = custom_pearson_corrcoef  # batched version of PCC in [-1, 1]
         batched_sim_loss = partial(similarity_loss)
