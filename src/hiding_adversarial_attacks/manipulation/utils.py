@@ -5,8 +5,9 @@ from functools import partial
 import pandas as pd
 import torch
 from matplotlib import pyplot as plt
+from piqa import SSIM
 from torch._vmap_internals import vmap
-from torchmetrics.functional import mean_squared_error, ssim
+from torchmetrics.functional import mean_squared_error
 
 from hiding_adversarial_attacks.classifiers.cifar_net import CifarNet
 from hiding_adversarial_attacks.classifiers.fashion_mnist_net import FashionMNISTNet
@@ -243,28 +244,28 @@ def get_similarities(similarity_loss_name, orig_explanations, adv_explanations):
         similarities = batched_sim_loss(orig_explanations, adv_explanations)
         reverse = True
     if similarity_loss_name == SimilarityLossNames.SSIM:
-        similarity_loss = ssim
-        batched_sim_loss = partial(
-            similarity_loss,
-            reduction="none",
+        batched_sim_loss = SSIM(
+            window_size=5, sigma=0.3, reduction="none", n_channels=1
         )
+        if orig_explanations.is_cuda:
+            batched_sim_loss = batched_sim_loss.cuda()
         orig_explanations = normalize_to_range(orig_explanations, 0, 1)
         adv_explanations = normalize_to_range(adv_explanations, 0, 1)
-        if len(orig_explanations) > 40000:
+        if len(orig_explanations) > 10000:
             similarities = torch.tensor([], device=orig_explanations.device)
             orig_expl = torch.split(
-                orig_explanations, math.ceil(len(orig_explanations) / 2), dim=0
+                orig_explanations, math.ceil(len(orig_explanations) / 10), dim=0
             )
             adv_expl = torch.split(
-                adv_explanations, math.ceil(len(adv_explanations) / 2), dim=0
+                adv_explanations, math.ceil(len(adv_explanations) / 10), dim=0
             )
             for orig_exp, adv_exp in zip(orig_expl, adv_expl):
                 sim = batched_sim_loss(orig_exp, adv_exp)
-                sim = sim.mean(dim=(1, 2, 3))
+                # sim = sim.mean(dim=(1, 2, 3))
                 similarities = torch.cat((similarities, sim), dim=0)
         else:
             similarities = batched_sim_loss(orig_explanations, adv_explanations)
-            similarities = similarities.mean(dim=(1, 2, 3))
+            similarities = similarities.mean()
     if similarity_loss_name == SimilarityLossNames.PCC:
         similarity_loss = custom_pearson_corrcoef  # batched version of PCC in [-1, 1]
         batched_sim_loss = partial(similarity_loss)

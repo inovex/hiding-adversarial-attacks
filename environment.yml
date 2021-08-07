@@ -46,4 +46,5 @@ dependencies:
   - pip:
      - -e .  # install git checkout of hiding_adversarial_attacks in editable mode
      - lightning-bolts
+     - piqa
      # add here only pip-packages that are not available in conda/conda-forge! E.g.:

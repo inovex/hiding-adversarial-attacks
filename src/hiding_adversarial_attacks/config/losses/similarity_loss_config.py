@@ -15,7 +15,7 @@ class SimilarityLossNames:
     SSIM: str = "SSIM"
 
 
-pssim = partial(ssim, data_range=1)
+pssim = partial(ssim, kernel_size=(5, 5), sigma=(0.3, 0.3), data_range=1)
 
 SimilarityLossMapping = {
     SimilarityLossNames.MSE: mean_squared_error,
