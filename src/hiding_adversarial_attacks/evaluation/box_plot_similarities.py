@@ -7,35 +7,21 @@ from matplotlib import pyplot as plt
 
 from hiding_adversarial_attacks.config.data_sets.data_set_config import DataSetNames
 from hiding_adversarial_attacks.config.explainers.explainer_config import ExplainerNames
+from hiding_adversarial_attacks.evaluation.config import (
+    COLOR_PALETTES,
+    SIM_Y_LIMITS,
+    SIMILARITIES_COLS,
+    Y_LABELS,
+)
+from hiding_adversarial_attacks.evaluation.utils import (
+    load_post_manipulation_test_similarities,
+    load_pre_manipulation_test_similarities,
+)
 from hiding_adversarial_attacks.visualization.config import (
     DATA_SET_MAPPING,
     DATA_SET_PLOT_NAMES,
     EXPLAINER_PLOT_NAMES,
-    PCC_COLOR_PALETTE,
-    SSIM_COLOR_PALETTE,
 )
-
-SIMILARITIES_FILE = "test_similarities.csv"
-SIMILARITIES_COLS = ["pcc_sim", "mse_sim", "ssim_sim"]
-Y_LABELS = ["PCC", "MSE", "SSIM"]
-COLOR_PALETTES = [PCC_COLOR_PALETTE, "Oranges", SSIM_COLOR_PALETTE]
-SIM_Y_LIMITS = [(-1.1, 1.1), None, (-0.1, 1.1)]
-
-
-def load_pre_manipulation_test_similarities(data_set_path):
-    sim_df = pd.read_csv(os.path.join(data_set_path, SIMILARITIES_FILE), index_col=0)
-    return sim_df
-
-
-def load_post_manipulation_test_similarities(runs_path, run_ids):
-    df = None
-    for run_id in run_ids:
-        run_df = pd.read_csv(
-            os.path.join(runs_path, f"HAA-{run_id}", SIMILARITIES_FILE),
-            index_col=0,
-        )
-        df = pd.concat([df, run_df])
-    return df
 
 
 def get_merged_sim_df(data_set_path, runs_path, run_ids, class_id):
@@ -110,15 +96,27 @@ def plot_pre_manipulation_similarities(data_set_path, data_set_name, explainer_n
     )
 
 
-def plot_boxplot_similarities(
+def plot_pre_and_post_manipulation_boxplot_similarities(
     data_set_path,
     runs_path,
     data_set_name,
+    explainer_name,
     top_run_ids,
     bottom_run_ids,
     top_class_id,
     bottom_class_id,
 ):
+    params = {
+        "legend.fontsize": "large",
+        "figure.figsize": (16, 8),
+        "figure.titlesize": "x-large",
+        "axes.labelsize": "x-large",
+        "axes.titlesize": "x-large",
+        "xtick.labelsize": "large",
+        "ytick.labelsize": "large",
+    }
+    pylab.rcParams.update(params)
+
     top_merged = get_merged_sim_df(data_set_path, runs_path, top_run_ids, top_class_id)
     bottom_merged = get_merged_sim_df(
         data_set_path, runs_path, bottom_run_ids, bottom_class_id
@@ -126,12 +124,16 @@ def plot_boxplot_similarities(
 
     top_class_name = DATA_SET_MAPPING[data_set_name][top_class_id]
     bottom_class_name = DATA_SET_MAPPING[data_set_name][bottom_class_id]
+    data_set_plot_name = DATA_SET_PLOT_NAMES[data_set_name]
+    explainer_plot_name = EXPLAINER_PLOT_NAMES[explainer_name]
 
     print("")
     x_ticklabels = ["pre-manipulation", "post-manipulation"]
 
     fig, axes = plt.subplots(3, 2, figsize=(8, 8), sharex=True)
-    for i, (col, ax, y_label) in enumerate(zip(SIMILARITIES_COLS, axes, Y_LABELS)):
+    for i, (col, ax, y_label, palette) in enumerate(
+        zip(SIMILARITIES_COLS, axes, Y_LABELS, COLOR_PALETTES)
+    ):
         if i == 0:
             ax[0].set_title(f"Top class: {top_class_name}")
             ax[1].set_title(f"Bottom class: {bottom_class_name}")
@@ -142,7 +144,7 @@ def plot_boxplot_similarities(
         sns.boxplot(
             data=top_merged[[f"{col}_pre", f"{col}_post"]],
             ax=ax[0],
-            palette="PuRd",
+            palette=palette,
             showfliers=False,
             # showmeans=True,
             meanprops={
@@ -154,7 +156,7 @@ def plot_boxplot_similarities(
         sns.boxplot(
             data=bottom_merged[[f"{col}_pre", f"{col}_post"]],
             ax=ax[1],
-            palette="PuRd",
+            palette=palette,
             showfliers=False,
             # showmeans=True,
             meanprops={
@@ -165,8 +167,19 @@ def plot_boxplot_similarities(
         )
         ax[0].set_xticklabels(x_ticklabels)
         ax[0].set_ylabel(y_label)
+    fig.suptitle(
+        f"{data_set_plot_name}: Comparison of pre- and post-manipulation"
+        f" \n {explainer_plot_name} explanation similarities"
+    )
     fig.tight_layout()
     plt.show()
+    fig.savefig(
+        os.path.join(
+            data_set_path,
+            f"{data_set_name}_{explainer_name}_top_and_bottom_similarities.png",
+        ),
+        transparent=True,
+    )
 
 
 def plot_fashion_mnist_pre_manipulation_similarity_boxplots():
@@ -193,32 +206,59 @@ def plot_fashion_mnist_pre_manipulation_similarity_boxplots():
     )
 
 
-if __name__ == "__main__":
+def plot_cifar10_pre_manipulation_similarity_boxplots():
+    # Grad-CAM
+    grad_cam_path = (
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+        "adversarial/data-set=CIFAR10--attack=DeepFool--"
+        "eps=0.1--cp-run=resnet18/exp=GradCAM--l=model.layer2.1.conv2--ra=False"
+    )
+    plot_pre_manipulation_similarities(
+        grad_cam_path, DataSetNames.CIFAR10, ExplainerNames.GRAD_CAM
+    )
+
+    # Guided Backprop
+    guided_backprop_path = (
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
+        "adversarial/data-set=CIFAR10--attack=DeepFool--"
+        "eps=0.1--cp-run=resnet18/exp=GuidedBackprop"
+    )
+    plot_pre_manipulation_similarities(
+        guided_backprop_path,
+        DataSetNames.CIFAR10,
+        ExplainerNames.GUIDED_BACKPROP,
+    )
+
+
+def plot_fashion_mnist_grad_cam_pre_and_post_manipulation_boxplots():
     runs_path = (
         "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/logs/"
         "manipulate_model/AdversarialFashionMNISTWithExplanations"
     )
-    bottom_run_ids = range(4507, 4508)
+    # Class: Coat
     bottom_class_id = 4
-    top_run_ids = range(4493, 4497)
+    bottom_run_ids = range(4503, 4508)
+    # Class: Sandal
     top_class_id = 5
+    top_run_ids = range(4493, 4497)
     path = (
         "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
         "preprocessed/adversarial/data-set=FashionMNIST--attack=DeepFool--eps="
         "0.105--cp-run=HAA-1728/exp=GradCAM--l=conv2--ra=False"
     )
-    # plot_boxplot_similarities(
-    #     path,
-    #     runs_path,
-    #     data_set_name,
-    #     top_run_ids,
-    #     bottom_run_ids,
-    #     top_class_id,
-    #     bottom_class_id,
-    # )
+    plot_pre_and_post_manipulation_boxplot_similarities(
+        path,
+        runs_path,
+        DataSetNames.FASHION_MNIST,
+        ExplainerNames.GRAD_CAM,
+        top_run_ids,
+        bottom_run_ids,
+        top_class_id,
+        bottom_class_id,
+    )
 
+
+if __name__ == "__main__":
     plot_fashion_mnist_pre_manipulation_similarity_boxplots()
+    # plot_cifar10_pre_manipulation_similarity_boxplots()
     # load_pre_manipulation_test_similarities(path)
-
-    # range(4493, 4497)
-# /home/steffi/dev/master_thesis/hiding_adversarial_attacks/logs/manipulate_model/AdversarialFashionMNISTWithExplanations/HAA-4503
