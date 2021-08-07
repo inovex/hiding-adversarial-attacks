@@ -57,7 +57,7 @@ from hiding_adversarial_attacks.manipulation.utils import (
     get_top_and_bottom_k_indices,
 )
 from hiding_adversarial_attacks.visualization.adversarial_obfuscation_rate import (
-    plot_aors,
+    plot_and_save_aors,
 )
 from hiding_adversarial_attacks.visualization.explanation_similarities import (
     visualize_explanation_similarities,
@@ -402,7 +402,7 @@ def test(
     visualize_top_bottom_k(config, device, model)
 
     # Visualize and save Adversarial Obfuscation Rate (AOR) plot
-    plot_aors(config.log_path)
+    plot_and_save_aors(config.log_path)
 
     visualize_explanation_similarities(
         model,
