@@ -148,12 +148,22 @@ def suggest_hyperparameters(config, trial):
             ce_class_weight_options["high"],
             step=ce_class_weight_options["step"],
         )
+    steps_lr = config.steps_lr
+    if "steps_lr" in config.optuna.search_space:
+        steps_lr = trial.suggest_categorical(
+            "steps_lr", config.optuna.search_space["steps_lr"]
+        )
+    gamma = config.gamma
+    if "gamma" in config.optuna.search_space:
+        gamma = trial.suggest_categorical("gamma", config.optuna.search_space["gamma"])
 
     return (
         loss_weight_orig_ce,
         loss_weight_adv_ce,
         loss_weight_similarity,
         lr,
+        steps_lr,
+        gamma,
         batch_size,
         weight_decay,
         ce_class_weight,
@@ -180,6 +190,8 @@ def train(
             config.loss_weight_adv_ce,
             config.loss_weight_similarity,
             config.lr,
+            config.steps_lr,
+            config.gamma,
             config.batch_size,
             config.weight_decay,
             config.ce_class_weight,
