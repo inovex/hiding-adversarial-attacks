@@ -182,5 +182,5 @@ class BaseDataModule(pl.LightningDataModule):
         return DataLoader(
             self.test,
             batch_size=self._batch_size,
-            num_workers=4,
+            num_workers=0,
         )

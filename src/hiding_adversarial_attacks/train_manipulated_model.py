@@ -351,7 +351,7 @@ def test(
     test_loader = data_module.test_dataloader()
     train_loader = data_module.train_dataloader()
 
-    trainer = Trainer(gpus=config.gpus, logger=neptune_logger)
+    trainer = Trainer(gpus=config.gpus, logger=neptune_logger, deterministic=True)
 
     # Pre-test: test model before adversarial manipulation
     model = get_manipulatable_model(config)
