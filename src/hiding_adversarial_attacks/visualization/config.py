@@ -1,8 +1,21 @@
 from hiding_adversarial_attacks.config.data_sets.data_set_config import DataSetNames
+from hiding_adversarial_attacks.config.explainers.explainer_config import ExplainerNames
 
 PCC_COLOR_PALETTE = "PuRd"
 MSE_COLOR_PALETTE = "afmhot_r"
+SSIM_COLOR_PALETTE = "BuGn"
 CONFUSION_MATRIX_COLOR_PALETTE = "PuRd"
+
+DATA_SET_PLOT_NAMES = {
+    DataSetNames.FASHION_MNIST: "Fashion-MNIST",
+    DataSetNames.CIFAR10: "CIFAR-10",
+}
+
+EXPLAINER_PLOT_NAMES = {
+    ExplainerNames.GRAD_CAM: "Grad-CAM",
+    ExplainerNames.GUIDED_BACKPROP: "Guided Backprop",
+}
+
 DATA_SET_MAPPING = {
     DataSetNames.FASHION_MNIST: {
         0: "T-shirt/top",
