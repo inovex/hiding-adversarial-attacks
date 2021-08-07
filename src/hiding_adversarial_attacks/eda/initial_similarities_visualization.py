@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import torch
 
+from hiding_adversarial_attacks.eda.utils import save_similarity_stats_csv
 from hiding_adversarial_attacks.manipulation.utils import get_similarities
 from hiding_adversarial_attacks.visualization.config import DATA_SET_MAPPING
 from hiding_adversarial_attacks.visualization.explanation_similarities import (
@@ -160,18 +161,8 @@ def plot_initial_similarities(
         train_sim_df.to_csv(os.path.join(output_path, "train_similarities.csv"))
         test_sim_df.to_csv(os.path.join(output_path, "test_similarities.csv"))
 
-        train_stats = (
-            train_sim_df[["mse_sim", "pcc_sim", "orig_label_name"]]
-            .groupby("orig_label_name")
-            .agg(["mean", "std", "median"])
-        )
-        train_stats.to_csv(os.path.join(output_path, "train_sim_stats.csv"))
-        test_stats = (
-            test_sim_df[["mse_sim", "pcc_sim", "orig_label_name"]]
-            .groupby("orig_label_name")
-            .agg(["mean", "std", "median"])
-        )
-        test_stats.to_csv(os.path.join(output_path, "test_sim_stats.csv"))
+        save_similarity_stats_csv(output_path, train_sim_df, stage="train")
+        save_similarity_stats_csv(output_path, test_sim_df, stage="test")
 
         train_mse.savefig(
             os.path.join(
