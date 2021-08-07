@@ -2,7 +2,7 @@ from typing import Tuple
 
 import pytorch_lightning as pl
 import torch
-from captum.attr import LayerAttribution, LayerGradCam
+from captum.attr import LayerGradCam
 
 from hiding_adversarial_attacks.classifiers.utils import get_conv2d_layer_by_name
 from hiding_adversarial_attacks.explainers.base import BaseExplainer
@@ -30,8 +30,4 @@ class LayerGradCamExplainer(BaseExplainer):
             relu_attributions=self._relu_attributions,
             **kwargs,
         )
-        # attribution needs to be interpolated to match the inout size
-        interpolated_attribution = LayerAttribution.interpolate(
-            attribution, self._image_shape, interpolate_mode="bicubic"
-        )
-        return interpolated_attribution
+        return attribution

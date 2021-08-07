@@ -3,10 +3,22 @@ from typing import List, Tuple, Union
 
 import numpy as np
 import torch
+from captum.attr import LayerAttribution
 from captum.attr._utils import visualization as viz
 from matplotlib.pyplot import axis, figure
 
 from hiding_adversarial_attacks.visualization.helpers import tensor_to_pil_numpy
+
+
+def interpolate_explanations(
+    explanations: torch.Tensor,
+    image_shape: Tuple[int, int],
+    interpolate_mode: str = "bicubic",
+):
+    interpolated_explanation = LayerAttribution.interpolate(
+        explanations, image_shape, interpolate_mode=interpolate_mode
+    )
+    return interpolated_explanation
 
 
 def visualize_explanations(
@@ -16,9 +28,11 @@ def visualize_explanations(
     plt_fig_axis: Union[None, Tuple[figure, axis]] = None,
     display_figure: bool = False,
 ):
+    image_shape = (images.shape[-2], images.shape[-1])
+    interpolated_explanation = interpolate_explanations(explanations, image_shape)
 
     imgs = tensor_to_pil_numpy(images)
-    expls = tensor_to_pil_numpy(explanations)
+    expls = tensor_to_pil_numpy(interpolated_explanation)
     figures = []
 
     for image, explanation, title in zip(imgs, expls, titles):

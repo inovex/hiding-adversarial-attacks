@@ -51,6 +51,7 @@ from hiding_adversarial_attacks.visualization.data_set_images import (
     visualize_difference_image_np,
 )
 from hiding_adversarial_attacks.visualization.explanations import (
+    interpolate_explanations,
     visualize_single_explanation,
 )
 from hiding_adversarial_attacks.visualization.helpers import tensor_to_pil_numpy
@@ -284,6 +285,10 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 ),
                 dim=0,
             )
+            if original_double.shape != predicted.shape:
+                predicted = interpolate_explanations(
+                    predicted, original_double.shape[2:]
+                )
             similarity = self.calculate_similarity_loss(original_double, predicted)
             # adversarial cross entropy
             _pred_labels_adv_incl = torch.index_select(
@@ -883,8 +888,13 @@ class ManipulatedMNISTNet(pl.LightningModule):
             .cpu()
         )
 
-        orig_expl = tensor_to_pil_numpy(orig_expl_maps)
-        adv_expl = tensor_to_pil_numpy(adv_expl_maps)
+        image_shape = (original_images.shape[-2], original_images.shape[-1])
+        orig_expl = tensor_to_pil_numpy(
+            interpolate_explanations(orig_expl_maps, image_shape)
+        )
+        adv_expl = tensor_to_pil_numpy(
+            interpolate_explanations(adv_expl_maps, image_shape)
+        )
         orig_images = tensor_to_pil_numpy(original_images[indeces])
         adv_images = tensor_to_pil_numpy(adversarial_images[indeces])
 

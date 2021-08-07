@@ -12,6 +12,7 @@ from hiding_adversarial_attacks.eda.initial_similarities_visualization import (
 )
 from hiding_adversarial_attacks.visualization.config import DATA_SET_MAPPING
 from hiding_adversarial_attacks.visualization.explanations import (
+    interpolate_explanations,
     visualize_single_explanation,
 )
 from hiding_adversarial_attacks.visualization.helpers import tensor_to_pil_numpy
@@ -96,17 +97,20 @@ def plot_initial_explanations(
             )
         ):
             ax1 = axes[idx][cols[0]]
+            image_shape = (orig_img.shape[-2], orig_img.shape[-1])
+            orig_expl_vis = interpolate_explanations(orig_expl, image_shape)
             visualize_single_explanation(
                 orig_img,
-                orig_expl,
+                orig_expl_vis,
                 f"Original label:\n{mapping[int(orig_label)]}",
                 (fig, ax1),
             )
 
             ax2 = axes[idx][cols[1]]
+            adv_expl_vis = interpolate_explanations(adv_expl, image_shape)
             visualize_single_explanation(
                 adv_img,
-                adv_expl,
+                adv_expl_vis,
                 f"Adversarial label:\n{mapping[int(adv_label)]}",
                 (fig, ax2),
             )

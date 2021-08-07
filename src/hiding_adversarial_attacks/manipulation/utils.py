@@ -42,6 +42,7 @@ from hiding_adversarial_attacks.visualization.data_set_images import (
     visualize_difference_image_np,
 )
 from hiding_adversarial_attacks.visualization.explanations import (
+    interpolate_explanations,
     visualize_single_explanation,
 )
 from hiding_adversarial_attacks.visualization.helpers import tensor_to_pil_numpy
@@ -158,10 +159,15 @@ def get_metricized_top_and_bottom_explanations(
     df_similarities.hist(bins=20, log=True)
     plt.show()
 
+    image_shape = training_orig_images.shape[-2], training_orig_images.shape[-1]
     train_img_top = tensor_to_pil_numpy(training_orig_images[top_bottom_indices])
-    train_expl_top = tensor_to_pil_numpy(training_orig_expl[top_bottom_indices])
+    train_expl_top = tensor_to_pil_numpy(
+        interpolate_explanations(training_orig_expl[top_bottom_indices], image_shape)
+    )
     train_adv_top = tensor_to_pil_numpy(training_adv_images[top_bottom_indices])
-    train_adv_expl_top = tensor_to_pil_numpy(training_adv_expl[top_bottom_indices])
+    train_adv_expl_top = tensor_to_pil_numpy(
+        interpolate_explanations(training_adv_expl[top_bottom_indices], image_shape)
+    )
 
     # Visualize explanations
     visualize_single_explanation(
