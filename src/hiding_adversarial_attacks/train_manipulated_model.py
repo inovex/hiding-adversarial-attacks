@@ -273,7 +273,23 @@ def run_training(
         # amp_backend='apex',
         max_epochs=config.max_epochs,
         gradient_clip_val=config.gradient_clip_val,
+        auto_lr_find=config.auto_lr_find,
     )
+
+    if config.auto_lr_find:
+        trainer.tune(model, train_loader, validation_loader)
+
+        # Run learning rate finder
+        lr_finder = trainer.tuner.lr_find(
+            model, train_loader, validation_loader, min_lr=1e-11, max_lr=1e-6
+        )
+
+        # Results can be found in
+        print(f"LR Finder results: \n: {lr_finder.results}")
+
+        # Plot with
+        fig = lr_finder.plot(suggest=True)
+        fig.show()
 
     trainer.fit(model, train_loader, validation_loader)
 
@@ -483,7 +499,7 @@ def run_optuna_study(
 @hydra.main(config_name="manipulated_model_training_config")
 def run(config: ManipulatedModelTrainingConfig) -> None:
     # torch.autograd.set_detect_anomaly(True)
-    if config.seed_everything:
+    if config.seed_everything or config.test:
         seed_everything(config.random_seed)
 
     config_validator = ConfigValidator()

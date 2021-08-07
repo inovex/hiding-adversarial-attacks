@@ -228,6 +228,7 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     precision: int = 32
     seed_everything: bool = False
     freeze: bool = False
+    auto_lr_find: bool = False
 
 
 cs = ConfigStore.instance()
