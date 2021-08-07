@@ -904,9 +904,9 @@ class ManipulatedMNISTNet(pl.LightningModule):
         ):
             if self.zero_explanation_count >= 3:
                 self.logger.experiment.append_tag("pruned")
-                raise TrialPruned(
-                    "Trial pruned due to too many explanation maps becoming zero."
-                )
+                message = "Trial pruned due to too many explanation maps becoming zero."
+                self.hydra_logger.warning(message)
+                raise TrialPruned(message)
 
             if np.count_nonzero(orig_expl[index]) == 0:
                 self.hydra_logger.warning(
