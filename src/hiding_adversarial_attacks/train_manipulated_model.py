@@ -1,6 +1,7 @@
 import glob
 import logging
 import os
+import re
 import shutil
 from functools import partial
 from pprint import pformat
@@ -47,6 +48,9 @@ from hiding_adversarial_attacks.data_modules.k_fold_cross_validation import (
     StratifiedKFoldCVDataModule,
 )
 from hiding_adversarial_attacks.data_modules.utils import get_data_module
+from hiding_adversarial_attacks.evaluation.box_plot_similarities import (
+    plot_pre_and_post_manipulation_boxplot_similarities,
+)
 from hiding_adversarial_attacks.manipulation.metricized_explanations import (
     MetricizedTopAndBottomExplanations,
 )
@@ -57,9 +61,11 @@ from hiding_adversarial_attacks.manipulation.utils import (
     get_top_and_bottom_k_indices,
 )
 from hiding_adversarial_attacks.visualization.adversarial_obfuscation_rate import (
-    plot_and_save_aors,
+    plot_aors,
 )
+from hiding_adversarial_attacks.visualization.config import EXPLAINER_PLOT_NAMES
 from hiding_adversarial_attacks.visualization.explanation_similarities import (
+    data_set_mappings,
     visualize_explanation_similarities,
 )
 
@@ -377,27 +383,21 @@ def test(
     os.makedirs(config.log_path, exist_ok=True)
 
     test_loader = data_module.test_dataloader()
-    train_loader = data_module.train_dataloader()
+    # train_loader = data_module.train_dataloader()
 
     trainer = Trainer(gpus=config.gpus, logger=neptune_logger, deterministic=True)
 
-    # Pre-test: test model before adversarial manipulation
-    model = get_manipulatable_model(config)
-    model.override_hparams(config)
-    model.set_metricized_explanations(metricized_top_and_bottom_explanations)
-    if config.convert_to_softplus:
-        convert_relu_to_softplus(
-            model,
-            config,
-            beta=config.soft_plus_beta,
-            threshold=config.soft_plus_threshold,
-        )
-    model.to(device)
-    model.eval()
+    # Pre-manipulation: test model before adversarial manipulation
+    model = get_testable_model(
+        config,
+        device,
+        metricized_top_and_bottom_explanations,
+    )
 
-    test_results = trainer.test(model, test_loader)
-    logger.info(f"Pre-test results before manipulation: \n {pformat(test_results)}")
-    save_test_results_as_csv(config, test_results, prefix="pre-")
+    pre_test_results = trainer.test(model, test_loader)
+    logger.info("*******************")
+    logger.info(f"Pre-manipulation test results: \n {pformat(pre_test_results)}")
+    save_test_results_as_csv(config, pre_test_results, prefix="")
 
     # Rename files so that they are not overwritten by second model run
     types = ("image_log/*.png", "*.csv")  # the tuple of file types
@@ -408,8 +408,169 @@ def test(
         new_path = f"{os.path.dirname(file)}/pre-{os.path.basename(file)}"
         shutil.move(file, new_path)
 
-    # Test: test model after manipulation
-    model = get_manipulatable_model(config).load_from_checkpoint(config.checkpoint)
+    # Post-manipulation: test model(s) after manipulation
+    pattern = re.compile(r"(HAA-\d+)")
+    accumulated_test_results = pd.DataFrame()
+    accumulated_sim_df = pd.DataFrame()
+    for checkpoint in config.checkpoint:
+        run_id = pattern.findall(checkpoint)[0]
+        model = get_testable_model(
+            config,
+            device,
+            metricized_top_and_bottom_explanations,
+            checkpoint=checkpoint,
+        )
+
+        test_results = trainer.test(model, test_loader)
+        logger.info("*******************")
+        logger.info(
+            f"Post-manipulation test results for run ID '{run_id}': "
+            f"\n {pformat(test_results)}"
+        )
+        test_results[0]["index"] = run_id
+        accumulated_test_results = pd.concat(
+            [accumulated_test_results, pd.DataFrame(test_results)]
+        )
+
+        sorted_df_sim = get_similarities_df(config, model)
+
+        csv_path = os.path.join(config.log_path, f"{run_id}_test_similarities.csv")
+        sorted_df_sim.to_csv(csv_path)
+        accumulated_sim_df = pd.concat([accumulated_sim_df, sorted_df_sim])
+
+    accumulated_test_results = accumulated_test_results.set_index("index")
+
+    accumulated_test_results = accumulated_test_results.append(
+        accumulated_test_results.agg(["mean", "std"], axis="index")
+    )
+    test_results_path = os.path.join(config.log_path, "concat_post_test_results.csv")
+    accumulated_test_results.to_csv(test_results_path)
+    accumulated_sim_df.to_csv(
+        os.path.join(config.log_path, "concat_post_test_similarities.csv")
+    )
+    accumulated_sim_df.groupby("orig_label_name").agg(["mean", "std"]).to_csv(
+        os.path.join(config.log_path, "aggregated_post_test_similarities_per_class.csv")
+    )
+
+    explainer_name = EXPLAINER_PLOT_NAMES[config.explainer.name]
+    aor_df = pd.DataFrame(
+        [
+            pd.Series(pre_test_results).loc[0],
+            accumulated_test_results.loc["mean"],
+        ]
+    )
+    aor_df.index = ["pre", "post"]
+    fig1, fig2 = plot_aors(
+        aor_df,
+        titles=[
+            f"{explainer_name}: Pre- and post-manipulation"
+            f" AOR curves for all classes",
+            f"{explainer_name}: Pre- and post-manipulation "
+            f"AOR curves for classes '{config.included_classes}'",
+        ],
+    )
+    fig1.savefig(os.path.join(config.log_path, "mean_aor.png"), transparent=True)
+    fig2.savefig(os.path.join(config.log_path, "mean_aor_class.png"), transparent=True)
+
+    post_sim_df = accumulated_sim_df[
+        accumulated_sim_df["orig_label"] == config.included_classes
+    ]
+    pre_sim_df = pd.read_csv(os.path.join(config.data_path, "test_similarities.csv"))
+    pre_sim_df = pre_sim_df[pre_sim_df["orig_label"] == config.included_classes]
+    merged_df = pd.merge(
+        pre_sim_df,
+        post_sim_df,
+        on="orig_label",
+        suffixes=["_pre", "_post"],
+    )
+
+    boxplot_fig = plot_pre_and_post_manipulation_boxplot_similarities(
+        merged_df, explainer_name, config.included_classes
+    )
+    boxplot_fig.save(
+        os.path.join(config.data_path, "pre_and_post_boxplots.png"),
+        transparent=True,
+    )
+
+    # # Visualize top and bottom k explanations after manipulation
+    # visualize_top_bottom_k(config, device, model)
+    #
+    # # Visualize and save Adversarial Obfuscation Rate (AOR) plot
+    # plot_and_save_aors(config.log_path)
+    #
+    # visualize_explanation_similarities(
+    #     model,
+    #     train_loader,
+    #     config.data_set.name,
+    #     device,
+    #     stage="train",
+    # )
+    # visualize_explanation_similarities(
+    #     model,
+    #     test_loader,
+    #     config.data_set.name,
+    #     device,
+    #     stage="test",
+    # )
+
+    copy_run_outputs(
+        config.log_path,
+        os.getcwd(),
+        neptune_logger.name,
+        neptune_logger.version,
+    )
+
+
+def get_similarities_df(config, model):
+    _, similarities_mse = get_similarities(
+        "MSE", model.test_orig_explanations, model.test_adv_explanations
+    )
+    _, similarities_pcc = get_similarities(
+        "PCC", model.test_orig_explanations, model.test_adv_explanations
+    )
+    _, similarities_ssim = get_similarities(
+        "SSIM", model.test_orig_explanations, model.test_adv_explanations
+    )
+    df_sim = pd.DataFrame(
+        [
+            similarities_mse.cpu().detach().numpy(),
+            similarities_pcc.cpu().detach().numpy(),
+            similarities_ssim.cpu().detach().numpy(),
+            model.test_orig_labels.cpu().detach().numpy(),
+            model.test_orig_pred_labels.argmax(dim=1).cpu().detach().numpy(),
+            model.test_adv_labels.cpu().detach().numpy(),
+            model.test_adv_pred_labels.argmax(dim=1).cpu().detach().numpy(),
+        ],
+        index=[
+            "mse_sim",
+            "pcc_sim",
+            "ssim_sim",
+            "orig_label",
+            "orig_pred_label",
+            "adv_label",
+            "adv_pred_label",
+        ],
+    ).T
+    df_sim["orig_label"] = df_sim["orig_label"].astype(int)
+    df_sim["orig_pred_label"] = df_sim["orig_pred_label"].astype(int)
+    df_sim["adv_label"] = df_sim["adv_label"].astype(int)
+    df_sim["adv_pred_label"] = df_sim["adv_pred_label"].astype(int)
+    df_sim["orig_label_name"] = df_sim["orig_label"].map(
+        data_set_mappings[config.data_set.name]
+    )
+    sorted_df_sim = df_sim.sort_values(by="orig_label")
+    return sorted_df_sim
+
+
+def get_testable_model(
+    config,
+    device,
+    metricized_top_and_bottom_explanations,
+    checkpoint=None,
+):
+    model = get_manipulatable_model(config)
+    if checkpoint is not None:
+        model = model.load_from_checkpoint(checkpoint)
     model.override_hparams(config)
     model.set_metricized_explanations(metricized_top_and_bottom_explanations)
     if config.convert_to_softplus:
@@ -421,38 +582,7 @@ def test(
         )
     model.to(device)
     model.eval()
-
-    test_results = trainer.test(model, test_loader)
-    logger.info(f"Test results: \n {pformat(test_results)}")
-    save_test_results_as_csv(config, test_results, prefix="post-")
-
-    # Visualize top and bottom k explanations after manipulation
-    visualize_top_bottom_k(config, device, model)
-
-    # Visualize and save Adversarial Obfuscation Rate (AOR) plot
-    plot_and_save_aors(config.log_path)
-
-    visualize_explanation_similarities(
-        model,
-        train_loader,
-        config.data_set.name,
-        device,
-        stage="train",
-    )
-    visualize_explanation_similarities(
-        model,
-        test_loader,
-        config.data_set.name,
-        device,
-        stage="test",
-    )
-
-    copy_run_outputs(
-        config.log_path,
-        os.getcwd(),
-        neptune_logger.name,
-        neptune_logger.version,
-    )
+    return model
 
 
 def run_optuna_study(

@@ -261,11 +261,9 @@ def get_similarities(similarity_loss_name, orig_explanations, adv_explanations):
             )
             for orig_exp, adv_exp in zip(orig_expl, adv_expl):
                 sim = batched_sim_loss(orig_exp, adv_exp)
-                # sim = sim.mean(dim=(1, 2, 3))
                 similarities = torch.cat((similarities, sim), dim=0)
         else:
             similarities = batched_sim_loss(orig_explanations, adv_explanations)
-            similarities = similarities.mean()
     if similarity_loss_name == SimilarityLossNames.PCC:
         similarity_loss = custom_pearson_corrcoef  # batched version of PCC in [-1, 1]
         batched_sim_loss = partial(similarity_loss)

@@ -172,8 +172,10 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     data_path: str = MISSING
     # Path of explanations
     explanations_path: str = MISSING
-    # Path to weights of attacked classifier
+    # Path to weights of pre-trained initial classifier
     classifier_checkpoint: str = ""
+    # Path(s) to attacked classifier after adversarial fine-tuning
+    checkpoint: List = field(default_factory=lambda: [])
 
     # Config for saving checkpoints
     checkpoint_config: ManipulatedClassifierCheckpointConfig = (

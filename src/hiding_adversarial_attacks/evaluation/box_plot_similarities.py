@@ -97,6 +97,56 @@ def plot_pre_manipulation_similarities(data_set_path, data_set_name, explainer_n
 
 
 def plot_pre_and_post_manipulation_boxplot_similarities(
+    pre_and_post_dim_df,
+    explainer_name,
+    class_name,
+):
+    params = {
+        "legend.fontsize": "large",
+        "figure.figsize": (16, 8),
+        "figure.titlesize": "x-large",
+        "axes.labelsize": "x-large",
+        "axes.titlesize": "x-large",
+        "xtick.labelsize": "large",
+        "ytick.labelsize": "large",
+    }
+    pylab.rcParams.update(params)
+
+    x_ticklabels = ["pre-manipulation", "post-manipulation"]
+
+    fig, axes = plt.subplots(3, 1, figsize=(8, 8), sharex=True)
+    for i, (col, ax, y_label, palette) in enumerate(
+        zip(SIMILARITIES_COLS, axes, Y_LABELS, COLOR_PALETTES)
+    ):
+        if i == 0:
+            ax.set_title(f"Class: {class_name}")
+
+        if col == "mse_sim":
+            ax.set_yscale("log")
+        sns.boxplot(
+            data=pre_and_post_dim_df[[f"{col}_pre", f"{col}_post"]],
+            ax=ax,
+            palette=palette,
+            showfliers=False,
+            # showmeans=True,
+            meanprops={
+                "markerfacecolor": "#fea040",
+                "markeredgecolor": "black",
+                "markersize": "10",
+            },
+        )
+        ax.set_xticklabels(x_ticklabels)
+        ax.set_ylabel(y_label)
+    fig.suptitle(
+        f"Comparison of pre- and post-manipulation"
+        f" \n {explainer_name} explanation similarities"
+    )
+    fig.tight_layout()
+    plt.show()
+    return fig
+
+
+def plot_pre_and_post_manipulation_boxplot_similarities_multiclass(
     data_set_path,
     runs_path,
     data_set_name,
@@ -246,7 +296,35 @@ def plot_fashion_mnist_grad_cam_pre_and_post_manipulation_boxplots():
         "preprocessed/adversarial/data-set=FashionMNIST--attack=DeepFool--eps="
         "0.105--cp-run=HAA-1728/exp=GradCAM--l=conv2--ra=False"
     )
-    plot_pre_and_post_manipulation_boxplot_similarities(
+    plot_pre_and_post_manipulation_boxplot_similarities_multiclass(
+        path,
+        runs_path,
+        DataSetNames.FASHION_MNIST,
+        ExplainerNames.GRAD_CAM,
+        top_run_ids,
+        bottom_run_ids,
+        top_class_id,
+        bottom_class_id,
+    )
+
+
+def plot_fashion_mnist_guided_backprop_pre_and_post_manipulation_boxplots():
+    runs_path = (
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/logs/"
+        "manipulate_model/AdversarialFashionMNISTWithExplanations"
+    )
+    # Bottom class: Sandal
+    bottom_class_id = 5
+    bottom_run_ids = range(5213, 5218)
+    # Top class: Coat
+    top_class_id = 4
+    top_run_ids = range(1, 2)
+    path = (
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+        "preprocessed/adversarial/data-set=FashionMNIST--attack=DeepFool--eps="
+        "0.105--cp-run=HAA-1728/exp=GradCAM--l=conv2--ra=False"
+    )
+    plot_pre_and_post_manipulation_boxplot_similarities_multiclass(
         path,
         runs_path,
         DataSetNames.FASHION_MNIST,

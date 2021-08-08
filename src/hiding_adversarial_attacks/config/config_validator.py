@@ -80,5 +80,5 @@ class ConfigValidator:
                 config.classifier_checkpoint != ""
             ), "classifier_checkpoint is unset for training"
         else:
-            assert config.checkpoint != "", "checkpoint is unset for testing"
+            assert len(config.checkpoint) > 0, "checkpoint(s) are unset for testing"
         self._validate_explainer_matches_explanations_path(config)

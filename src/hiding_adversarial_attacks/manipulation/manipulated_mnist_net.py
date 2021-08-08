@@ -87,9 +87,11 @@ class ManipulatedMNISTNet(pl.LightningModule):
         self.test_orig_explanations = torch.tensor([]).to(self.device)
         self.test_orig_images = torch.tensor([]).to(self.device)
         self.test_orig_labels = torch.tensor([]).to(self.device)
+        self.test_orig_pred_labels = torch.tensor([]).to(self.device)
         self.test_adv_explanations = torch.tensor([]).to(self.device)
         self.test_adv_images = torch.tensor([]).to(self.device)
         self.test_adv_labels = torch.tensor([]).to(self.device)
+        self.test_adv_pred_labels = torch.tensor([]).to(self.device)
 
         # Explanation similarity loss
         self.similarity_loss = SimilarityLossMapping[hparams.similarity_loss.name]
@@ -421,9 +423,11 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 original_images,
                 original_explanations,
                 original_labels,
+                pred_labels_orig,
                 adversarial_images,
                 adversarial_explanations,
                 adversarial_labels,
+                pred_labels_adv,
             )
 
         # Save original and adversarial explanations locally
@@ -473,9 +477,11 @@ class ManipulatedMNISTNet(pl.LightningModule):
         original_images,
         original_explanation_maps,
         original_labels,
+        original_predicted_labels,
         adversarial_images,
         adversarial_explanation_maps,
         adversarial_labels,
+        adversarial_predicted_labels,
     ):
         self.test_orig_images = torch.cat(
             (
@@ -498,6 +504,13 @@ class ManipulatedMNISTNet(pl.LightningModule):
             ),
             dim=0,
         )
+        self.test_orig_pred_labels = torch.cat(
+            (
+                self.test_orig_pred_labels.to(self.device),
+                original_predicted_labels.detach().to(self.device),
+            ),
+            dim=0,
+        )
         self.test_adv_images = torch.cat(
             (
                 self.test_adv_images.to(self.device),
@@ -516,6 +529,13 @@ class ManipulatedMNISTNet(pl.LightningModule):
             (
                 self.test_adv_labels.to(self.device),
                 adversarial_labels.detach().to(self.device),
+            ),
+            dim=0,
+        )
+        self.test_adv_pred_labels = torch.cat(
+            (
+                self.test_adv_pred_labels.to(self.device),
+                adversarial_predicted_labels.detach().to(self.device),
             ),
             dim=0,
         )

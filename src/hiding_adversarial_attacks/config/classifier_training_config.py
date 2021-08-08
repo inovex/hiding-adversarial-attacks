@@ -64,7 +64,7 @@ class ClassifierTrainingConfig:
     classifier: ClassifierConfig = MISSING
 
     # Config for checkpoints
-    checkpoint: str = ""
+    checkpoint: List = field(default_factory=lambda: [])  # todo: update code
     checkpoint_config: ClassifierCheckpointConfig = ClassifierCheckpointConfig()
     resume_from_checkpoint: bool = False
 
