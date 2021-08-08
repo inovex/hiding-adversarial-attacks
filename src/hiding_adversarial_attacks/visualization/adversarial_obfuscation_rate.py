@@ -23,7 +23,7 @@ def plot_aors(test_results_df, titles=None):
     ]
     aor_df_class = aor_df_class.T
 
-    title1, title2 = titles if titles is not None else ""
+    title1, title2 = titles if titles is not None else ("", "")
     fig1 = _plot_aor(aor_df, title1)
     fig2 = _plot_aor(aor_df_class, title2)
     return fig1, fig2
