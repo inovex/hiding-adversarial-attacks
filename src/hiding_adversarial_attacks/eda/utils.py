@@ -13,7 +13,7 @@ def save_similarity_stats_csv(output_path, train_sim_df, stage="train"):
 
 
 def load_test_results_as_df(directory: str):
-    pre = pd.read_csv(os.path.join(directory, "pre-pre-test_results.csv"), index_col=0)
+    pre = pd.read_csv(os.path.join(directory, "pre-test_results.csv"), index_col=0)
     post = pd.read_csv(os.path.join(directory, "post-test_results.csv"), index_col=0)
     results_df = pre.append(post)
     results_df.index = ["pre", "post"]
