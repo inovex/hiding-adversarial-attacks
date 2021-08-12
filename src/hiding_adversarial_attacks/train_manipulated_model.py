@@ -186,7 +186,6 @@ def train(
     original_log_path: str,
     trial: optuna.trial.Trial = None,
 ) -> Tuple[float]:
-
     experiment_name = config.data_set.name
 
     # Hyperparameter suggestions by Optuna => override hyperparams in config
@@ -399,6 +398,13 @@ def test(
     logger.info(f"Pre-manipulation test results: \n {pformat(pre_test_results)}")
     save_test_results_as_csv(config, pre_test_results, prefix="")
 
+    pre_sorted_df_sim = get_similarities_df(config, model)
+    csv_path = os.path.join(config.log_path, "concat_pre_test_similarities.csv")
+    pre_sorted_df_sim.to_csv(csv_path)
+    pre_sorted_df_sim.groupby("orig_label_name").agg(["mean", "std", "median"]).to_csv(
+        os.path.join(config.log_path, "aggregated_pre_test_similarities_per_class.csv")
+    )
+
     # Rename files so that they are not overwritten by second model run
     types = ("image_log/*.png", "*.csv")  # the tuple of file types
     files_to_move = []
@@ -432,11 +438,11 @@ def test(
             [accumulated_test_results, pd.DataFrame(test_results)]
         )
 
-        sorted_df_sim = get_similarities_df(config, model)
+        post_sorted_df_sim = get_similarities_df(config, model)
 
         csv_path = os.path.join(config.log_path, f"{run_id}_test_similarities.csv")
-        sorted_df_sim.to_csv(csv_path)
-        accumulated_sim_df = pd.concat([accumulated_sim_df, sorted_df_sim])
+        post_sorted_df_sim.to_csv(csv_path)
+        accumulated_sim_df = pd.concat([accumulated_sim_df, post_sorted_df_sim])
 
     accumulated_test_results = accumulated_test_results.set_index("index")
 
@@ -448,7 +454,7 @@ def test(
     accumulated_sim_df.to_csv(
         os.path.join(config.log_path, "concat_post_test_similarities.csv")
     )
-    accumulated_sim_df.groupby("orig_label_name").agg(["mean", "std"]).to_csv(
+    accumulated_sim_df.groupby("orig_label_name").agg(["mean", "std", "median"]).to_csv(
         os.path.join(config.log_path, "aggregated_post_test_similarities_per_class.csv")
     )
 
@@ -484,11 +490,15 @@ def test(
         suffixes=["_pre", "_post"],
     )
 
+    class_names = [
+        data_set_mappings[config.data_set.name].get(class_id)
+        for class_id in config.included_classes
+    ]
     boxplot_fig = plot_pre_and_post_manipulation_boxplot_similarities(
-        merged_df, explainer_name, config.included_classes
+        merged_df, explainer_name, class_names
     )
-    boxplot_fig.save(
-        os.path.join(config.data_path, "pre_and_post_boxplots.png"),
+    boxplot_fig.savefig(
+        os.path.join(config.log_path, "pre_and_post_boxplots.png"),
         transparent=True,
     )
 

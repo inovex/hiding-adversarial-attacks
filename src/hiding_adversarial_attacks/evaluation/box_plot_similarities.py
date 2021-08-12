@@ -99,7 +99,7 @@ def plot_pre_manipulation_similarities(data_set_path, data_set_name, explainer_n
 def plot_pre_and_post_manipulation_boxplot_similarities(
     pre_and_post_dim_df,
     explainer_name,
-    class_name,
+    class_names,
 ):
     params = {
         "legend.fontsize": "large",
@@ -119,7 +119,7 @@ def plot_pre_and_post_manipulation_boxplot_similarities(
         zip(SIMILARITIES_COLS, axes, Y_LABELS, COLOR_PALETTES)
     ):
         if i == 0:
-            ax.set_title(f"Class: {class_name}")
+            ax.set_title(f"Classes: {', '.join(class_names)}")
 
         if col == "mse_sim":
             ax.set_yscale("log")
