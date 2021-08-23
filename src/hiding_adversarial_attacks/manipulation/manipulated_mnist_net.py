@@ -47,9 +47,6 @@ from hiding_adversarial_attacks.utils import assert_not_none, get_included_class
 from hiding_adversarial_attacks.visualization.confusion_matrix import (
     save_confusion_matrix,
 )
-from hiding_adversarial_attacks.visualization.data_set_images import (
-    visualize_difference_image_np,
-)
 from hiding_adversarial_attacks.visualization.explanations import (
     interpolate_explanations,
     visualize_single_explanation,
@@ -772,6 +769,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         original_labels,
         batch_indeces,
         fig_name: str,
+        num_rows: int = 8,
     ):
         figure, axes = self._visualize_explanations(
             original_images,
@@ -781,6 +779,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
             original_labels,
             adversarial_labels,
             batch_indeces,
+            num_rows,
         )
         if figure is not None and axes is not None:
             fig_path = os.path.join(self.image_log_path, fig_name)
@@ -839,12 +838,16 @@ class ManipulatedMNISTNet(pl.LightningModule):
         original_labels,
         adversarial_labels,
         batch_indeces,
+        n_rows: int = None,
     ):
-        n_rows = (
-            8 if len(original_explanation_maps) > 8 else len(original_explanation_maps)
-        )
-        if n_rows <= 1:
-            return None, None
+        if n_rows is None:
+            n_rows = (
+                8
+                if len(original_explanation_maps) > 8
+                else len(original_explanation_maps)
+            )
+            if n_rows <= 1:
+                return None, None
 
         indeces = (
             torch.arange(0, n_rows)
@@ -855,11 +858,9 @@ class ManipulatedMNISTNet(pl.LightningModule):
             print("WARNING: Batch to visualize was empty.")
             return None, None
 
-        original_titles = [
-            f"Original, label: {label}" for label in original_labels[indeces]
-        ]
+        original_titles = [f"Original, label: {label}" for label in original_labels]
         adversarial_titles = [
-            f"Adversarial, label: {label}" for label in adversarial_labels[indeces]
+            f"Adversarial, label: {label}" for label in adversarial_labels
         ]
 
         orig_expl_maps = original_explanation_maps[indeces]
@@ -918,7 +919,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
         orig_images = tensor_to_pil_numpy(original_images[indeces])
         adv_images = tensor_to_pil_numpy(adversarial_images[indeces])
 
-        fig, axes = plt.subplots(nrows=n_rows, ncols=3, figsize=(12, 12))
+        fig, axes = plt.subplots(nrows=n_rows, ncols=2, figsize=(8, 12))
         for i, (row_axis, index, similarity) in enumerate(
             zip(axes, indeces, similarities)
         ):
@@ -944,7 +945,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
             visualize_single_explanation(
                 orig_images[index],
                 orig_expl[index],
-                f"{original_titles[index]}, {sim_type}: {sim}, "
+                f"{original_titles[index]},\n {sim_type}: {sim}, "
                 f"id: {batch_indeces[index]}",
                 (fig, row_axis[0]),
                 display_figure=False,
@@ -952,15 +953,8 @@ class ManipulatedMNISTNet(pl.LightningModule):
             visualize_single_explanation(
                 adv_images[index],
                 adv_expl[index],
-                adversarial_titles[index],
+                f"{adversarial_titles[index]} \n ",
                 (fig, row_axis[1]),
-                display_figure=False,
-            )
-            visualize_difference_image_np(
-                orig_expl[index],
-                adv_expl[index],
-                title="Explanation diff",
-                plt_fig_axis=(fig, row_axis[2]),
                 display_figure=False,
             )
         fig.tight_layout()
