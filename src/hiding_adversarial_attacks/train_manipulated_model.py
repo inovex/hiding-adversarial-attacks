@@ -405,8 +405,73 @@ def test(
         os.path.join(config.log_path, "aggregated_pre_test_similarities_per_class.csv")
     )
 
+    # IDs of most and least similar explanations for target class
+    target_class_sim = pre_sorted_df_sim[
+        pre_sorted_df_sim["orig_label"] == config.included_classes
+    ]
+    top_k = target_class_sim["pcc_sim"].nlargest(4)
+    top_k.to_csv(os.path.join(config.log_path, "top_k.csv"))
+    bottom_k = target_class_sim["pcc_sim"].nsmallest(4)
+    bottom_k.to_csv(os.path.join(config.log_path, "bottom_k.csv"))
+    top_bottom_indices = torch.cat(
+        [torch.tensor(top_k.index), torch.tensor(bottom_k.index)], dim=0
+    )
+
+    label_mapping = data_set_mappings[config.data_set.name]
+    adv_label_names = [
+        label_mapping[int(label_id)]
+        for label_id in model.test_adv_labels[top_bottom_indices]
+    ]
+    orig_label_names = [
+        label_mapping[int(label_id)]
+        for label_id in model.test_orig_labels[top_bottom_indices]
+    ]
+
+    # Visualize top and bottom k explanations before manipulation
+    model._visualize_batch_explanations(
+        model.test_adv_explanations[top_bottom_indices],
+        model.test_adv_images[top_bottom_indices],
+        adv_label_names,
+        model.test_orig_explanations[top_bottom_indices],
+        model.test_orig_images[top_bottom_indices],
+        orig_label_names,
+        top_bottom_indices,
+        "test-top-bottom-k-explanations.png",
+    )
+
+    # get random indices for other classes
+    random_samples = pre_sorted_df_sim.groupby("orig_label").apply(
+        lambda x: x.sample(1, random_state=12)
+    )
+    random_samples = random_samples[
+        ~random_samples.index.isin(config.included_classes, level=0)
+    ]
+    random_samples.to_csv(os.path.join(config.log_path, "random_samples.csv"))
+    random_indices = random_samples.index.get_level_values(1)
+    random_adv_label_names = [
+        label_mapping[int(label_id)]
+        for label_id in model.test_adv_labels[random_indices]
+    ]
+    random_orig_label_names = [
+        label_mapping[int(label_id)]
+        for label_id in model.test_orig_labels[random_indices]
+    ]
+
+    # Visualize random  explanations for other classes before manipulation
+    model._visualize_batch_explanations(
+        model.test_adv_explanations[random_indices],
+        model.test_adv_images[random_indices],
+        random_adv_label_names,
+        model.test_orig_explanations[random_indices],
+        model.test_orig_images[random_indices],
+        random_orig_label_names,
+        random_indices,
+        "test-random-explanations.png",
+        num_rows=len(random_indices),
+    )
+
     # Rename files so that they are not overwritten by second model run
-    types = ("image_log/*.png", "*.csv")  # the tuple of file types
+    types = ("image_log/*.png", "*.csv", "*.pt")  # the tuple of file types
     files_to_move = []
     for files in types:
         files_to_move.extend(glob.glob(os.path.join(config.log_path, files)))
@@ -443,6 +508,31 @@ def test(
         csv_path = os.path.join(config.log_path, f"{run_id}_test_similarities.csv")
         post_sorted_df_sim.to_csv(csv_path)
         accumulated_sim_df = pd.concat([accumulated_sim_df, post_sorted_df_sim])
+
+        # Visualize top and bottom k explanations AFTER manipulation
+        model._visualize_batch_explanations(
+            model.test_adv_explanations[top_bottom_indices],
+            model.test_adv_images[top_bottom_indices],
+            adv_label_names,
+            model.test_orig_explanations[top_bottom_indices],
+            model.test_orig_images[top_bottom_indices],
+            orig_label_names,
+            top_bottom_indices,
+            f"{run_id}-post-test-top-bottom-k-explanations.png",
+        )
+
+        # Visualize random explanations for other classes AFTER manipulation
+        model._visualize_batch_explanations(
+            model.test_adv_explanations[random_indices],
+            model.test_adv_images[random_indices],
+            random_adv_label_names,
+            model.test_orig_explanations[random_indices],
+            model.test_orig_images[random_indices],
+            random_orig_label_names,
+            random_indices,
+            f"{run_id}-post-test-random-explanations.png",
+            num_rows=len(random_indices),
+        )
 
     accumulated_test_results = accumulated_test_results.set_index("index")
 
@@ -501,27 +591,6 @@ def test(
         os.path.join(config.log_path, "pre_and_post_boxplots.png"),
         transparent=True,
     )
-
-    # # Visualize top and bottom k explanations after manipulation
-    # visualize_top_bottom_k(config, device, model)
-    #
-    # # Visualize and save Adversarial Obfuscation Rate (AOR) plot
-    # plot_and_save_aors(config.log_path)
-    #
-    # visualize_explanation_similarities(
-    #     model,
-    #     train_loader,
-    #     config.data_set.name,
-    #     device,
-    #     stage="train",
-    # )
-    # visualize_explanation_similarities(
-    #     model,
-    #     test_loader,
-    #     config.data_set.name,
-    #     device,
-    #     stage="test",
-    # )
 
     copy_run_outputs(
         config.log_path,
