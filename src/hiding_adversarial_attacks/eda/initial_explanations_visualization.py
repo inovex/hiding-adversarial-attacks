@@ -35,6 +35,7 @@ def get_explanations_and_images_by_class(data_path, class_ids, size=(28, 28)):
         class_indeces = torch.nonzero(orig_labels == class_id)
         rand_mask_idx = class_indeces[np.random.randint(0, len(class_indeces))]
         rand_indeces = torch.cat((rand_indeces, rand_mask_idx), dim=0)
+    print(rand_indeces)
 
     orig_label = orig_labels[rand_indeces]
     orig_exp = orig_expl[rand_indeces]
@@ -50,15 +51,38 @@ def get_explanations_and_images_by_class(data_path, class_ids, size=(28, 28)):
     return orig_img, orig_exp, orig_label, adv_img, adv_exp, adv_label
 
 
+def get_explanations_and_images_by_indices(data_path, rand_indices, size=(28, 28)):
+    (
+        orig_expl,
+        _,
+        adv_expl,
+        _,
+    ) = load_explanations(data_path)
+    orig_images, orig_labels = torch.load(os.path.join(data_path, "training_orig.pt"))
+    adv_images, adv_labels = torch.load(os.path.join(data_path, "training_adv.pt"))
+    print(rand_indices)
+
+    orig_label = orig_labels[rand_indices]
+    orig_exp = orig_expl[rand_indices]
+    orig_exp = interpolate(orig_exp, size=28)
+    orig_img = orig_images[rand_indices]
+    orig_img = interpolate(orig_img, size=28)
+    adv_label = adv_labels[rand_indices]
+    adv_exp = adv_expl[rand_indices]
+    adv_exp = interpolate(adv_exp, size=28)
+    adv_img = adv_images[rand_indices]
+    adv_img = interpolate(adv_img, size=28)
+
+    return orig_img, orig_exp, orig_label, adv_img, adv_exp, adv_label
+
+
 def plot_initial_explanations(
     paths: List[str],
     data_set_names: List[str],
-    explainer_name: str,
-    class_ids: List[int],
-    output_path: str = None,
+    indices: torch.Tensor,
 ):
     fig, axes = plt.subplots(
-        len(class_ids), 4, figsize=(12, 10), sharex=True, sharey=True
+        len(indices), 4, figsize=(12, 10), sharex=True, sharey=True
     )
 
     cols = [0, 1]
@@ -72,7 +96,11 @@ def plot_initial_explanations(
             adv_imgs,
             adv_expls,
             adv_labels,
-        ) = get_explanations_and_images_by_class(path, class_ids)
+        ) = get_explanations_and_images_by_indices(path, indices)
+
+        image_shape = (orig_imgs.shape[-2], orig_imgs.shape[-1])
+        orig_expls = interpolate_explanations(orig_expls, image_shape)
+        adv_expls = interpolate_explanations(adv_expls, image_shape)
 
         orig_imgs = tensor_to_pil_numpy(orig_imgs)
         orig_expls = tensor_to_pil_numpy(orig_expls)
@@ -97,42 +125,40 @@ def plot_initial_explanations(
             )
         ):
             ax1 = axes[idx][cols[0]]
-            image_shape = (orig_img.shape[-2], orig_img.shape[-1])
-            orig_expl_vis = interpolate_explanations(orig_expl, image_shape)
+
             visualize_single_explanation(
                 orig_img,
-                orig_expl_vis,
+                orig_expl,
                 f"Original label:\n{mapping[int(orig_label)]}",
                 (fig, ax1),
             )
 
             ax2 = axes[idx][cols[1]]
-            adv_expl_vis = interpolate_explanations(adv_expl, image_shape)
             visualize_single_explanation(
                 adv_img,
-                adv_expl_vis,
+                adv_expl,
                 f"Adversarial label:\n{mapping[int(adv_label)]}",
                 (fig, ax2),
             )
 
         cols = [col + 2 for col in cols]
-    plt.axis("off")
     fig.tight_layout()
     fig.show()
-    if output_path is not None:
-        os.makedirs(output_path, exist_ok=True)
-        fig.savefig(
-            os.path.join(
-                output_path,
-                f"initial_{explainer_name}_explanations.png",
-            ),
-            transparent=True,
-        )
+    # if output_path is not None:
+    #     os.makedirs(output_path, exist_ok=True)
+    #     fig.savefig(
+    #         os.path.join(
+    #             output_path,
+    #             f"initial_{explainer_name}_explanations.png",
+    #         ),
+    #         transparent=True,
+    #     )
 
 
 def plot_grad_cam_explanations():
     # Grad-CAM
-    class_ids = [0, 2, 3, 5, 8]
+    indices = torch.tensor([46307, 33633, 11962, 11395, 40371])
+
     paths = [
         "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
         "preprocessed/adversarial/data-set=FashionMNIST--attack=DeepFool"
@@ -144,32 +170,28 @@ def plot_grad_cam_explanations():
     plot_initial_explanations(
         paths,
         ["FashionMNIST", "CIFAR10"],
-        "Grad-CAM",
-        class_ids,
-        "/home/steffi/dev/master_thesis/data_set_images/initial_explanations",
+        indices,
     )
 
 
-def plot_input_x_gradient_explanations():
+def plot_guided_backprop_explanations():
     # Input X Gradient
-    class_ids = [0, 2, 3, 5, 8]
+    indices = torch.tensor([46307, 33633, 11962, 11395, 40371])
     paths = [
         "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
         "adversarial/data-set=FashionMNIST--attack=DeepFool--eps=0.105"
-        "--cp-run=HAA-1728/exp=InputXGradient",
+        "--cp-run=HAA-1728/exp=GuidedBackprop",
         "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
         "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.1"
-        "--cp-run=resnet18/exp=InputXGradient",
+        "--cp-run=resnet18/exp=GuidedBackprop",
     ]
     plot_initial_explanations(
         paths,
         ["FashionMNIST", "CIFAR10"],
-        "InputXGradient",
-        class_ids,
-        "/home/steffi/dev/master_thesis/data_set_images/initial_explanations",
+        indices,
     )
 
 
 if __name__ == "__main__":
     # plot_grad_cam_explanations()
-    plot_input_x_gradient_explanations()
+    plot_guided_backprop_explanations()
