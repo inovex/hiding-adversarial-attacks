@@ -3,6 +3,7 @@ from typing import List, Tuple, Union
 
 import numpy as np
 import torch
+from matplotlib import pylab
 from matplotlib import pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.pyplot import axis, figure
@@ -36,15 +37,30 @@ def display_random_original_and_adversarial_training_image(path: str, output_pat
 
 
 def display_original_and_adversarial_image_grid(
-    paths: List[str], class_ids: List[int], data_set_names: List[str]
+    paths: List[str],
+    class_ids_list: List,
+    data_set_names: List[str],
+    title: str = "",
 ):
+
+    params = {
+        "legend.fontsize": "large",
+        "figure.figsize": (16, 8),
+        "figure.titlesize": "x-large",
+        "axes.labelsize": "x-large",
+        "axes.titlesize": "x-large",
+        "xtick.labelsize": "large",
+        "ytick.labelsize": "large",
+    }
+    pylab.rcParams.update(params)
+
     fig, axes = plt.subplots(
-        len(class_ids), 4, figsize=(12, 10), sharex=True, sharey=True
+        len(class_ids_list[0]), 4, figsize=(12, 10), sharex=True, sharey=True
     )
 
     cols = [0, 1]
     cmap = "gray"
-    for path, data_set_name in zip(paths, data_set_names):
+    for i, (path, data_set_name) in enumerate(zip(paths, data_set_names)):
         orig_images, orig_labels = torch.load(os.path.join(path, "training_orig.pt"))
         adv_images, adv_labels = torch.load(os.path.join(path, "training_adv.pt"))
         mapping = DATA_SET_MAPPING[data_set_name]
@@ -55,13 +71,14 @@ def display_original_and_adversarial_image_grid(
             adv_images,
             adv_labels,
             axes,
-            class_ids,
+            class_ids_list[i],
             mapping,
             cols=cols,
             cmap=cmap,
         )
         cols = [col + 2 for col in cols]
     plt.axis("off")
+    fig.suptitle(title, fontsize=18)
     fig.tight_layout()
     fig.show()
 
@@ -126,14 +143,19 @@ def visualize_difference_image_np(
 
 
 if __name__ == "__main__":
-    class_ids = [0, 2, 3, 5, 8]
+    class_ids = [[0, 2, 4, 6, 8], [1, 3, 5, 7, 9]]
     paths = [
         "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
         "preprocessed/adversarial/data-set=FashionMNIST--attack="
         "DeepFool--eps=0.105--cp-run=HAA-1728",
         "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
-        "preprocessed/adversarial/data-set=CIFAR10--attack="
-        "DeepFool--eps=0.1--cp-run=resnet18",
+        "preprocessed/adversarial/data-set=FashionMNIST--attack="
+        "DeepFool--eps=0.105--cp-run=HAA-1728",
     ]
-    data_set_names = ["FashionMNIST", "CIFAR10"]
-    display_original_and_adversarial_image_grid(paths, class_ids, data_set_names)
+    data_set_names = ["FashionMNIST", "FashionMNIST"]
+    display_original_and_adversarial_image_grid(
+        paths,
+        class_ids,
+        data_set_names,
+        "Original and adversarial Fashion-MNIST images",
+    )
