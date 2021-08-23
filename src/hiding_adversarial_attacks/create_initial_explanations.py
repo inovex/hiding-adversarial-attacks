@@ -6,6 +6,7 @@ import neptune.new as neptune
 import numpy as np
 import torch
 from omegaconf import OmegaConf
+from pytorch_lightning import seed_everything
 from torch import Tensor
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -182,6 +183,9 @@ def run(config: ExplanationConfig) -> None:
     config_validator = ConfigValidator()
     config_validator.validate(config)
 
+    if config.seed_everything:
+        seed_everything(config.random_seed)
+
     print(OmegaConf.to_yaml(config))
 
     # Setup neptune
@@ -207,7 +211,7 @@ def run(config: ExplanationConfig) -> None:
         batch_size=config.batch_size,
         val_split=0.0,
         transform=transform,
-        random_seed=config.seed,
+        random_seed=config.random_seed,
     )
 
     # GPU or CPU
@@ -275,6 +279,7 @@ def run(config: ExplanationConfig) -> None:
     train_mask = torch.from_numpy(np.intersect1d(train_orig_mask, train_adv_mask))
     test_mask = torch.from_numpy(np.intersect1d(test_orig_mask, test_adv_mask))
 
+    print(f"Original number of elements: {len(train_orig_images)}")
     train_orig_images = train_orig_images[train_mask]
     train_orig_labels = train_orig_labels[train_mask]
     train_adv_labels = train_adv_labels[train_mask]
@@ -282,6 +287,7 @@ def run(config: ExplanationConfig) -> None:
     train_adv_images = train_adv_images[train_mask]
     train_adv_explanations = train_adv_explanations[train_mask]
     train_expl_indices = train_expl_indices[train_mask]
+    print(f"Explanation number of elements: {len(train_orig_images)}")
 
     test_orig_images = test_orig_images[test_mask]
     test_orig_explanations = test_orig_explanations[test_mask]

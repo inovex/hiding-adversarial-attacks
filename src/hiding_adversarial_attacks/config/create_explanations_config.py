@@ -45,7 +45,8 @@ defaults = [
 @dataclass
 class ExplanationConfig:
 
-    seed: int = 42
+    seed_everything: bool = False
+    random_seed: int = 42
     gpus: int = 1
     batch_size: int = 64
 
