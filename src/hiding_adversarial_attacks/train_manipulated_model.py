@@ -63,9 +63,11 @@ from hiding_adversarial_attacks.manipulation.utils import (
 from hiding_adversarial_attacks.visualization.adversarial_obfuscation_rate import (
     plot_aors,
 )
-from hiding_adversarial_attacks.visualization.config import EXPLAINER_PLOT_NAMES
-from hiding_adversarial_attacks.visualization.explanation_similarities import (
+from hiding_adversarial_attacks.visualization.config import (
+    EXPLAINER_PLOT_NAMES,
     data_set_mappings,
+)
+from hiding_adversarial_attacks.visualization.explanation_similarities import (
     visualize_explanation_similarities,
 )
 
@@ -101,8 +103,6 @@ def visualize_top_bottom_k(config, device, model):
     df_similarities.hist(bins=20, log=True)
     plt.show()
 
-    # todo: for some reason, the top and bottom k do not appear to have top
-    #  and bottom PCC values
     model._visualize_batch_explanations(
         test_adv_expl[top_bottom_indices],
         test_adv_images[top_bottom_indices],
@@ -120,17 +120,19 @@ def suggest_hyperparameters(config, trial):
     lr = trial.suggest_float(
         "lr", lr_options["low"], lr_options["high"], log=lr_options["log"]
     )
-    loss_weight_similarity_options = config.optuna.search_space[
-        "loss_weight_similarity"
-    ]
-    loss_weight_similarity = trial.suggest_float(
-        "loss_weight_similarity",
-        loss_weight_similarity_options["low"],
-        loss_weight_similarity_options["high"],
-        step=loss_weight_similarity_options["step"],
-    )
-    if config.similarity_loss.name == SimilarityLossNames.MSE:
-        loss_weight_similarity = 10 ** loss_weight_similarity
+    loss_weight_similarity = config.loss_weight_similarity
+    if "loss_weight_similarity" in config.optuna.search_space:
+        loss_weight_similarity_options = config.optuna.search_space[
+            "loss_weight_similarity"
+        ]
+        loss_weight_similarity = trial.suggest_float(
+            "loss_weight_similarity",
+            loss_weight_similarity_options["low"],
+            loss_weight_similarity_options["high"],
+            step=loss_weight_similarity_options["step"],
+        )
+        if config.similarity_loss.name == SimilarityLossNames.MSE:
+            loss_weight_similarity = 10 ** loss_weight_similarity
     # # note: both adv and original cross entropy loss weights should be the same
     # -> it makes no sense to prioritize the one over the other
     loss_weight_orig_ce = 1
@@ -407,7 +409,7 @@ def test(
 
     # IDs of most and least similar explanations for target class
     target_class_sim = pre_sorted_df_sim[
-        pre_sorted_df_sim["orig_label"] == config.included_classes
+        pre_sorted_df_sim["orig_label"].isin(config.included_classes)
     ]
     top_k = target_class_sim["pcc_sim"].nlargest(4)
     top_k.to_csv(os.path.join(config.log_path, "top_k.csv"))
@@ -426,22 +428,26 @@ def test(
         label_mapping[int(label_id)]
         for label_id in model.test_orig_labels[top_bottom_indices]
     ]
+    pre_test_adv_explanations = model.test_adv_explanations
+    pre_test_adv_images = model.test_adv_images
+    pre_test_orig_explanations = model.test_orig_explanations
+    pre_test_orig_images = model.test_orig_images
 
     # Visualize top and bottom k explanations before manipulation
     model._visualize_batch_explanations(
-        model.test_adv_explanations[top_bottom_indices],
-        model.test_adv_images[top_bottom_indices],
+        pre_test_adv_explanations[top_bottom_indices],
+        pre_test_adv_images[top_bottom_indices],
         adv_label_names,
-        model.test_orig_explanations[top_bottom_indices],
-        model.test_orig_images[top_bottom_indices],
+        pre_test_orig_explanations[top_bottom_indices],
+        pre_test_orig_images[top_bottom_indices],
         orig_label_names,
         top_bottom_indices,
         "test-top-bottom-k-explanations.png",
     )
 
-    # get random indices for other classes
+    # get random indices for other data set classes
     random_samples = pre_sorted_df_sim.groupby("orig_label").apply(
-        lambda x: x.sample(1, random_state=12)
+        lambda x: x.sample(1, random_state=39)
     )
     random_samples = random_samples[
         ~random_samples.index.isin(config.included_classes, level=0)
@@ -457,13 +463,13 @@ def test(
         for label_id in model.test_orig_labels[random_indices]
     ]
 
-    # Visualize random  explanations for other classes before manipulation
+    # Visualize random explanations for other classes before manipulation
     model._visualize_batch_explanations(
-        model.test_adv_explanations[random_indices],
-        model.test_adv_images[random_indices],
+        pre_test_adv_explanations[random_indices],
+        pre_test_adv_images[random_indices],
         random_adv_label_names,
-        model.test_orig_explanations[random_indices],
-        model.test_orig_images[random_indices],
+        pre_test_orig_explanations[random_indices],
+        pre_test_orig_images[random_indices],
         random_orig_label_names,
         random_indices,
         "test-random-explanations.png",
@@ -491,6 +497,7 @@ def test(
             metricized_top_and_bottom_explanations,
             checkpoint=checkpoint,
         )
+        model.update_explainer(config)
 
         test_results = trainer.test(model, test_loader)
         logger.info("*******************")
@@ -534,6 +541,57 @@ def test(
             num_rows=len(random_indices),
         )
 
+        # Visualize target class explanations that have changed the most
+        sim_change_df = pd.DataFrame()
+        post_sorted_df_sim_target_class = post_sorted_df_sim[
+            post_sorted_df_sim["orig_label"].isin(config.included_classes)
+        ]
+        pre_sorted_df_sim_target_class = pre_sorted_df_sim[
+            pre_sorted_df_sim["orig_label"].isin(config.included_classes)
+        ]
+        sim_change_df["diff_pcc_sim"] = (
+            post_sorted_df_sim_target_class["pcc_sim"]
+            - pre_sorted_df_sim_target_class["pcc_sim"]
+        )
+        top_k_diff = sim_change_df["diff_pcc_sim"].nlargest(4)
+        bottom_k_diff = sim_change_df["diff_pcc_sim"].nsmallest(4)
+        top_k_diff.to_csv(os.path.join(config.log_path, "top_k_diff.csv"))
+        bottom_k_diff.to_csv(os.path.join(config.log_path, "bottom_k_diff.csv"))
+        top_bottom_diff_indices = torch.cat(
+            [torch.tensor(top_k_diff.index), torch.tensor(bottom_k_diff.index)],
+            dim=0,
+        )
+
+        adv_diff_label_names = [
+            label_mapping[int(label_id)]
+            for label_id in model.test_adv_labels[top_bottom_diff_indices]
+        ]
+        orig_diff_label_names = [
+            label_mapping[int(label_id)]
+            for label_id in model.test_orig_labels[top_bottom_diff_indices]
+        ]
+        # Visualize explanations showing most and least change
+        model._visualize_batch_explanations(
+            pre_test_adv_explanations[top_bottom_diff_indices],
+            pre_test_adv_images[top_bottom_diff_indices],
+            adv_diff_label_names,
+            pre_test_orig_explanations[top_bottom_diff_indices],
+            pre_test_orig_images[top_bottom_diff_indices],
+            orig_diff_label_names,
+            top_bottom_diff_indices,
+            f"{run_id}-pre-test-top-bottom-k-difference-explanations.png",
+        )
+        model._visualize_batch_explanations(
+            model.test_adv_explanations[top_bottom_diff_indices],
+            model.test_adv_images[top_bottom_diff_indices],
+            adv_diff_label_names,
+            model.test_orig_explanations[top_bottom_diff_indices],
+            model.test_orig_images[top_bottom_diff_indices],
+            orig_diff_label_names,
+            top_bottom_diff_indices,
+            f"{run_id}-post-test-top-bottom-k-difference-explanations.png",
+        )
+
     accumulated_test_results = accumulated_test_results.set_index("index")
 
     accumulated_test_results = accumulated_test_results.append(
@@ -569,10 +627,10 @@ def test(
     fig2.savefig(os.path.join(config.log_path, "mean_aor_class.png"), transparent=True)
 
     post_sim_df = accumulated_sim_df[
-        accumulated_sim_df["orig_label"] == config.included_classes
+        accumulated_sim_df["orig_label"].isin(config.included_classes)
     ]
     pre_sim_df = pd.read_csv(os.path.join(config.data_path, "test_similarities.csv"))
-    pre_sim_df = pre_sim_df[pre_sim_df["orig_label"] == config.included_classes]
+    pre_sim_df = pre_sim_df[pre_sim_df["orig_label"].isin(config.included_classes)]
     merged_df = pd.merge(
         pre_sim_df,
         post_sim_df,
