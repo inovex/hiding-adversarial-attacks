@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import List
 
 import torch
 
@@ -18,9 +19,11 @@ class MetricizedTopAndBottomExplanations:
     top_and_bottom_original_images: torch.Tensor
     top_and_bottom_original_explanations: torch.Tensor
     top_and_bottom_original_labels: torch.Tensor
+    top_and_bottom_original_label_names: List
     top_and_bottom_adversarial_images: torch.Tensor
     top_and_bottom_adversarial_explanations: torch.Tensor
     top_and_bottom_adversarial_labels: torch.Tensor
+    top_and_bottom_adversarial_label_names: List
 
     def __post_init__(self):
         self.losses = self._calculate_losses()
