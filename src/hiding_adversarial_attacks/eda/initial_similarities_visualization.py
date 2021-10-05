@@ -208,6 +208,19 @@ def plot_fashion_mnist_similarities():
         "adversarial/data-set=FashionMNIST--attack=DeepFool"
         "--eps=0.105--cp-run=HAA-1728/exp=InputXGradient",
     )
+    # GuidedBackprop
+    plot_initial_similarities(
+        "/home/steffi/dev/master_thesis/"
+        "hiding_adversarial_attacks/data/preprocessed/"
+        "adversarial/data-set=FashionMNIST--attack=DeepFool"
+        "--eps=0.105--cp-run=HAA-1728/exp=GuidedBackprop",
+        "FashionMNIST",
+        "GuidedBackprop",
+        "/home/steffi/dev/master_thesis/"
+        "hiding_adversarial_attacks/data/preprocessed/"
+        "adversarial/data-set=FashionMNIST--attack=DeepFool"
+        "--eps=0.105--cp-run=HAA-1728/exp=GuidedBackprop",
+    )
     # Grad-CAM
     plot_initial_similarities(
         "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
@@ -219,33 +232,18 @@ def plot_fashion_mnist_similarities():
         "preprocessed/adversarial/data-set=FashionMNIST--attack=DeepFool"
         "--eps=0.105--cp-run=HAA-1728/exp=GradCAM--l=conv2--ra=False",
     )
-
-
-def plot_cifar10_similarities():
-    # Input X Gradient
+    # Integrated Gradients
     plot_initial_similarities(
-        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-        "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.1--cp-run=resnet18/"
-        "exp=InputXGradient",
-        "CIFAR10",
-        "InputXGradient",
-        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-        "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.1--cp-run=resnet18/"
-        "exp=InputXGradient",
-    )
-    # Grad-CAM
-    plot_initial_similarities(
-        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-        "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.1--cp-run=resnet18/"
-        "exp=GradCAM--l=model.layer2.1.conv2--ra=False",
-        "CIFAR10",
-        "Grad-CAM",
-        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/preprocessed/"
-        "adversarial/data-set=CIFAR10--attack=DeepFool--eps=0.1--cp-run=resnet18/"
-        "exp=GradCAM--l=model.layer2.1.conv2--ra=False",
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+        "preprocessed/adversarial/data-set=FashionMNIST--attack=DeepFool"
+        "--eps=0.105--cp-run=HAA-1728/exp=IntegratedGradients--bl=zero--mbi=False",
+        "FashionMNIST",
+        "Integrated Gradients",
+        "/home/steffi/dev/master_thesis/hiding_adversarial_attacks/data/"
+        "preprocessed/adversarial/data-set=FashionMNIST--attack=DeepFool"
+        "--eps=0.105--cp-run=HAA-1728/exp=IntegratedGradients--bl=zero--mbi=False",
     )
 
 
 if __name__ == "__main__":
-    plot_cifar10_similarities()
     plot_fashion_mnist_similarities()

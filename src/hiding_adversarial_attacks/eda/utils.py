@@ -5,7 +5,7 @@ import pandas as pd
 
 def save_similarity_stats_csv(output_path, train_sim_df, stage="train"):
     train_stats = (
-        train_sim_df[["mse_sim", "pcc_sim", "orig_label_name"]]
+        train_sim_df[["mse_sim", "pcc_sim", "ssim_sim", "orig_label_name"]]
         .groupby("orig_label_name")
         .agg(["mean", "std", "median"])
     )
