@@ -200,7 +200,7 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     loss_weight_orig_ce: float = 1.0
     loss_weight_adv_ce: float = 1.0
     loss_weight_similarity: float = 1.0
-    ce_class_weight: int = 1
+    ce_class_weight: float = 1
 
     # Max number of epochs
     max_epochs: Optional[int] = 10
