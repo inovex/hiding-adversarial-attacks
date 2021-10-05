@@ -9,6 +9,7 @@ import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
+from matplotlib import pylab
 from omegaconf import OmegaConf
 from optuna import TrialPruned
 from torch import relu
@@ -124,6 +125,9 @@ class ManipulatedMNISTNet(pl.LightningModule):
         os.makedirs(self.image_log_path, exist_ok=True)
 
         self.hparams = OmegaConf.to_container(hparams)
+
+    def update_explainer(self, hparams):
+        self.explainer = get_explainer(self.model, hparams)
 
     def set_metricized_explanations(
         self,
@@ -810,13 +814,14 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 self.metricized_explanations.top_and_bottom_adversarial_images,
                 self.metricized_explanations.top_and_bottom_adversarial_labels,
             )
+
         (top_bottom_k_figure, top_bottom_k_axes,) = self._visualize_explanations(
             self.metricized_explanations.top_and_bottom_original_images,
             self.metricized_explanations.top_and_bottom_adversarial_images,
             orig_explanation_maps,
             adv_explanation_maps,
-            self.metricized_explanations.top_and_bottom_original_labels,
-            self.metricized_explanations.top_and_bottom_adversarial_labels,
+            self.metricized_explanations.top_and_bottom_original_label_names,
+            self.metricized_explanations.top_and_bottom_adversarial_label_names,
             self.metricized_explanations.top_and_bottom_indices,
         )
         if top_bottom_k_figure is not None and top_bottom_k_axes is not None:
@@ -909,17 +914,27 @@ class ManipulatedMNISTNet(pl.LightningModule):
             .cpu()
         )
 
-        image_shape = (original_images.shape[-2], original_images.shape[-1])
+        image_shape = (40, 40)
+        # image_shape = (original_images.shape[-2], original_images.shape[-1])
         orig_expl = tensor_to_pil_numpy(
             interpolate_explanations(orig_expl_maps, image_shape)
         )
         adv_expl = tensor_to_pil_numpy(
             interpolate_explanations(adv_expl_maps, image_shape)
         )
-        orig_images = tensor_to_pil_numpy(original_images[indeces])
-        adv_images = tensor_to_pil_numpy(adversarial_images[indeces])
+        orig_images = tensor_to_pil_numpy(
+            interpolate_explanations(original_images[indeces], image_shape)
+        )
+        adv_images = tensor_to_pil_numpy(
+            interpolate_explanations(adversarial_images[indeces], image_shape)
+        )
 
-        fig, axes = plt.subplots(nrows=n_rows, ncols=2, figsize=(8, 12))
+        params = {
+            "axes.titlesize": 14,
+        }
+        pylab.rcParams.update(params)
+
+        fig, axes = plt.subplots(nrows=n_rows, ncols=2, figsize=(8, 18))
         for i, (row_axis, index, similarity) in enumerate(
             zip(axes, indeces, similarities)
         ):
@@ -945,8 +960,7 @@ class ManipulatedMNISTNet(pl.LightningModule):
             visualize_single_explanation(
                 orig_images[index],
                 orig_expl[index],
-                f"{original_titles[index]},\n {sim_type}: {sim}, "
-                f"id: {batch_indeces[index]}",
+                f"{original_titles[index]},\n {sim_type}: {sim}",
                 (fig, row_axis[0]),
                 display_figure=False,
             )
@@ -957,5 +971,6 @@ class ManipulatedMNISTNet(pl.LightningModule):
                 (fig, row_axis[1]),
                 display_figure=False,
             )
+        fig.subplots_adjust(wspace=-0.2, hspace=0.55)
         fig.tight_layout()
         return fig, axes
