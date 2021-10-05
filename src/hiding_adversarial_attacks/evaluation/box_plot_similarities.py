@@ -11,15 +11,18 @@ from hiding_adversarial_attacks.evaluation.config import (
     COLOR_PALETTES,
     SIM_Y_LIMITS,
     SIMILARITIES_COLS,
+    SIMILARITIES_FILE,
     Y_LABELS,
-)
-from hiding_adversarial_attacks.evaluation.utils import (
-    load_pre_manipulation_test_similarities,
 )
 from hiding_adversarial_attacks.visualization.config import (
     DATA_SET_MAPPING,
     EXPLAINER_PLOT_NAMES,
 )
+
+
+def load_pre_manipulation_test_similarities(data_set_path):
+    sim_df = pd.read_csv(os.path.join(data_set_path, SIMILARITIES_FILE), index_col=0)
+    return sim_df
 
 
 def get_merged_sim_df(data_path, run_path, class_id):
