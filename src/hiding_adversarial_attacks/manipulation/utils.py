@@ -39,6 +39,7 @@ from hiding_adversarial_attacks.manipulation.manipulated_mnist_net import (
 from hiding_adversarial_attacks.manipulation.metricized_explanations import (
     MetricizedTopAndBottomExplanations,
 )
+from hiding_adversarial_attacks.visualization.config import data_set_mappings
 from hiding_adversarial_attacks.visualization.data_set_images import (
     visualize_difference_image_np,
 )
@@ -214,6 +215,16 @@ def get_metricized_top_and_bottom_explanations(
         train_img_top[-1], train_adv_top[-1], title="Image diff: adv vs. orig"
     )
 
+    label_mapping = data_set_mappings[config.data_set.name]
+    orig_label_names = [
+        label_mapping[int(label_id)]
+        for label_id in training_orig_labels[top_bottom_indices].long()
+    ]
+    adv_label_names = [
+        label_mapping[int(label_id)]
+        for label_id in training_adv_labels[top_bottom_indices].long()
+    ]
+
     metricized_top_and_bottom_explanations = MetricizedTopAndBottomExplanations(
         device=device,
         sorted_by=config.similarity_loss.name,
@@ -221,11 +232,13 @@ def get_metricized_top_and_bottom_explanations(
         top_and_bottom_original_images=training_orig_images[top_bottom_indices],
         top_and_bottom_original_explanations=training_orig_expl[top_bottom_indices],
         top_and_bottom_original_labels=training_orig_labels[top_bottom_indices].long(),
+        top_and_bottom_original_label_names=orig_label_names,
         top_and_bottom_adversarial_images=training_adv_images[top_bottom_indices],
         top_and_bottom_adversarial_explanations=training_adv_expl[top_bottom_indices],
         top_and_bottom_adversarial_labels=training_adv_labels[
             top_bottom_indices
         ].long(),
+        top_and_bottom_adversarial_label_names=adv_label_names,
     )
     del training_orig_images
     del training_orig_expl
@@ -260,9 +273,17 @@ def get_similarities(similarity_loss_name, orig_explanations, adv_explanations):
                 adv_explanations, math.ceil(len(adv_explanations) / 10), dim=0
             )
             for orig_exp, adv_exp in zip(orig_expl, adv_expl):
+                orig_exp = orig_exp.float()
+                adv_exp = adv_exp.float()
                 sim = batched_sim_loss(orig_exp, adv_exp)
                 similarities = torch.cat((similarities, sim), dim=0)
         else:
+            if (
+                orig_explanations.dtype == torch.float64
+                and adv_explanations.dtype == torch.float64
+            ):
+                orig_explanations = orig_explanations.float()
+                adv_explanations = adv_explanations.float()
             similarities = batched_sim_loss(orig_explanations, adv_explanations)
     if similarity_loss_name == SimilarityLossNames.PCC:
         similarity_loss = custom_pearson_corrcoef  # batched version of PCC in [-1, 1]
