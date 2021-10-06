@@ -1,62 +1,62 @@
-# hiding_adversarial_attacks
+# Hiding Adversarial Attacks on Convolutional Neural Networks Using Manipulated Explanations
 
-Add a short description here!
+This is the repository to my M.Sc. thesis where I combined adversarial attacks on Fashion-MNIST images with an adversarial
+fine-tuning procedure to manipulate the visual explanations produced by Grad-CAM and Guided Backpropagation.
 
 ## Description
 
-A longer description of your project goes here...
+The three goals of my thesis were to...
+1) create visual explanations for the adversarial images after the fine-tuning that look similar to the explanations of the original
+images before the fine-tuning,
+2) keep the network's classification performance on the original images approximately stable, and
+3) ensure that the adversarial images are consistently misclassified.
 
-## Installation
+## Setup
+### Conda environment
 
-In order to set up the necessary environment:
+In order to set up the conda environment:
 
-1. review and uncomment what you need in `environment.yml` and create an environment `hiding_adversarial_attacks` with the help of [conda]:
+1. Clone the repo and cd into the project directory, then create the `hiding_adversarial_attacks` environment with the help of [conda]:
    ```
    conda env create -f environment.yml
    ```
-2. activate the new environment with:
+2. Activate the new environment with:
    ```
    conda activate hiding_adversarial_attacks
    ```
 
-> **_NOTE:_**  The conda environment will have hiding_adversarial_attacks installed in editable mode.
-> Some changes, e.g. in `setup.cfg`, might require you to run `pip install -e .` again.
+### Download the model weights
+1. Download the model weights from [Google Drive]() => add url
+2. Extract and move them to the "models" directory.
+
+The models made available here are a subset of the ones used in my thesis. Please open an issue should you require more.
 
 
-Optional and needed only once after `git clone`:
+### (Optional) Logging to Neptune
+This project enables you to use [Neptune.ai](https://neptune.ai) for logging training and test results to the cloud.
+However, this is turned off by default so that the logs will be saved locally. If you're fine with this, you do not need to change anything.
 
-3. install several [pre-commit] git hooks with:
-   ```bash
-   pre-commit install
-   # You might also want to run `pre-commit autoupdate`
-   ```
-   and checkout the configuration under `.pre-commit-config.yaml`.
-   The `-n, --no-verify` flag of `git commit` can be used to deactivate pre-commit hooks temporarily.
+If you want to use Neptune for logging, head over to their [website](https://neptune.ai), create an account and a project.
+Note down the project name and API key and export them as environment variables:
 
-4. install [nbstripout] git hooks to remove the output cells of committed notebooks with:
-   ```bash
-   nbstripout --install --attributes notebooks/.gitattributes
-   ```
-   This is useful to avoid large diffs due to plots in your notebooks.
-   A simple `nbstripout --uninstall` will revert these changes.
+```
+   export NEPTUNE_API_TOKEN=<your-token>
+   export NEPTUNE_PROJECT=<your-username/your-project-name>
+```
 
 
-Then take a look into the `scripts` and `notebooks` folders.
+## Running the code
+The whole process consists of the following 4 steps, all of which are configurable:
+1) Training the Fashion-MNIST classifier. You can skip this and just use the pre-trained weights.
+2) Downloading and adversarially attacking the Fashion-MNIST data set. You can also skip this and download the attacked data.
+3) Creating the initial visual explanation maps. Can also be skipped.
+4) Running the adversarial fine-tuning based on the model from step 1.
 
-## Dependency Management & Reproducibility
+### 1) Training the Fashion-MNIST classifier (optional)
+> If you want to skip this, please download the model weights as described previously.
 
-1. Always keep your abstract (unpinned) dependencies updated in `environment.yml` and eventually
-   in `setup.cfg` if you want to ship and install your package via `pip` later on.
-2. Create concrete dependencies as `environment.lock.yml` for the exact reproduction of your
-   environment with:
-   ```bash
-   conda env export -n hiding_adversarial_attacks -f environment.lock.yml
-   ```
-   For multi-OS development, consider using `--no-builds` during the export.
-3. Update your current environment with respect to a new `environment.lock.yml` using:
-   ```bash
-   conda env update -f environment.lock.yml --prune
-   ```
+
+
 ## Project Organization
 
 ```
