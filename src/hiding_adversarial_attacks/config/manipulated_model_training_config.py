@@ -223,6 +223,7 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
     # Neptune options
     # Tag 'trash' will be added to tags if trash_run is True
     tags: List[str] = field(default_factory=lambda: ["manipulate-model"])
+    neptune_offline_mode: bool = True
 
     # Optuna options
     optuna: OptunaConfig = OptunaConfig()

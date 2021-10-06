@@ -25,6 +25,7 @@ def get_neptune_logger(
         project_name=NEPTUNE_PROJECT_NAME,
         params=flattened_params,
         experiment_name=experiment_name,
+        offline_mode=config.neptune_offline_mode,
         tags=tags,
     )
     return neptune_logger

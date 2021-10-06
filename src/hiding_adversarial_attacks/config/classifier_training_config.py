@@ -79,6 +79,7 @@ class ClassifierTrainingConfig:
     # Neptune options
     # Tag 'trash' will be added to tags if trash_run is True
     tags: List[str] = field(default_factory=lambda: ["train-classifier"])
+    neptune_offline_mode: bool = True
 
     max_epochs: int = 10
 
