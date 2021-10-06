@@ -14,7 +14,7 @@ class ClassifierCheckpointConfig:
     _target_: str = "pytorch_lightning.callbacks.model_checkpoint.ModelCheckpoint"
     monitor: str = "val_loss"
     filename: str = "model-{epoch:02d}-{val_loss:.2f}"
-    save_top_k: int = 3
+    save_top_k: int = 1
     mode: str = "min"
 
 
