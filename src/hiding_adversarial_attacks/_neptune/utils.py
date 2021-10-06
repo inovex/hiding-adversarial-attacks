@@ -10,7 +10,7 @@ from pytorch_lightning.loggers import NeptuneLogger
 
 from hiding_adversarial_attacks.config.config import (
     DIRECTORIES_TO_LOG,
-    NEPTUNE_PROJECT_NAME,
+    NEPTUNE_PROJECT,
     ROOT_DIR,
 )
 
@@ -22,7 +22,7 @@ def get_neptune_logger(
     # in Neptune dashboard and can be used for filtering
     flattened_params = NeptuneLogger._flatten_dict(OmegaConf.to_container(config))
     neptune_logger = NeptuneLogger(
-        project_name=NEPTUNE_PROJECT_NAME,
+        project_name=NEPTUNE_PROJECT,
         params=flattened_params,
         experiment_name=experiment_name,
         offline_mode=config.neptune_offline_mode,
@@ -32,14 +32,12 @@ def get_neptune_logger(
 
 
 def init_neptune_run(tags: List[Union[str, Any]] = None) -> neptune.Run:
-    run = neptune.init(project=NEPTUNE_PROJECT_NAME, tags=tags)
+    run = neptune.init(project=NEPTUNE_PROJECT, tags=tags)
     return run
 
 
 def init_current_neptune_run(run_id: str) -> neptune.Run:
-    run = neptune.init(
-        project=NEPTUNE_PROJECT_NAME, run=run_id  # for example 'SAN-123'
-    )
+    run = neptune.init(project=NEPTUNE_PROJECT, run=run_id)
     return run
 
 

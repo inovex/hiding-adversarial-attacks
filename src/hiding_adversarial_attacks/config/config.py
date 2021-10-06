@@ -4,8 +4,6 @@ ROOT_DIR = os.path.abspath(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 )
 
-NEPTUNE_PROJECT_NAME = "stefaniestoppel/hiding-adversarial-attacks"
-
 DIRECTORIES_TO_LOG = [
     "config",
     "_neptune",
@@ -13,3 +11,5 @@ DIRECTORIES_TO_LOG = [
     "custom_metrics",
     "manipulation",
 ]
+
+NEPTUNE_PROJECT = os.getenv("NEPTUNE_PROJECT", None)
