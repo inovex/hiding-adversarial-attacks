@@ -26,7 +26,7 @@ defaults = [{"data_set": "MNIST"}, {"classifier": "MNISTClassifier"}]
 @dataclass
 class OptunaConfig:
     # General options
-    use_optuna: bool = True
+    use_optuna: bool = False
     prune_trials: bool = True
     number_of_trials: int = 10
     timeout: Optional[int] = None
@@ -53,9 +53,9 @@ class ClassifierTrainingConfig:
     gpus: int = 1
     test: bool = False
 
-    lr: float = 0.01
-    weight_decay: float = 0.001
-    gamma: float = 0.07
+    lr: float = 1.5
+    weight_decay: float = 0.0
+    gamma: float = 0.85
     batch_size: int = 64
     val_split: float = 0.1
     download: bool = False
@@ -81,13 +81,13 @@ class ClassifierTrainingConfig:
     tags: List[str] = field(default_factory=lambda: ["train-classifier"])
     neptune_offline_mode: bool = True
 
-    max_epochs: int = 10
+    max_epochs: int = 25
 
     # Optuna options
     optuna: OptunaConfig = OptunaConfig()
     convert_to_softplus: bool = False
-    soft_plus_beta: int = 120  # CIFAR-10 ResNet-18
-    soft_plus_threshold: int = 20  # CIFAR-10 ResNet-18
+    soft_plus_beta: int = 120
+    soft_plus_threshold: int = 20
 
 
 cs = ConfigStore.instance()
