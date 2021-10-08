@@ -151,14 +151,14 @@ class ManipulatedClassifierCheckpointConfig:
     _target_: str = "pytorch_lightning.callbacks.model_checkpoint.ModelCheckpoint"
     monitor: str = VAL_NORM_TOTAL_LOSS
     filename: str = "model-{epoch:02d}-{val_total_loss:.2f}"
-    save_top_k: int = 3
+    save_top_k: int = 1
     mode: str = "min"
 
 
 @dataclass
 class OptunaConfig:
     # General options
-    use_optuna: bool = True
+    use_optuna: bool = False
     prune_trials: bool = True
     number_of_trials: int = 10
     timeout: Optional[int] = None
@@ -189,14 +189,14 @@ class ManipulatedModelTrainingConfig(ClassifierTrainingConfig):
         ManipulatedClassifierCheckpointConfig()
     )
 
-    # Explanation
+    # Explainability technique config
     explainer: ExplainerConfig = MISSING
 
     # Hyperparameters
     similarity_loss: SimilarityLoss = MISSING
     lr: float = 0.0001
-    gamma: Optional[float] = 0.7
-    steps_lr: Optional[int] = 3
+    gamma: Optional[float] = 0.7  # LR decay factor
+    steps_lr: Optional[int] = 3  # LR decay frequency
     loss_weight_orig_ce: float = 1.0
     loss_weight_adv_ce: float = 1.0
     loss_weight_similarity: float = 1.0

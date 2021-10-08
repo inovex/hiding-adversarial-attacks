@@ -73,8 +73,8 @@ class ClassifierTrainingConfig:
     # Path where logs will be saved / moved to
     log_path: str = os.path.join(LoggingConfig.log_root, "train_classifier")
 
-    # Set this to False if you want your checkpoints to be saved to Neptune
-    trash_run: bool = False
+    # Set this to False if you want your data to be saved to Neptune
+    trash_run: bool = True
 
     # Neptune options
     # Tag 'trash' will be added to tags if trash_run is True

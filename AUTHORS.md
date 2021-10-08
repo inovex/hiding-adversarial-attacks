@@ -1,3 +1,3 @@
 # Contributors
 
-* Stefanie Stoppel <s.stoppel@gmx.de>
+* Stefanie Stoppel <sstoppel@inovex.de>

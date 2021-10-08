@@ -42,7 +42,7 @@ class AdversarialAttackConfig:
 
     lr: float = 0.01  # unused
     gamma: float = 0.07  # unused
-    batch_size: int = 64
+    batch_size: int = 128
 
     max_epochs: int = 100
 
@@ -59,7 +59,7 @@ class AdversarialAttackConfig:
         "data-set={data_set}--attack={attack}--eps={epsilon}--cp-run={run}"
     )
 
-    # Set this to False if you want your attacked data to be saved to Neptune
+    # Set this to False if you want your data to be saved to Neptune
     trash_run: bool = True
 
     # Neptune options
