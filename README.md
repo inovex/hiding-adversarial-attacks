@@ -228,7 +228,7 @@ You should also specify the correct class ID: `included_classes=[5]` for Sandal 
 
 |                        | Grad&#8209;CAM <br />x <br /> Sandal | Grad&#8209;CAM  <br /> x  <br /> Coat | Guided Backpropagation  <br /> x  <br /> Sandal | Guided Backpropagation  <br /> x  <br /> Coat |
 |------------------------|:------------------------------------:|:-------------------------------------:|:-----------------------------------------------:|:---------------------------------------------:|
-| lr                     | 3.00 x 10<sup>-5</sup>               | 3.50 x 10<sup>-4</sup>                | 1.70 x 10<sup>-4</sup>                          | 6.00 x 10<sup>-5</sup>                       |
+| lr                     | 0.00003                              | 0.00035                               | 0.00017                                         | 0.00006                                       |
 | loss_weight_similarity | 1                                    | 1                                     | 2                                               | 1                                             |
 | ce_class_weight        | 1                                    | 7                                     | 130                                             | 3                                             |
 | batch_size             | 64                                   | 64                                    | 64                                              | 64                                            |
